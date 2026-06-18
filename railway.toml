@@ -1,0 +1,16 @@
+# Config Railway — servicio API (monorepo Moda Urbana)
+# Equivalente a apps/api/railway.toml; Railway lo detecta desde la raíz del repo.
+# Alternativa en dashboard: Config-as-code → apps/api/railway.toml
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "apps/api/Dockerfile"
+
+[deploy]
+preDeployCommand = "node ace migration:run --force"
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+
+# Uploads: adjuntar Volume en dashboard → mount /data/uploads
+# y setear STORAGE_LOCAL_PATH=/data/uploads (ver docs/RAILWAY_DEPLOY.md).

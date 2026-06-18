@@ -111,19 +111,15 @@ export function LoginForm() {
             ) : null}
           </div>
 
-          <div
-            className={cn(
-              'min-h-[2.75rem] rounded-lg border px-3 py-2 text-sm transition-colors',
-              submitError
-                ? 'border-red-500/30 bg-red-500/10 text-red-300'
-                : 'border-transparent bg-transparent'
-            )}
-            role={submitError ? 'alert' : undefined}
-            aria-live="polite"
-            aria-hidden={!submitError}
-          >
-            {submitError}
-          </div>
+          {submitError ? (
+            <div
+              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              role="alert"
+              aria-live="polite"
+            >
+              {submitError}
+            </div>
+          ) : null}
 
           <Button
             type="submit"

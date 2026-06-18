@@ -193,54 +193,10 @@
 
 .login-identity-mark-wrap {
   position: relative;
-  isolation: isolate;
-  aspect-ratio: 1;
-}
-
-.login-identity-mark-wrap::before {
-  content: '';
-  position: absolute;
-  inset: 14%;
-  z-index: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgb(0 0 0 / 0.32) 0%,
-    rgb(0 0 0 / 0.18) 42%,
-    rgb(0 0 0 / 0.06) 58%,
-    rgb(0 0 0 / 0) 72%
-  );
-  filter: blur(8px);
-  pointer-events: none;
 }
 
 .login-identity-mark {
   position: relative;
-  z-index: 1;
-  -webkit-mask-image: radial-gradient(
-    circle at 50% 50%,
-    #000 0%,
-    #000 52%,
-    rgb(0 0 0 / 0.96) 54%,
-    rgb(0 0 0 / 0.78) 57%,
-    rgb(0 0 0 / 0.45) 61%,
-    rgb(0 0 0 / 0.14) 66%,
-    transparent 73%
-  );
-  mask-image: radial-gradient(
-    circle at 50% 50%,
-    #000 0%,
-    #000 52%,
-    rgb(0 0 0 / 0.96) 54%,
-    rgb(0 0 0 / 0.78) 57%,
-    rgb(0 0 0 / 0.45) 61%,
-    rgb(0 0 0 / 0.14) 66%,
-    transparent 73%
-  );
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
 }
 
 @keyframes report-hero-enter {

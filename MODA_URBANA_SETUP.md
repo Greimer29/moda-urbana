@@ -29,11 +29,23 @@ Login: `admin@modaurbana.local` (contraseña en `apps/api/.env`).
 
 ## Railway (API + MySQL)
 
-1. Proyecto nuevo en Railway → repo `Greimer29/moda-urbana`.
-2. MySQL `moda-urbana-mysql` + API con `apps/api/Dockerfile`.
-3. Volume `/data/uploads` + `STORAGE_LOCAL_PATH=/data/uploads`.
-4. `APP_KEY` nuevo, `FRONTEND_URL=http://localhost:5174`.
-5. Tras el deploy, en `apps/web/.env`: `VITE_API_URL=https://<tu-api-railway>`.
+1. Proyecto en Railway → repo `Greimer29/moda-urbana`.
+2. MySQL `moda-urbana-mysql` + servicio API (mismo repo).
+3. **Settings del servicio API** (igual que `hebra-api`):
+
+   | Setting | Valor |
+   |---------|--------|
+   | Root Directory | *(vacío — raíz del repo)* |
+   | **Config-as-code → Railway config file** | `apps/api/railway.toml` *(o `railway.toml` en la raíz)* |
+   | Dockerfile Path | *(lo toma del config)* → `apps/api/Dockerfile` |
+   | Pre-deploy command | *(lo toma del config)* → `node ace migration:run --force` |
+
+   Si ves `Dockerfile` suelto en la UI (auto-detectado), configurá el **config file** arriba y redeployá.
+
+4. Volume `/data/uploads` + `STORAGE_LOCAL_PATH=/data/uploads`.
+5. Variables: `APP_KEY`, `FRONTEND_URL=http://localhost:5174`, `ADMIN_*`, `DB_*` referenciando MySQL.
+6. Tras el deploy: seed manual → `railway ssh -- node ace db:seed`
+7. Web local: `VITE_API_URL=https://moda-urbana-production.up.railway.app`
 
 Ver `docs/RAILWAY_DEPLOY.md` (misma arquitectura; renombrá servicios `hebra-*` → `moda-urbana-*`).
 
