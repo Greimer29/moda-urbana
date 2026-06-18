@@ -234,6 +234,30 @@ export default class DashboardService {
     return { desde: `${hoy} 00:00:00`, hasta: `${hoy} 23:59:59` }
   }
 
+  private async gastosDelDia(): Promise<{ cantidad: number; montoUsd: number }> {
+    const hoy = DateTime.now().toISODate()!
+
+    const expenses = await db
+      .from('expenses')
+      .where('date', hoy)
+      .select(
+        db.raw('COUNT(*) as qty'),
+        db.raw('COALESCE(SUM(amount_usd), 0) as total_usd')
+      )
+      .first()
+
+    const machine = await db
+      .from('machine_expenses')
+      .where('date', hoy)
+      .select(db.raw('COUNT(*) as qty'), db.raw('COALESCE(SUM(amount), 0) as total_amount'))
+      .first()
+
+    return {
+      cantidad: Number(expenses?.qty ?? 0) + Number(machine?.qty ?? 0),
+      montoUsd: Number(expenses?.total_usd ?? 0) + Number(machine?.total_amount ?? 0),
+    }
+  }
+
   private async ventasDelDia(): Promise<VentasDelDia> {
     const { desde, hasta } = this.todayRange()
 
@@ -253,31 +277,13 @@ export default class DashboardService {
       )
       .first()
 
-    const hoy = DateTime.now().toISODate()!
-
-    const expenses = await db
-      .from('expenses')
-      .where('date', hoy)
-      .select(
-        db.raw('COUNT(*) as qty'),
-        db.raw('COALESCE(SUM(amount_usd), 0) as total_usd')
-      )
-      .first()
-
-    const machine = await db
-      .from('machine_expenses')
-      .where('date', hoy)
-      .select(db.raw('COUNT(*) as qty'), db.raw('COALESCE(SUM(amount), 0) as total_amount'))
-      .first()
-
-    const gastosCantidad = Number(expenses?.qty ?? 0) + Number(machine?.qty ?? 0)
-    const gastosMontoUsd = Number(expenses?.total_usd ?? 0) + Number(machine?.total_amount ?? 0)
+    const gastos = await this.gastosDelDia()
 
     return {
       productosVendidos: Number(ventas?.qty ?? 0),
       montoProductosUsd: Number(ventas?.total_usd ?? 0).toFixed(4),
-      gastosCantidad,
-      gastosMontoUsd: gastosMontoUsd.toFixed(4),
+      gastosCantidad: gastos.cantidad,
+      gastosMontoUsd: gastos.montoUsd.toFixed(4),
     }
   }
 
@@ -370,10 +376,12 @@ export default class DashboardService {
 
     const profit = Number(row?.profit ?? 0)
     const sales = Number(row?.sales ?? 0)
-    const porcentaje = sales > 0 ? (profit / sales) * 100 : 0
+    const gastos = await this.gastosDelDia()
+    const netProfit = profit - gastos.montoUsd
+    const porcentaje = sales > 0 ? (netProfit / sales) * 100 : 0
 
     return {
-      montoUsd: profit.toFixed(4),
+      montoUsd: netProfit.toFixed(4),
       porcentajeSobreVentas: Math.round(porcentaje * 100) / 100,
     }
   }

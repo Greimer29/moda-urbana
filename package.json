@@ -11,7 +11,8 @@
     "dev:db": "docker compose up -d mysql",
     "dev:api": "npx pnpm@9.15.4 --filter api dev",
     "dev:web": "npx pnpm@9.15.4 --filter web dev",
-    "dev:setup": "powershell -ExecutionPolicy Bypass -File scripts/dev-setup.ps1"
+    "dev:setup": "powershell -ExecutionPolicy Bypass -File scripts/dev-setup.ps1",
+    "build:desktop": "npx pnpm@9.15.4 --filter web build && npx pnpm@9.15.4 --filter desktop dist"
   },
   "engines": {
     "node": ">=20.0.0",

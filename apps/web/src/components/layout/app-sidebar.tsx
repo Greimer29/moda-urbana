@@ -167,10 +167,10 @@ export function AppSidebar() {
     <aside className="bg-sidebar text-sidebar-foreground hidden h-svh w-56 shrink-0 flex-col overflow-hidden border-r md:flex">
       <div className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
         <img
-          src="/moda-urbana-logo.png"
+          src="/logo-bn.png"
           alt=""
           aria-hidden
-          className="size-8 shrink-0 rounded-full object-cover"
+          className="size-8 shrink-0 rounded-full object-contain"
         />
         <span className="text-lg font-semibold tracking-tight">Moda Urbana</span>
       </div>

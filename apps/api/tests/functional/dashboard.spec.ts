@@ -3,6 +3,7 @@ import Material from '#models/material'
 import InventoryMovement from '#models/inventory_movement'
 import Machine from '#models/machine'
 import MachineExpense from '#models/machine_expense'
+import Expense from '#models/expense'
 import Supplier from '#models/supplier'
 import User from '#models/user'
 import Customer from '#models/customer'
@@ -236,5 +237,80 @@ test.group('Dashboard API', (group) => {
     assert.equal(body.data.products[0].total_usd, '24.0000')
     assert.equal(body.data.summary.productos_vendidos, 2)
     assert.equal(body.data.summary.monto_productos_usd, '24.0000')
+  })
+
+  test('GET /api/v1/dashboard/overview subtracts daily expenses from ganancia del dia', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const hoy = DateTime.now().toISODate()!
+    const customer = await Customer.create({
+      name: 'Cliente Ganancia',
+      active: true,
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto ganancia',
+      category: 'Camisas',
+      saleUnit: 'UND',
+      salePriceUsd: '12.0000',
+      costUsd: '5.0000',
+      stockQuantity: '10.000',
+      active: true,
+    })
+    const order = await Order.create({
+      code: 'PED-GAN-1',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta hoy',
+      totalQuantity: 2,
+      orderDate: DateTime.now(),
+      status: 'DELIVERED',
+      totalPrice: '24.0000',
+      confirmedAt: DateTime.now(),
+    })
+    await OrderLine.create({
+      orderId: order.id,
+      catalogProductId: product.id,
+      quantity: '2',
+      unitPriceUsd: '12.0000',
+      subtotalUsd: '24.0000',
+      returnedQuantity: '0',
+    })
+
+    await Expense.create({
+      date: DateTime.fromISO(hoy),
+      description: 'Transporte',
+      amountUsd: '4.0000',
+      currencyCode: 'USD',
+    })
+
+    const machine = await Machine.create({
+      name: 'Overlock ganancia',
+      type: 'OVERLOCK',
+      status: 'OPERATIONAL',
+      active: true,
+    })
+    await MachineExpense.create({
+      machineId: Number(machine.id),
+      date: DateTime.fromISO(hoy),
+      category: 'REPAIR',
+      description: 'Repuesto',
+      amount: '6.0000',
+    })
+
+    const response = await client.get('/api/v1/dashboard/overview').loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        ventasDelDia: { gastosMontoUsd: string }
+        gananciaDelDia: { montoUsd: string; porcentajeSobreVentas: number }
+      }
+    }
+
+    assert.equal(body.data.ventasDelDia.gastosMontoUsd, '10.0000')
+    assert.equal(body.data.gananciaDelDia.montoUsd, '4.0000')
+    assert.equal(body.data.gananciaDelDia.porcentajeSobreVentas, 16.67)
   })
 })

@@ -91,7 +91,7 @@ export function ReportKpiGrid({ summary, filterSearch }: ReportKpiGridProps) {
 
 
 
-const HERO_LOGO = '/moda-urbana-logo.png'
+const HERO_BACKGROUND = '/panel-reportes.png'
 
 
 
@@ -110,17 +110,11 @@ function HeroKpiCard({
     <div className={cn(reportUi.hero, 'sm:col-span-2 xl:col-span-2 xl:row-span-2')}>
 
       <img
-
-        src={HERO_LOGO}
-
+        src={HERO_BACKGROUND}
         alt=""
-
         aria-hidden
-
         draggable={false}
-
-        className="report-hero-kpi-logo pointer-events-none absolute top-1/2 right-0 z-0 h-auto w-[min(22rem,58%)] max-w-none translate-y-[-50%] select-none object-contain object-right pr-2 sm:pr-4"
-
+        className="report-hero-kpi-bg pointer-events-none absolute inset-0 z-0 h-full w-full select-none object-cover object-center"
       />
 
 
