@@ -1,21 +1,26 @@
 appId: com.modaurbana.app
 productName: Moda Urbana
+icon: resources/icon.ico
 directories:
   output: release
 files:
   - dist/**/*
   - package.json
+  - resources/icon.ico
 extraResources:
   - from: ../web/dist
     to: web-dist
     filter:
       - '**/*'
+afterPack: scripts/after-pack.cjs
 win:
   target: nsis
-  icon: resources/icon.png
+  icon: resources/icon.ico
   signAndEditExecutable: false
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
