@@ -1,0 +1,18 @@
+import { api } from '@/lib/api'
+import type {
+  DashboardChartMode,
+  DashboardOverviewResponse,
+  DailyProductSalesResponse,
+} from '@/features/dashboard/types'
+
+export async function getDashboardOverview(chart: DashboardChartMode = 'weekly') {
+  const { data } = await api.get<DashboardOverviewResponse>('/dashboard/overview', {
+    params: { chart },
+  })
+  return data.data
+}
+
+export async function getDailyProductSales() {
+  const { data } = await api.get<DailyProductSalesResponse>('/dashboard/daily-product-sales')
+  return data.data
+}

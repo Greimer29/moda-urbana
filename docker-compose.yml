@@ -1,0 +1,28 @@
+# MySQL local para desarrollo — credenciales alineadas con apps/api/.env.example
+# Uso: docker compose up -d mysql
+#
+# Puerto 3307 para no chocar con Hebra (3306) si ambos proyectos corren a la vez.
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: moda-urbana-mysql
+    restart: unless-stopped
+    ports:
+      - '3307:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: moda_urbana
+      MYSQL_USER: moda_urbana
+      MYSQL_PASSWORD: moda_urbana
+    volumes:
+      - moda_urbana_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-umoda_urbana', '-pmoda_urbana']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  moda_urbana_mysql_data:
