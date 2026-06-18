@@ -18,7 +18,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   DB_DATABASE: Env.schema.string(),
 
   FRONTEND_URL: Env.schema.string({ format: 'url', tld: false }),
-  DESKTOP_APP_ORIGIN: Env.schema.string({ format: 'url', tld: false }).optional(),
+  DESKTOP_APP_ORIGIN: Env.schema.string.optional(),
 
   ADMIN_EMAIL: Env.schema.string({ format: 'email' }),
   ADMIN_PASSWORD: Env.schema.string(),
