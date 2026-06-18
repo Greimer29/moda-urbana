@@ -24,11 +24,12 @@ export function LoginForm() {
   const { login } = useAuth()
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -39,6 +40,7 @@ export function LoginForm() {
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null)
+    setIsLoggingIn(true)
 
     try {
       await login(values.email, values.password)
@@ -47,13 +49,14 @@ export function LoginForm() {
         '/dashboard'
       navigate(redirectTo === '/login' ? '/dashboard' : redirectTo, { replace: true })
     } catch (error) {
-      const apiError = getApiError(error)
-      setSubmitError(apiError.message)
+      setSubmitError(getApiError(error).message)
+    } finally {
+      setIsLoggingIn(false)
     }
   })
 
   return (
-    <div className="login-form-enter login-glass-body h-[550px] w-full max-w-md overflow-hidden rounded-2xl border border-white/15 px-6 py-8 shadow-[0_24px_64px_rgb(0_0_0_/_0.35)] sm:px-8">
+    <div className="login-form-enter login-glass-body flex min-h-[550px] w-full max-w-md flex-col rounded-2xl border border-white/15 px-6 py-8 shadow-[0_24px_64px_rgb(0_0_0_/_0.35)] sm:px-8">
       <ModaUrbanaIdentity />
 
       <form className="flex flex-col gap-5" onSubmit={onSubmit} noValidate>
@@ -68,7 +71,7 @@ export function LoginForm() {
                 type="email"
                 autoComplete="email"
                 placeholder="Ingresa tu email"
-                disabled={isSubmitting}
+                disabled={isLoggingIn}
                 className="login-input h-11 shadow-none pl-10"
                 {...register('email')}
               />
@@ -89,7 +92,7 @@ export function LoginForm() {
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 placeholder="Ingresa tu contraseña"
-                disabled={isSubmitting}
+                disabled={isLoggingIn}
                 className="login-input h-11 pr-10 pl-10 shadow-none"
                 {...register('password')}
               />
@@ -97,6 +100,7 @@ export function LoginForm() {
                 type="button"
                 className="absolute top-1/2 right-3 -translate-y-1/2 text-neutral-400 transition-colors hover:text-neutral-200"
                 aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                disabled={isLoggingIn}
                 onClick={() => setShowPassword((prev) => !prev)}
               >
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -107,24 +111,29 @@ export function LoginForm() {
             ) : null}
           </div>
 
-          {submitError ? (
-            <div
-              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
-              role="alert"
-            >
-              {submitError}
-            </div>
-          ) : null}
+          <div
+            className={cn(
+              'min-h-[2.75rem] rounded-lg border px-3 py-2 text-sm transition-colors',
+              submitError
+                ? 'border-red-500/30 bg-red-500/10 text-red-300'
+                : 'border-transparent bg-transparent'
+            )}
+            role={submitError ? 'alert' : undefined}
+            aria-live="polite"
+            aria-hidden={!submitError}
+          >
+            {submitError}
+          </div>
 
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isLoggingIn}
             className={cn(
               'h-11 w-full rounded-lg border-0 text-sm font-semibold tracking-wide',
               'bg-white text-neutral-950 hover:bg-neutral-100'
             )}
           >
-            {isSubmitting ? (
+            {isLoggingIn ? (
               <>
                 <Loader2 className="animate-spin" />
                 Ingresando…
