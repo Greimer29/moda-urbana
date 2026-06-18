@@ -1,7 +1,7 @@
 # Validación técnica — Mes 1 receta + stock
 
-- **Fecha:** 2026-06-02T04:12:40.928Z
-- **Entorno:** http://localhost:3333
+- **Fecha:** 2026-06-18T17:25:58.545Z
+- **Entorno:** http://localhost:3334
 - **Modo:** local
 - **Resultado:** PASS (20/20 pasos OK)
 
@@ -9,14 +9,14 @@
 
 | Paso | Resultado | Detalle |
 |------|-----------|---------|
-| Entorno | OK | local @ http://localhost:3333 |
+| Entorno | OK | local @ http://localhost:3334 |
 | Health check | OK | status 200 |
-| Login | OK | admin@hebra.local |
+| Login | OK | admin@modaurbana.local |
 | Listar proveedores (seeder) | OK |  |
-| Crear cliente | OK | id 1 |
+| Crear cliente | OK | id 3 |
 | Crear 2 materiales | OK |  |
 | Ajustar stock inicial | OK |  |
-| Crear pedido | OK | id 1 |
+| Crear pedido | OK | id 7 |
 | Agregar receta (2 materiales) | OK |  |
 | Detalle pedido incluye receta | OK | items 2 |
 | Transición a CONFIRMED | OK |  |
@@ -26,6 +26,6 @@
 | Stock insuficiente devuelve 409 | OK | status 409 |
 | Forzar producción sin stock | OK |  |
 | Cancelación revierte stock | OK | 175 -> 195 |
-| Crear máquina | OK | id 1 |
+| Crear máquina | OK | id 3 |
 | Registrar gasto de máquina | OK |  |
 | Dashboard resumen | OK | status 200 |

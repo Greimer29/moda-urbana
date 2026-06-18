@@ -2,26 +2,12 @@ import Purchase from '#models/purchase'
 import Supplier from '#models/supplier'
 import User from '#models/user'
 import testUtils from '@adonisjs/core/services/test_utils'
-import db from '@adonisjs/lucid/services/db'
+import { resetTestDatabase } from '#tests/helpers/reset_test_database'
 import { DateTime } from 'luxon'
 import { test } from '@japa/runner'
 
 const TEST_EMAIL = 'test-suppliers@hebra.local'
 const TEST_PASSWORD = 'password123'
-
-async function resetDatabase() {
-  await db.from('inventory_movements').delete()
-  await db.from('purchase_items').delete()
-  await db.from('purchases').delete()
-  await db.from('orders').delete()
-  await db.from('machine_expenses').delete()
-  await db.from('materials').delete()
-  await db.from('machines').delete()
-  await db.from('customers').delete()
-  await db.from('counters').delete()
-  await db.from('suppliers').delete()
-  await db.from('users').delete()
-}
 
 async function seedAdminUser() {
   await User.updateOrCreate(
@@ -41,7 +27,7 @@ test.group('Suppliers API', (group) => {
   })
 
   group.each.setup(async () => {
-    await resetDatabase()
+    await resetTestDatabase()
     await seedAdminUser()
   })
 

@@ -141,8 +141,8 @@ async function runProdSmoke(api) {
     code: `SMK-${Date.now().toString().slice(-6)}`,
     name: 'Material smoke producción',
     category: 'FABRIC',
-    unit: 'METER',
-    stock_minimo: 1,
+    unit: 'MTS',
+    minimum_stock: 1,
     active: true,
   })
   log('Crear material de prueba', material.status === 200, `id ${material.data?.data?.material?.id}`)
@@ -179,16 +179,16 @@ async function runFullLocalSmoke(api) {
     code: 'VAL-TEL-A',
     name: 'Tela validación A',
     category: 'FABRIC',
-    unit: 'METER',
-    stock_minimo: 10,
+    unit: 'MTS',
+    minimum_stock: 10,
     active: true,
   })
   const matB = await api.request('POST', '/materials', {
     code: 'VAL-HIL-B',
     name: 'Hilo validación B',
     category: 'THREAD',
-    unit: 'UNIT',
-    stock_minimo: 5,
+    unit: 'UND',
+    minimum_stock: 5,
     active: true,
   })
   const materialAId = matA.data?.data?.material?.id
@@ -196,10 +196,12 @@ async function runFullLocalSmoke(api) {
   log('Crear 2 materiales', matA.status === 200 && matB.status === 200)
 
   const stockA = await api.request('POST', `/materials/${materialAId}/adjustment`, {
+    mode: 'CARGO',
     quantity: 500,
     note: 'Stock inicial validación',
   })
   const stockB = await api.request('POST', `/materials/${materialBId}/adjustment`, {
+    mode: 'CARGO',
     quantity: 200,
     note: 'Stock inicial validación',
   })

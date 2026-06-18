@@ -119,7 +119,7 @@ function HeroKpiCard({
 
         draggable={false}
 
-        className="report-hero-kpi-logo login-identity-mark pointer-events-none absolute top-1/2 right-0 z-0 h-auto w-[min(22rem,58%)] max-w-none translate-y-[-50%] select-none object-contain object-right pr-2 sm:pr-4"
+        className="report-hero-kpi-logo pointer-events-none absolute top-1/2 right-0 z-0 h-auto w-[min(22rem,58%)] max-w-none translate-y-[-50%] select-none object-contain object-right pr-2 sm:pr-4"
 
       />
 
