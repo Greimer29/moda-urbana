@@ -10,10 +10,20 @@ type DashboardDailySalesCardProps = {
   ganancia: GananciaDelDia
 }
 
+function parseUsd(value: string | number | null | undefined): number {
+  if (value === null || value === undefined || value === '') {
+    return 0
+  }
+
+  const num = Number(value)
+  return Number.isFinite(num) ? num : 0
+}
+
 export function DashboardDailySalesCard({ ventas, ganancia }: DashboardDailySalesCardProps) {
-  const brutoUsd = Number(ventas.montoProductosUsd)
-  const gastosUsd = Number(ventas.gastosMontoUsd)
-  const entradasNetasUsd = brutoUsd - gastosUsd
+  const brutoUsd = parseUsd(ventas.montoProductosUsd)
+  const creditoUsd = parseUsd(ventas.montoCreditoUsd)
+  const gastosUsd = parseUsd(ventas.gastosMontoUsd)
+  const entradasNetasUsd = brutoUsd - gastosUsd - creditoUsd
 
   return (
     <div className={dashboardUi.heroCard}>
@@ -70,14 +80,35 @@ export function DashboardDailySalesCard({ ventas, ganancia }: DashboardDailySale
           </div>
         </div>
 
-        <div className="flex items-center justify-between rounded-2xl bg-white/10 p-3">
-          <div>
-            <p className="text-sm text-white/70">Ganancia del día</p>
-            <p className="text-lg font-semibold">
-              <DisplayMoneyFromUsd amountUsd={ganancia.montoUsd} size="md" className="text-white" />
-            </p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-2xl bg-white/10 p-3">
+            <div>
+              <p className="text-sm text-white/70">Facturado a crédito</p>
+              <p className="text-lg font-semibold">
+                <DisplayMoneyFromUsd
+                  amountUsd={creditoUsd}
+                  size="md"
+                  className="text-white"
+                />
+              </p>
+              {ventas.pedidosCredito > 0 ? (
+                <p className="text-xs tabular-nums text-white/70">
+                  {ventas.pedidosCredito.toLocaleString('es-VE')}{' '}
+                  {ventas.pedidosCredito === 1 ? 'pedido' : 'pedidos'}
+                </p>
+              ) : null}
+            </div>
           </div>
-          <DashboardProfitDonut percent={ganancia.porcentajeSobreVentas} />
+
+          <div className="flex items-center justify-between rounded-2xl bg-white/10 p-3">
+            <div>
+              <p className="text-sm text-white/70">Ganancia del día</p>
+              <p className="text-lg font-semibold">
+                <DisplayMoneyFromUsd amountUsd={ganancia.montoUsd} size="md" className="text-white" />
+              </p>
+            </div>
+            <DashboardProfitDonut percent={ganancia.porcentajeSobreVentas} />
+          </div>
         </div>
       </div>
     </div>

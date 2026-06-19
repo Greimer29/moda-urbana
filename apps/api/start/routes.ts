@@ -28,6 +28,7 @@ router
     router.get('catalog-products/:id/image', [CatalogProductsController, 'downloadImage'])
     router.get('materials/:id/image', [controllers.Materials, 'downloadImage'])
     router.get('suppliers/:id/image', [controllers.Suppliers, 'downloadImage'])
+    router.get('customers/:id/image', [controllers.Customers, 'downloadImage'])
 
     router
       .group(() => {
@@ -39,6 +40,8 @@ router
         router.post('customers', [controllers.Customers, 'store'])
         router.put('customers/:id', [controllers.Customers, 'update'])
         router.delete('customers/:id', [controllers.Customers, 'destroy'])
+        router.post('customers/:id/image', [controllers.Customers, 'uploadImage'])
+        router.delete('customers/:id/image', [controllers.Customers, 'deleteImage'])
         router.post('customers/:id/payments', [controllers.Customers, 'storePayment'])
 
         router.get('orders', [controllers.Orders, 'index'])

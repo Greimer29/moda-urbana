@@ -1,4 +1,4 @@
-export type AccountStatementMovementType = 'sale' | 'purchase' | 'expense' | 'machine_expense'
+export type AccountStatementMovementType = 'sale' | 'customer_payment' | 'purchase' | 'expense' | 'machine_expense'
 
 
 
@@ -37,6 +37,12 @@ export type AccountStatementMovement = {
   creditOverdue?: boolean
 
   creditReportStatus?: 'pending' | 'overdue' | 'settled'
+
+  isCreditSale?: boolean
+
+  saleDate?: string
+
+  customerId?: number
 
 }
 

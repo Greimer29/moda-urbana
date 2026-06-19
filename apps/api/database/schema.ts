@@ -139,7 +139,7 @@ export class CustomerPaymentSchema extends BaseModel {
 }
 
 export class CustomerSchema extends BaseModel {
-  static $columns = ['active', 'address', 'createdAt', 'creditDays', 'document', 'email', 'id', 'name', 'notes', 'phone', 'type', 'updatedAt'] as const
+  static $columns = ['active', 'address', 'createdAt', 'creditDays', 'document', 'email', 'id', 'imagePath', 'name', 'notes', 'phone', 'type', 'updatedAt'] as const
   $columns = CustomerSchema.$columns
   @column()
   declare active: boolean
@@ -155,6 +155,8 @@ export class CustomerSchema extends BaseModel {
   declare email: string | null
   @column({ isPrimary: true })
   declare id: bigint | number
+  @column()
+  declare imagePath: string | null
   @column()
   declare name: string
   @column()

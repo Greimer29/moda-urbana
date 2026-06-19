@@ -5,6 +5,8 @@ import {
   creditPurchaseReportStatus,
   creditPurchaseVisibleInReport,
 } from '#utils/credit_purchase_report'
+import { creditSaleReportStatus } from '#utils/credit_sale_report'
+import CustomerPayment from '#models/customer_payment'
 import Expense from '#models/expense'
 
 import MachineExpense from '#models/machine_expense'
@@ -20,6 +22,8 @@ import { DateTime } from 'luxon'
 export type AccountStatementMovementType =
 
   | 'sale'
+
+  | 'customer_payment'
 
   | 'purchase'
 
@@ -84,6 +88,12 @@ export type AccountStatementMovement = {
   creditOverdue?: boolean
 
   creditReportStatus?: 'pending' | 'overdue' | 'settled'
+
+  isCreditSale?: boolean
+
+  saleDate?: string
+
+  customerId?: number
 
 }
 
@@ -204,25 +214,175 @@ export default class ReportService {
 
         }
 
+        const orderDate = order.orderDate.toISODate()!
+
+        const isCredit = order.paymentType === 'CREDIT'
+
+
+
+        if (isCredit) {
+
+          const creditDueDate = order.creditDueDate?.toISODate() ?? null
+
+          const balanceUsd = Number(order.balanceUsd ?? 0)
+
+          const creditStatus = creditSaleReportStatus(balanceUsd, creditDueDate)
+
+
+
+          movements.push(
+
+            this.buildMovement({
+
+              id: Number(order.id),
+
+              type: 'sale',
+
+              date: orderDate,
+
+              label: `Venta ${order.code} — ${order.description}`,
+
+              account: null,
+
+              native,
+
+              currencyCode,
+
+              usd,
+
+              displayCurrency,
+
+              rates,
+
+              referenceId: Number(order.id),
+
+              status: order.status,
+
+              isIncome: false,
+
+              isCreditSale: true,
+
+              creditDueDate,
+
+              saleDate: orderDate,
+
+              creditReportStatus: creditStatus ?? undefined,
+
+            })
+
+          )
+
+        } else {
+
+          salesUsd += usd
+
+          movements.push(
+
+            this.buildMovement({
+
+              id: Number(order.id),
+
+              type: 'sale',
+
+              date: orderDate,
+
+              label: `Venta ${order.code} — ${order.description}`,
+
+              account: null,
+
+              native,
+
+              currencyCode,
+
+              usd,
+
+              displayCurrency,
+
+              rates,
+
+              referenceId: Number(order.id),
+
+              status: order.status,
+
+              isIncome: true,
+
+            })
+
+          )
+
+        }
+
+      }
+
+
+
+      const paymentQuery = CustomerPayment.query()
+
+        .where('date', '>=', period.from)
+
+        .where('date', '<=', period.to)
+
+        .preload('customer')
+
+        .preload('order')
+
+        .preload('account')
+
+        .orderBy('date', 'desc')
+
+        .orderBy('id', 'desc')
+
+
+
+      this.applyAccountFilter(paymentQuery, filters)
+
+
+
+      const payments = await paymentQuery
+
+
+
+      for (const payment of payments) {
+
+        const usd = Number(payment.amountUsd)
+
+        if (usd <= 0) {
+
+          continue
+
+        }
+
+
+
         salesUsd += usd
+
+        const customerName = payment.customer?.name ?? 'Cliente'
+
+        const orderRef = payment.order ? ` (${payment.order.code})` : ''
+
+
 
         movements.push(
 
           this.buildMovement({
 
-            id: Number(order.id),
+            id: Number(payment.id),
 
-            type: 'sale',
+            type: 'customer_payment',
 
-            date: order.orderDate.toISODate()!,
+            date: payment.date.toISODate()!,
 
-            label: `Venta ${order.code} — ${order.description}`,
+            label: `Abono — ${customerName}${orderRef}`,
 
-            account: null,
+            account: payment.account
 
-            native,
+              ? { id: Number(payment.account.id), name: payment.account.name }
 
-            currencyCode,
+              : null,
+
+            native: usd,
+
+            currencyCode: 'USD',
 
             usd,
 
@@ -230,9 +390,9 @@ export default class ReportService {
 
             rates,
 
-            referenceId: Number(order.id),
+            referenceId: Number(payment.id),
 
-            status: order.status,
+            customerId: Number(payment.customerId),
 
             isIncome: true,
 
@@ -719,13 +879,19 @@ export default class ReportService {
 
     isCreditPurchase?: boolean
 
+    isCreditSale?: boolean
+
     creditDueDate?: string | null
 
     purchaseDate?: string
 
+    saleDate?: string
+
     creditOverdue?: boolean
 
     creditReportStatus?: 'pending' | 'overdue' | 'settled'
+
+    customerId?: number
 
   }): AccountStatementMovement {
     const displayAmount = this.currencyService.fromUsd(
@@ -796,6 +962,34 @@ export default class ReportService {
 
         : {}),
 
+      ...(options.type === 'sale' && options.isCreditSale
+
+        ? {
+
+            isCreditSale: true,
+
+            creditDueDate: options.creditDueDate ?? null,
+
+            saleDate: options.saleDate,
+
+            creditOverdue: options.creditReportStatus === 'overdue',
+
+            ...(options.creditReportStatus
+
+              ? { creditReportStatus: options.creditReportStatus }
+
+              : {}),
+
+          }
+
+        : {}),
+
+      ...(options.type === 'customer_payment' && options.customerId
+
+        ? { customerId: options.customerId }
+
+        : {}),
+
     }
   }
 
@@ -851,7 +1045,13 @@ export default class ReportService {
 
   private applyAccountFilter(
 
-    query: ReturnType<typeof Purchase.query>,
+    query: {
+
+      whereNull(column: string): unknown
+
+      where(column: string, value: unknown): unknown
+
+    },
 
     filters: AccountStatementFilters
 

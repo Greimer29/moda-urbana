@@ -1,11 +1,13 @@
 import { PublicImage } from '@/components/public-image'
 import type { ProductSaleUnit } from '@/features/ventas/constants'
+import type { BillingMethod } from '@/features/ventas/constants'
 import type { ReactNode } from 'react'
 import { LayoutGrid, Package, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DecimalInput } from '@/components/decimal-input'
 import { DisplayMoney, DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { useFormatMoney } from '@/features/currencies/context/display-currency-context'
+import { VentasBillingMethodToggle } from '@/features/ventas/components/ventas-billing-method-toggle'
 import { inventoryQuantityDecimals } from '@/lib/inventory-units'
 import { cn } from '@/lib/utils'
 import { parseDecimalInput } from '@/lib/numeric-input'
@@ -35,6 +37,8 @@ type VentasOrderCartProps = {
   children?: ReactNode
   className?: string
   headerAction?: ReactNode
+  billingMethod?: BillingMethod
+  onBillingMethodChange?: (method: BillingMethod) => void
 }
 
 const IMAGE_TONE_CLASS: Record<NonNullable<VentasCartLine['imageTone']>, string> = {
@@ -66,6 +70,8 @@ export function VentasOrderCart({
   children,
   className,
   headerAction,
+  billingMethod,
+  onBillingMethodChange,
 }: VentasOrderCartProps) {
   const { displayCurrency } = useFormatMoney()
 
@@ -76,9 +82,16 @@ export function VentasOrderCart({
         className
       )}
     >
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
+      <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b px-4 py-3">
         <p className="text-sm font-semibold tracking-tight">{orderLabel}</p>
-        <div className="flex items-center gap-1">
+
+        {billingMethod != null && onBillingMethodChange ? (
+          <VentasBillingMethodToggle value={billingMethod} onChange={onBillingMethodChange} />
+        ) : (
+          <span aria-hidden />
+        )}
+
+        <div className="flex items-center justify-end gap-1">
           {headerAction}
           <Button
           type="button"

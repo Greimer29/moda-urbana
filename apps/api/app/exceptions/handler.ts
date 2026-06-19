@@ -486,7 +486,7 @@ export default class HttpExceptionHandler extends ExceptionHandler {
     }
 
     if (error instanceof ArchivoImagenNoDisponibleException) {
-      return ctx.response.status(ArchivoImagenNoDisponibleException.status).json({
+      return ctx.response.status(error.status ?? ArchivoImagenNoDisponibleException.status).json({
         error: {
           code: ArchivoImagenNoDisponibleException.code,
           message: error.message || ArchivoImagenNoDisponibleException.message,

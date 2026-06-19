@@ -19,12 +19,15 @@ export type BajoStockProductoItem = {
 export type VentasDelDia = {
   productosVendidos: number
   montoProductosUsd: string
+  montoCreditoUsd: string
+  pedidosCredito: number
   gastosCantidad: number
   gastosMontoUsd: string
 }
 
 export type GananciaDelDia = {
   montoUsd: string
+  gananciaCreditoUsd: string
   porcentajeSobreVentas: number
 }
 

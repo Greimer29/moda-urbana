@@ -292,4 +292,38 @@ test.group('Customers API', (group) => {
     assert.lengthOf(body.data.customers, 1)
     assert.equal(body.data.customers[0].name, 'Listado Alpha')
   })
+
+  test('POST /api/v1/customers/:id/image stores customer photo', async ({ client, assert }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente con foto',
+      type: 'CORPORATE',
+      active: true,
+    })
+
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64'
+    )
+
+    const response = await client
+      .post(`/api/v1/customers/${customer.id}/image`)
+      .loginAs(user)
+      .file('image', png, {
+        filename: 'cliente.png',
+        contentType: 'image/png',
+      })
+
+    response.assertStatus(200)
+
+    const body = response.body() as { data: { customer: { imagePath: string | null } } }
+    assert.isNotNull(body.data.customer.imagePath)
+
+    const downloadResponse = await client
+      .get(`/api/v1/customers/${customer.id}/image`)
+      .loginAs(user)
+
+    downloadResponse.assertStatus(200)
+    downloadResponse.assertHeader('content-type', 'image/png')
+  })
 })

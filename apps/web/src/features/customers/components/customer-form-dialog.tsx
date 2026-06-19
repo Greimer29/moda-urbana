@@ -14,19 +14,17 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { TIPO_LABELS } from '@/features/customers/constants'
 import {
   useCreateCustomerMutation,
   useUpdateCustomerMutation,
 } from '@/features/customers/hooks/use-customers'
-import type { Customer, CustomerTipo } from '@/features/customers/types'
-import { getApiError } from '@/lib/api-error'
-
-const TIPOS = ['WHITE_LABEL', 'CORPORATE', 'OTHER'] as const
+import type { Customer } from '@/features/customers/types'
+import { getApiError, formatValidationDetails } from '@/lib/api-error'
+import { normalizeRif } from '@/lib/rif'
 
 const customerSchema = z.object({
   name: z.string().trim().min(1, 'El nombre es obligatorio').max(150),
+  document: z.string().trim().max(30).optional(),
   phone: z.string().trim().max(20).optional(),
   email: z
     .string()
@@ -35,11 +33,8 @@ const customerSchema = z.object({
     .max(150)
     .optional()
     .or(z.literal('')),
-  type: z.enum(TIPOS),
-  document: z.string().trim().max(30).optional(),
-  address: z.string().trim().max(255).optional(),
-  notes: z.string().trim().optional(),
-  credit_days: z.number().min(0).max(365).optional(),
+  offers_credit: z.boolean(),
+  credit_days: z.number().min(1).max(365).optional(),
   active: z.boolean().optional(),
 })
 
@@ -55,42 +50,40 @@ type CustomerFormDialogProps = {
 function emptyValues(): CustomerFormValues {
   return {
     name: '',
+    document: '',
     phone: '',
     email: '',
-    type: 'CORPORATE',
-    document: '',
-    address: '',
-    notes: '',
-    credit_days: 0,
+    offers_credit: false,
+    credit_days: 30,
     active: true,
   }
 }
 
 function toFormValues(customer: Customer): CustomerFormValues {
+  const days = customer.creditDays ?? 0
+
   return {
     name: customer.name,
+    document: customer.document ?? '',
     phone: customer.phone ?? '',
     email: customer.email ?? '',
-    type: customer.type as CustomerTipo,
-    document: customer.document ?? '',
-    address: customer.address ?? '',
-    notes: customer.notes ?? '',
-    credit_days: customer.creditDays ?? 0,
+    offers_credit: days > 0,
+    credit_days: days > 0 ? days : 30,
     active: customer.active,
   }
 }
 
-function toPayload(values: CustomerFormValues) {
+function toPayload(values: CustomerFormValues, isEditing: boolean) {
+  const documentRaw = values.document?.trim()
+
   return {
     name: values.name.trim(),
+    document: documentRaw ? normalizeRif(documentRaw) : undefined,
     phone: values.phone?.trim() || undefined,
     email: values.email?.trim() || undefined,
-    type: values.type,
-    document: values.document?.trim() || undefined,
-    address: values.address?.trim() || undefined,
-    notes: values.notes?.trim() || undefined,
-    credit_days: values.credit_days ?? 0,
-    ...(values.active !== undefined ? { active: values.active } : {}),
+    credit_days: values.offers_credit ? (values.credit_days ?? 30) : 0,
+    ...(!isEditing ? { type: 'CORPORATE' as const } : {}),
+    ...(isEditing && values.active !== undefined ? { active: values.active } : {}),
   }
 }
 
@@ -109,11 +102,15 @@ export function CustomerFormDialog({
     handleSubmit,
     reset,
     setError,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: emptyValues(),
   })
+
+  const offersCredit = watch('offers_credit')
 
   useEffect(() => {
     if (open) {
@@ -123,7 +120,7 @@ export function CustomerFormDialog({
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      const payload = toPayload(values)
+      const payload = toPayload(values, isEditing)
 
       if (isEditing) {
         await updateMutation.mutateAsync({ id: customer.id, payload })
@@ -134,7 +131,11 @@ export function CustomerFormDialog({
 
       onOpenChange(false)
     } catch (error) {
-      setError('root', { message: getApiError(error).message })
+      const apiError = getApiError(error)
+      const detailsMessage = formatValidationDetails(apiError.details)
+      setError('root', {
+        message: detailsMessage ? `${apiError.message}: ${detailsMessage}` : apiError.message,
+      })
     }
   })
 
@@ -160,23 +161,16 @@ export function CustomerFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="type">Tipo *</Label>
-            <select
-              id="type"
-              className="border-input bg-background flex h-9 w-full rounded-md border px-3 text-sm"
-              {...register('type')}
-            >
-              {TIPOS.map((type) => (
-                <option key={type} value={type}>
-                  {TIPO_LABELS[type]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="document">Documento / RIF</Label>
-            <Input id="document" placeholder="J-12345678-9" {...register('document')} />
+            <Label htmlFor="document">CI / RIF</Label>
+            <Input
+              id="document"
+              placeholder="J-12345678-9"
+              {...register('document')}
+              onBlur={(event) => {
+                const raw = event.target.value.trim()
+                if (raw) setValue('document', normalizeRif(raw), { shouldDirty: true })
+              }}
+            />
           </div>
 
           <div className="space-y-2">
@@ -192,26 +186,30 @@ export function CustomerFormDialog({
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="address">Dirección</Label>
-            <Input id="address" {...register('address')} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="credit_days">Días de crédito</Label>
-            <Input
-              id="credit_days"
-              type="number"
-              min={0}
-              max={365}
-              {...register('credit_days', { valueAsNumber: true })}
-            />
-            <p className="text-muted-foreground text-xs">0 = sin crédito. Aplica al facturar a crédito.</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas</Label>
-            <Textarea id="notes" rows={3} {...register('notes')} />
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 rounded border"
+                {...register('offers_credit')}
+              />
+              Tiene crédito
+            </label>
+            {offersCredit ? (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="credit_days" className="text-sm font-normal">
+                  Días
+                </Label>
+                <Input
+                  id="credit_days"
+                  type="number"
+                  min={1}
+                  max={365}
+                  className="w-20"
+                  {...register('credit_days', { valueAsNumber: true })}
+                />
+              </div>
+            ) : null}
           </div>
 
           {isEditing ? (

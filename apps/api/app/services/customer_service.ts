@@ -1,3 +1,4 @@
+import ArchivoImagenNoDisponibleException from '#exceptions/archivo_imagen_no_disponible_exception'
 import CustomerNoEncontradoException from '#exceptions/cliente_no_encontrado_exception'
 import EmailDuplicadoException from '#exceptions/email_duplicado_exception'
 import TelefonoDuplicadoException from '#exceptions/telefono_duplicado_exception'
@@ -5,13 +6,29 @@ import TelefonoInvalidoException from '#exceptions/telefono_invalido_exception'
 import Customer from '#models/customer'
 import Order from '#models/order'
 import { normalizePhoneToE164 } from '#utils/phone'
+import drive from '@adonisjs/drive/services/main'
+import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
+import { randomUUID } from 'node:crypto'
+
+const IMAGE_MIME: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+}
+
+export type CustomerImageDownload = {
+  bytes: Uint8Array
+  contentType: string
+  filename: string
+}
 
 export type CustomerInput = {
   name: string
   phone?: string | null
   email?: string | null
-  type: string
+  type?: string
   document?: string | null
   address?: string | null
   notes?: string | null
@@ -86,7 +103,10 @@ export default class CustomerService {
     const data = await this.prepareInput(input)
     await this.assertUnicos(data)
 
-    return Customer.create(data)
+    return Customer.create({
+      ...data,
+      type: input.type ?? 'CORPORATE',
+    })
   }
 
   async actualizar(id: number, input: CustomerInput): Promise<Customer> {
@@ -94,7 +114,10 @@ export default class CustomerService {
     const data = await this.prepareInput(input)
     await this.assertUnicos(data, id)
 
-    customer.merge(data)
+    customer.merge({
+      ...data,
+      ...(input.type !== undefined ? { type: input.type } : {}),
+    })
     await customer.save()
 
     return customer
@@ -115,6 +138,68 @@ export default class CustomerService {
     return { id: Number(customer.id), modo: 'hard' }
   }
 
+  async guardarImagen(customerId: number, file: MultipartFile): Promise<Customer> {
+    const customer = await this.obtener(customerId)
+    const extension = file.extname?.toLowerCase() ?? 'bin'
+    const key = `customers/${customerId}/${randomUUID()}.${extension}`
+
+    if (customer.imagePath) {
+      await drive
+        .use()
+        .delete(customer.imagePath)
+        .catch(() => undefined)
+    }
+
+    try {
+      await file.moveToDisk(key)
+    } catch {
+      throw new ArchivoImagenNoDisponibleException(
+        'No se pudo guardar la imagen del cliente. Verificá que el almacenamiento del servidor esté disponible.',
+        { status: 500 }
+      )
+    }
+
+    customer.imagePath = key
+    await customer.save()
+
+    return customer
+  }
+
+  async eliminarImagen(customerId: number): Promise<Customer> {
+    const customer = await this.obtener(customerId)
+
+    if (customer.imagePath) {
+      await drive
+        .use()
+        .delete(customer.imagePath)
+        .catch(() => undefined)
+      customer.imagePath = null
+      await customer.save()
+    }
+
+    return customer
+  }
+
+  async obtenerImagen(customerId: number): Promise<CustomerImageDownload> {
+    const customer = await this.obtener(customerId)
+
+    if (!customer.imagePath) {
+      throw new CustomerNoEncontradoException()
+    }
+
+    const exists = await drive.use().exists(customer.imagePath)
+    if (!exists) {
+      throw new CustomerNoEncontradoException()
+    }
+
+    const bytes = await drive.use().getBytes(customer.imagePath)
+    const extension = customer.imagePath.split('.').pop()?.toLowerCase() ?? 'bin'
+    const contentType = IMAGE_MIME[extension] ?? 'application/octet-stream'
+    const filename = `customer-${customer.id}.${extension}`
+
+    return { bytes, contentType, filename }
+  }
+
   private async prepareInput(input: CustomerInput) {
     let phone: string | null = input.phone?.trim() || null
 
@@ -130,7 +215,6 @@ export default class CustomerService {
       name: input.name.trim(),
       phone,
       email: input.email?.trim().toLowerCase() || null,
-      type: input.type,
       document: input.document?.trim() || null,
       address: input.address?.trim() || null,
       notes: input.notes?.trim() || null,

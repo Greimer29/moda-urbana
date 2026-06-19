@@ -117,6 +117,10 @@ function applyCsrfHeader(config: import('axios').InternalAxiosRequestConfig) {
 api.interceptors.request.use(async (config) => {
   config.baseURL = resolveApiBasePath()
 
+  if (config.data instanceof FormData) {
+    config.headers.delete('Content-Type')
+  }
+
   const method = config.method?.toUpperCase()
   if (method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
     await ensureCsrfToken()

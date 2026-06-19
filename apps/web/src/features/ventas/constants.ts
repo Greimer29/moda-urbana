@@ -37,6 +37,13 @@ export const PAYMENT_METHODS = [
 
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]['value']
 
+export const BILLING_METHODS = [
+  { value: 'FAST', label: 'Rápido' },
+  { value: 'ORDER', label: 'Pedido' },
+] as const
+
+export type BillingMethod = (typeof BILLING_METHODS)[number]['value']
+
 export function catalogImageUrl(productId: number) {
   return resolvePublicAssetUrl(`/catalog-products/${productId}/image`)
 }

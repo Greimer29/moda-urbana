@@ -41,12 +41,15 @@ export type MachineExpensesMonthSummary = {
 export type VentasDelDia = {
   productosVendidos: number
   montoProductosUsd: string
+  montoCreditoUsd: string
+  pedidosCredito: number
   gastosCantidad: number
   gastosMontoUsd: string
 }
 
 export type GananciaDelDia = {
   montoUsd: string
+  gananciaCreditoUsd: string
   porcentajeSobreVentas: number
 }
 
@@ -346,6 +349,12 @@ export default class DashboardService {
         ),
         db.raw(
           'COALESCE(SUM((order_lines.quantity - order_lines.returned_quantity) * order_lines.unit_price_usd), 0) as total_usd'
+        ),
+        db.raw(
+          `COALESCE(SUM(CASE WHEN orders.payment_type = 'CREDIT' THEN (order_lines.quantity - order_lines.returned_quantity) * order_lines.unit_price_usd ELSE 0 END), 0) as credit_usd`
+        ),
+        db.raw(
+          `COUNT(DISTINCT CASE WHEN orders.payment_type = 'CREDIT' THEN orders.id END) as pedidos_credito`
         )
       )
       .first()
@@ -355,6 +364,8 @@ export default class DashboardService {
     return {
       productosVendidos: Number(ventas?.qty ?? 0),
       montoProductosUsd: Number(ventas?.total_usd ?? 0).toFixed(4),
+      montoCreditoUsd: Number(ventas?.credit_usd ?? 0).toFixed(4),
+      pedidosCredito: Number(ventas?.pedidos_credito ?? 0),
       gastosCantidad: gastos.cantidad,
       gastosMontoUsd: gastos.montoUsd.toFixed(4),
     }
@@ -518,18 +529,28 @@ export default class DashboardService {
         ),
         db.raw(
           'COALESCE(SUM((order_lines.quantity - order_lines.returned_quantity) * order_lines.unit_price_usd), 0) as sales'
+        ),
+        db.raw(
+          `COALESCE(SUM(CASE WHEN orders.payment_type = 'CREDIT' THEN (order_lines.unit_price_usd - COALESCE(order_lines.cost_usd, catalog_products.cost_usd)) * (order_lines.quantity - order_lines.returned_quantity) ELSE 0 END), 0) as credit_profit`
+        ),
+        db.raw(
+          `COALESCE(SUM(CASE WHEN orders.payment_type = 'CREDIT' THEN (order_lines.quantity - order_lines.returned_quantity) * order_lines.unit_price_usd ELSE 0 END), 0) as credit_sales`
         )
       )
       .first()
 
     const profit = Number(row?.profit ?? 0)
     const sales = Number(row?.sales ?? 0)
+    const creditProfit = Number(row?.credit_profit ?? 0)
+    const creditSales = Number(row?.credit_sales ?? 0)
     const gastos = await this.gastosDelDia()
-    const netProfit = profit - gastos.montoUsd
-    const porcentaje = sales > 0 ? (netProfit / sales) * 100 : 0
+    const netProfit = profit - creditProfit - gastos.montoUsd
+    const ventasContado = sales - creditSales
+    const porcentaje = ventasContado > 0 ? (netProfit / ventasContado) * 100 : 0
 
     return {
       montoUsd: netProfit.toFixed(4),
+      gananciaCreditoUsd: creditProfit.toFixed(4),
       porcentajeSobreVentas: Math.round(porcentaje * 100) / 100,
     }
   }

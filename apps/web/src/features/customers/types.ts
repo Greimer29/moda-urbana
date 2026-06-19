@@ -10,6 +10,7 @@ export type Customer = {
   address: string | null
   notes: string | null
   creditDays: number | null
+  imagePath: string | null
   active: boolean
   createdAt: string
   updatedAt: string
@@ -64,7 +65,7 @@ export type CustomerInput = {
   name: string
   phone?: string
   email?: string
-  type: CustomerTipo
+  type?: CustomerTipo
   document?: string
   address?: string
   notes?: string

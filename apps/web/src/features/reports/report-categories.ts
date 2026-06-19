@@ -17,7 +17,7 @@ export const REPORT_CATEGORIES: Record<ReportMovementCategorySlug, ReportCategor
   ventas: {
     slug: 'ventas',
     title: 'Historial de ventas',
-    subtitle: 'Ingresos por ventas en el período seleccionado',
+    subtitle: 'Cobros por ventas (contado + abonos) en el período seleccionado',
     movementType: 'sale',
     apiType: 'sales',
     tone: 'income',

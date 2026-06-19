@@ -4,6 +4,7 @@ export { formatFecha }
 
 export const MOVEMENT_TYPE_LABELS = {
   sale: 'Venta',
+  customer_payment: 'Abono cliente',
   purchase: 'Compra',
   expense: 'Gasto empresa',
   machine_expense: 'Gasto máquina',

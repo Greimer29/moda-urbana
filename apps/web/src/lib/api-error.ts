@@ -42,9 +42,27 @@ export function getApiError(error: unknown): ApiErrorBody {
   }
 
   if (axios.isAxiosError(error) && (error.code === 'ERR_NETWORK' || error.message === 'Network Error')) {
+    const status = error.response?.status
+    if (status && status >= 500) {
+      return {
+        code: 'SERVER_ERROR',
+        message: 'El servidor respondió con un error al procesar la solicitud. Intentá de nuevo en unos segundos.',
+      }
+    }
+
     return {
       code: 'NETWORK_ERROR',
       message: 'No se pudo conectar con el servidor. Verificá tu conexión e intentá de nuevo.',
+    }
+  }
+
+  if (axios.isAxiosError(error) && error.response?.status && error.response.status >= 500) {
+    const payload = error.response.data as { error?: { message?: string } } | undefined
+    return {
+      code: 'SERVER_ERROR',
+      message:
+        payload?.error?.message ??
+        'El servidor respondió con un error inesperado. Intentá de nuevo en unos segundos.',
     }
   }
 
@@ -52,4 +70,28 @@ export function getApiError(error: unknown): ApiErrorBody {
     code: 'UNKNOWN_ERROR',
     message: 'Ocurrió un error inesperado. Intentá de nuevo.',
   }
+}
+
+export function formatValidationDetails(details: unknown): string | null {
+  if (!details || typeof details !== 'object') {
+    return null
+  }
+
+  const messages: string[] = []
+
+  for (const [field, value] of Object.entries(details as Record<string, unknown>)) {
+    if (typeof value === 'string') {
+      messages.push(`${field}: ${value}`)
+      continue
+    }
+
+    if (Array.isArray(value)) {
+      const text = value.filter((item): item is string => typeof item === 'string').join(', ')
+      if (text) {
+        messages.push(`${field}: ${text}`)
+      }
+    }
+  }
+
+  return messages.length > 0 ? messages.join(' · ') : null
 }

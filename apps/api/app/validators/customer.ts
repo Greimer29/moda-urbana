@@ -6,7 +6,7 @@ const customerFields = {
   name: vine.string().trim().minLength(1).maxLength(150),
   phone: vine.string().trim().maxLength(20).optional(),
   email: vine.string().trim().email().maxLength(150).optional(),
-  type: vine.enum(TIPOS_CLIENTE),
+  type: vine.enum(TIPOS_CLIENTE).optional(),
   document: vine.string().trim().maxLength(30).optional(),
   address: vine.string().trim().maxLength(255).optional(),
   notes: vine.string().trim().optional(),

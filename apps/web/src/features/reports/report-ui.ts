@@ -11,6 +11,12 @@ export const movementTheme: Record<
     badge: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
     label: 'Ingreso',
   },
+  customer_payment: {
+    bar: '#16a34a',
+    chart: '#16a34a',
+    badge: 'bg-green-50 text-green-800 border border-green-200',
+    label: 'Abono',
+  },
   purchase: {
     bar: '#0d3d2e',
     chart: '#0d3d2e',

@@ -33,6 +33,7 @@ import {
 } from '@/features/ventas/components/ventas-order-cart'
 import { useActiveCategoriesQuery } from '@/features/categories/hooks/use-categories'
 import { catalogImageUrl } from '@/features/ventas/constants'
+import type { BillingMethod } from '@/features/ventas/constants'
 import { useCatalogProductsQuery } from '@/features/ventas/hooks/use-catalog'
 import type { CatalogProduct } from '@/features/ventas/types'
 import { cartHasStockIssues } from '@/features/ventas/utils/product-stock'
@@ -66,6 +67,7 @@ function VentasCreateView() {
   const [clientName, setClientName] = useState('')
   const [customerCreditDays, setCustomerCreditDays] = useState<number | null>(null)
   const [paymentType, setPaymentType] = useState<'CASH' | 'CREDIT'>('CASH')
+  const [billingMethod, setBillingMethod] = useState<BillingMethod>('FAST')
   const [cart, setCart] = useState<CartLine[]>([])
   const [sourceOrderId, setSourceOrderId] = useState<number | null>(null)
   const [sourceOrderCode, setSourceOrderCode] = useState<string | null>(null)
@@ -331,7 +333,7 @@ function VentasCreateView() {
       }
 
       await transicionarOrder(orderId, {
-        new_status: 'DELIVERED',
+        new_status: billingMethod === 'FAST' ? 'DELIVERED' : 'CONFIRMED',
         payment_type: paymentType,
       })
 
@@ -360,6 +362,8 @@ function VentasCreateView() {
             onRemoveLine={(key) => updateCartQty(Number(key), 0)}
             onUpdateQuantity={(key, qty) => updateCartQty(Number(key), qty)}
             emptyMessage="Agregá productos desde el catálogo."
+            billingMethod={billingMethod}
+            onBillingMethodChange={setBillingMethod}
             headerAction={
               <Button
                 type="button"
@@ -482,7 +486,7 @@ function VentasCreateView() {
                 onClick={() => void confirmOrder()}
               >
                 {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
-                Confirmar venta
+                {billingMethod === 'FAST' ? 'Confirmar venta' : 'Confirmar pedido'}
               </Button>
             </div>
           </VentasOrderCart>

@@ -33,16 +33,16 @@ const navEntries: NavEntry[] = [
   },
   {
     type: 'link',
-    item: { to: '/customers', label: 'Clientes', icon: Users },
-  },
-  {
-    type: 'link',
     item: {
       to: '/ventas',
       label: 'Ventas',
       icon: Banknote,
       match: (pathname) => pathname.startsWith('/ventas'),
     },
+  },
+  {
+    type: 'link',
+    item: { to: '/customers', label: 'Clientes', icon: Users },
   },
   {
     type: 'link',
@@ -170,7 +170,7 @@ export function AppSidebar() {
           src="/logo-bn.png"
           alt=""
           aria-hidden
-          className="size-8 shrink-0 rounded-full object-contain"
+          className="size-8 shrink-0 rounded-full object-cover"
         />
         <span className="text-lg font-semibold tracking-tight">Moda Urbana</span>
       </div>

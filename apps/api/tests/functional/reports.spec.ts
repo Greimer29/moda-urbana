@@ -1,6 +1,8 @@
 import User from '#models/user'
+import Account from '#models/account'
 import CatalogProduct from '#models/catalog_product'
 import Customer from '#models/customer'
+import CustomerPayment from '#models/customer_payment'
 import Order from '#models/order'
 import OrderLine from '#models/order_line'
 import Purchase from '#models/purchase'
@@ -19,6 +21,7 @@ async function resetDatabase() {
   await db.from('purchases').delete()
   await db.from('expenses').delete()
   await db.from('machine_expenses').delete()
+  await db.from('customer_payments').delete()
   await db.from('order_lines').delete()
   await db.from('order_materials').delete()
   await db.from('orders').delete()
@@ -332,5 +335,281 @@ test.group('Reports API', (group) => {
     if (duePast < nextMonth.startOf('month')) {
       assert.exists(nextBody.data.movements.find((m) => m.amountUsd === '100.0000'))
     }
+  })
+
+  test('GET account-statement excludes credit sales from summary but lists them informatively', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente crédito reporte',
+      type: 'CORPORATE',
+      creditDays: 30,
+      active: true,
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto crédito',
+      category: 'Camisas',
+      salePriceUsd: '100.0000',
+      costUsd: '40.0000',
+      active: true,
+    })
+    const order = await Order.create({
+      code: 'PED-CRED-REP',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta a crédito',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO('2026-06-01'),
+      status: 'DELIVERED',
+      paymentType: 'CREDIT',
+      balanceUsd: '100.0000',
+      amountPaidUsd: '0.0000',
+      creditDueDate: DateTime.fromISO('2026-07-01'),
+      totalPrice: '100.0000',
+      confirmedAt: DateTime.fromISO('2026-06-01'),
+    })
+    await OrderLine.create({
+      orderId: order.id,
+      catalogProductId: product.id,
+      quantity: '1',
+      unitPriceUsd: '100.0000',
+      subtotalUsd: '100.0000',
+      returnedQuantity: '0',
+    })
+
+    const response = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: '2026-06', types: 'sales', display_currency: 'USD' })
+      .loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        movements: Array<{
+          type: string
+          isIncome: boolean
+          isCreditSale?: boolean
+          amountUsd: string
+        }>
+        summary: { sales: string }
+      }
+    }
+
+    assert.equal(body.data.summary.sales, '0.00')
+    assert.lengthOf(body.data.movements, 1)
+    assert.equal(body.data.movements[0].type, 'sale')
+    assert.equal(body.data.movements[0].isIncome, false)
+    assert.equal(body.data.movements[0].isCreditSale, true)
+    assert.equal(body.data.movements[0].amountUsd, '100.0000')
+  })
+
+  test('GET account-statement counts customer payments as sales income on payment date', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente abono reporte',
+      type: 'CORPORATE',
+      creditDays: 30,
+      active: true,
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto abono',
+      category: 'Camisas',
+      salePriceUsd: '100.0000',
+      costUsd: '40.0000',
+      active: true,
+    })
+    const order = await Order.create({
+      code: 'PED-ABONO-REP',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta a crédito con abono',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO('2026-06-01'),
+      status: 'DELIVERED',
+      paymentType: 'CREDIT',
+      balanceUsd: '60.0000',
+      amountPaidUsd: '40.0000',
+      creditDueDate: DateTime.fromISO('2026-07-01'),
+      totalPrice: '100.0000',
+      confirmedAt: DateTime.fromISO('2026-06-01'),
+    })
+    await OrderLine.create({
+      orderId: order.id,
+      catalogProductId: product.id,
+      quantity: '1',
+      unitPriceUsd: '100.0000',
+      subtotalUsd: '100.0000',
+      returnedQuantity: '0',
+    })
+    await CustomerPayment.create({
+      customerId: customer.id,
+      orderId: order.id,
+      accountId: null,
+      amountUsd: '40.0000',
+      date: DateTime.fromISO('2026-06-15'),
+      note: 'Abono parcial',
+    })
+
+    const response = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: '2026-06', types: 'sales', display_currency: 'USD' })
+      .loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        movements: Array<{ type: string; date: string; isIncome: boolean; amountUsd: string }>
+        summary: { sales: string }
+      }
+    }
+
+    assert.equal(body.data.summary.sales, '40.00')
+    const paymentMovement = body.data.movements.find((m) => m.type === 'customer_payment')
+    assert.exists(paymentMovement)
+    assert.equal(paymentMovement!.date, '2026-06-15')
+    assert.equal(paymentMovement!.isIncome, true)
+    assert.equal(paymentMovement!.amountUsd, '40.0000')
+  })
+
+  test('GET account-statement omits customer payments outside period', async ({ client, assert }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente abono fuera',
+      type: 'CORPORATE',
+      active: true,
+    })
+    await CustomerPayment.create({
+      customerId: customer.id,
+      orderId: null,
+      accountId: null,
+      amountUsd: '25.0000',
+      date: DateTime.fromISO('2026-07-05'),
+      note: 'Abono julio',
+    })
+
+    const response = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: '2026-06', types: 'sales', display_currency: 'USD' })
+      .loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        movements: Array<{ type: string }>
+        summary: { sales: string }
+      }
+    }
+
+    assert.equal(body.data.summary.sales, '0.00')
+    assert.isEmpty(body.data.movements)
+  })
+
+  test('GET account-statement filters customer payments by account', async ({ client, assert }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente cuenta',
+      type: 'CORPORATE',
+      active: true,
+    })
+    const accountA = await Account.create({ name: 'Caja A', description: null, isActive: true })
+    const accountB = await Account.create({ name: 'Caja B', description: null, isActive: true })
+
+    await CustomerPayment.create({
+      customerId: customer.id,
+      orderId: null,
+      accountId: accountA.id,
+      amountUsd: '30.0000',
+      date: DateTime.fromISO('2026-06-10'),
+    })
+    await CustomerPayment.create({
+      customerId: customer.id,
+      orderId: null,
+      accountId: accountB.id,
+      amountUsd: '20.0000',
+      date: DateTime.fromISO('2026-06-12'),
+    })
+
+    const filtered = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: '2026-06', types: 'sales', account_id: accountA.id, display_currency: 'USD' })
+      .loginAs(user)
+
+    filtered.assertStatus(200)
+    const filteredBody = filtered.body() as {
+      data: {
+        movements: Array<{ amountUsd: string }>
+        summary: { sales: string }
+      }
+    }
+
+    assert.equal(filteredBody.data.summary.sales, '30.00')
+    assert.lengthOf(filteredBody.data.movements, 1)
+    assert.equal(filteredBody.data.movements[0].amountUsd, '30.0000')
+  })
+
+  test('GET account-statement shows net credit sale amount after returns without counting as income', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente devolución crédito',
+      type: 'CORPORATE',
+      creditDays: 30,
+      active: true,
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto devuelto crédito',
+      category: 'Camisas',
+      salePriceUsd: '50.0000',
+      costUsd: '20.0000',
+      active: true,
+    })
+    const order = await Order.create({
+      code: 'PED-CRED-DEV',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Crédito con devolución',
+      totalQuantity: 2,
+      orderDate: DateTime.fromISO('2026-06-08'),
+      status: 'DELIVERED',
+      paymentType: 'CREDIT',
+      balanceUsd: '50.0000',
+      amountPaidUsd: '0.0000',
+      creditDueDate: DateTime.fromISO('2026-07-08'),
+      totalPrice: '100.0000',
+      confirmedAt: DateTime.fromISO('2026-06-08'),
+    })
+    await OrderLine.create({
+      orderId: order.id,
+      catalogProductId: product.id,
+      quantity: '2',
+      unitPriceUsd: '50.0000',
+      subtotalUsd: '100.0000',
+      returnedQuantity: '1',
+    })
+
+    const response = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: '2026-06', types: 'sales', display_currency: 'USD' })
+      .loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        movements: Array<{ isCreditSale?: boolean; amountUsd: string; isIncome: boolean }>
+        summary: { sales: string }
+      }
+    }
+
+    assert.equal(body.data.summary.sales, '0.00')
+    assert.equal(body.data.movements[0].amountUsd, '50.0000')
+    assert.equal(body.data.movements[0].isCreditSale, true)
+    assert.equal(body.data.movements[0].isIncome, false)
   })
 })

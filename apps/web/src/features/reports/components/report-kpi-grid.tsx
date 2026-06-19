@@ -60,6 +60,7 @@ export function ReportKpiGrid({ summary, filterSearch }: ReportKpiGridProps) {
       <MetricCard
         icon={ArrowUpRight}
         label="Ingresos (ventas)"
+        detail="Cobros: contado + abonos"
         value={formatUsd(summary.salesUsd)}
         tone="income"
         href={reportCategoryHref('ventas', filterSearch)}

@@ -8,6 +8,7 @@
     "build:main": "tsc -p tsconfig.json",
     "dev": "pnpm build:main && electron .",
     "predist": "node scripts/pre-dist.cjs",
+    "round-icon": "powershell -ExecutionPolicy Bypass -File scripts/round-icon.ps1",
     "dist": "pnpm build:main && electron-builder --win --config electron-builder.yml",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

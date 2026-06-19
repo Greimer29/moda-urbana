@@ -11,15 +11,17 @@ import {
   formatReportOriginalAmount,
 } from '@/features/reports/utils/format-report-amount'
 import { movementTheme, reportUi } from '@/features/reports/report-ui'
-import type { AccountStatementMovement, AccountStatementMovementType } from '@/features/reports/types'
+import type { AccountStatementMovement } from '@/features/reports/types'
 import { cn } from '@/lib/utils'
 
-function movementLink(type: AccountStatementMovementType, id: number) {
-  switch (type) {
+function movementLink(movement: AccountStatementMovement): string | null {
+  switch (movement.type) {
     case 'sale':
-      return `/ventas/${id}`
+      return `/ventas/${movement.referenceId}`
+    case 'customer_payment':
+      return movement.customerId ? `/customers/${movement.customerId}` : null
     case 'purchase':
-      return `/purchases/${id}`
+      return `/purchases/${movement.referenceId}`
     case 'machine_expense':
       return `/machines`
     default:
@@ -27,25 +29,50 @@ function movementLink(type: AccountStatementMovementType, id: number) {
   }
 }
 
-function PurchasePaymentCell({ movement }: { movement: AccountStatementMovement }) {
-  if (movement.type !== 'purchase') {
-    return <span className={reportUi.muted}>—</span>
-  }
+function PaymentTypeCell({ movement }: { movement: AccountStatementMovement }) {
+  if (movement.type === 'purchase') {
+    if (movement.isCreditPurchase) {
+      return (
+        <CreditPurchaseBadge
+          creditDueDate={movement.creditDueDate ?? null}
+          reportStatus={movement.creditReportStatus}
+        />
+      )
+    }
 
-  if (movement.isCreditPurchase) {
     return (
-      <CreditPurchaseBadge
-        creditDueDate={movement.creditDueDate ?? null}
-        reportStatus={movement.creditReportStatus}
-      />
+      <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700">
+        Contado
+      </span>
     )
   }
 
-  return (
-    <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700">
-      Contado
-    </span>
-  )
+  if (movement.type === 'sale') {
+    if (movement.isCreditSale) {
+      return (
+        <CreditPurchaseBadge
+          creditDueDate={movement.creditDueDate ?? null}
+          reportStatus={movement.creditReportStatus}
+        />
+      )
+    }
+
+    return (
+      <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700">
+        Contado
+      </span>
+    )
+  }
+
+  if (movement.type === 'customer_payment') {
+    return (
+      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+        Abono
+      </span>
+    )
+  }
+
+  return <span className={reportUi.muted}>—</span>
 }
 
 type ReportMovementsTableProps = {
@@ -93,8 +120,9 @@ export function ReportMovementsTable({
             </thead>
             <tbody>
               {movements.map((movement) => {
-                const href = movementLink(movement.type, movement.referenceId)
+                const href = movementLink(movement)
                 const theme = movementTheme[movement.type]
+                const isInformationalCreditSale = movement.type === 'sale' && movement.isCreditSale
 
                 return (
                   <tr
@@ -133,7 +161,7 @@ export function ReportMovementsTable({
                       {formatFecha(movement.date)}
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
-                      <PurchasePaymentCell movement={movement} />
+                      <PaymentTypeCell movement={movement} />
                     </td>
                     <td className={`px-5 py-4 tabular-nums whitespace-nowrap ${reportUi.body}`}>
                       {formatReportOriginalAmount(
@@ -149,11 +177,21 @@ export function ReportMovementsTable({
                       <span
                         className={cn(
                           'tabular-nums',
-                          movement.isIncome ? reportUi.income : reportUi.expense
+                          isInformationalCreditSale
+                            ? reportUi.muted
+                            : movement.isIncome
+                              ? reportUi.income
+                              : reportUi.expense
                         )}
                       >
-                        {movement.isIncome ? '+' : '−'}{' '}
-                        {formatReportDisplayAmount(movement.amountUsd, formatFromUsd)}
+                        {isInformationalCreditSale ? (
+                          formatReportDisplayAmount(movement.amountUsd, formatFromUsd)
+                        ) : (
+                          <>
+                            {movement.isIncome ? '+' : '−'}{' '}
+                            {formatReportDisplayAmount(movement.amountUsd, formatFromUsd)}
+                          </>
+                        )}
                       </span>
                     </td>
                   </tr>

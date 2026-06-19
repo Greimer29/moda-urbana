@@ -658,13 +658,209 @@ test.group('Dashboard API', (group) => {
     reportResponse.assertStatus(200)
 
     const dashboardBody = dashboardResponse.body() as {
-      data: { ventasDelDia: { montoProductosUsd: string } }
+      data: {
+        ventasDelDia: { montoProductosUsd: string; montoCreditoUsd: string }
+      }
     }
     const reportBody = reportResponse.body() as {
       data: { summary: { sales: string } }
     }
 
+    const cashSalesUsd =
+      Number(dashboardBody.data.ventasDelDia.montoProductosUsd) -
+      Number(dashboardBody.data.ventasDelDia.montoCreditoUsd)
+
     assert.equal(dashboardBody.data.ventasDelDia.montoProductosUsd, '60.0000')
+    assert.equal(reportBody.data.summary.sales, cashSalesUsd.toFixed(2))
+  })
+
+  test('GET /api/v1/dashboard/overview report sales match cash-only portion on mixed day', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const hoy = DateTime.now().toISODate()!
+    const mes = DateTime.now().toFormat('yyyy-MM')
+    const customer = await Customer.create({
+      name: 'Cliente mixto coherencia',
+      creditDays: 30,
+      active: true,
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto mixto coherencia',
+      category: 'Camisas',
+      saleUnit: 'UND',
+      salePriceUsd: '30.0000',
+      costUsd: '10.0000',
+      stockQuantity: '10.000',
+      active: true,
+    })
+
+    const cashOrder = await Order.create({
+      code: 'PED-COH-CASH',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Contado coherencia',
+      totalQuantity: 2,
+      orderDate: DateTime.fromISO(hoy),
+      status: 'DELIVERED',
+      paymentType: 'CASH',
+      amountPaidUsd: '60.0000',
+      balanceUsd: '0.0000',
+      totalPrice: '60.0000',
+      confirmedAt: DateTime.now(),
+    })
+    await OrderLine.create({
+      orderId: cashOrder.id,
+      catalogProductId: product.id,
+      quantity: '2',
+      unitPriceUsd: '30.0000',
+      subtotalUsd: '60.0000',
+      returnedQuantity: '0',
+      costUsd: '10.0000',
+    })
+
+    const creditOrder = await Order.create({
+      code: 'PED-COH-CRED',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Crédito coherencia',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO(hoy),
+      status: 'DELIVERED',
+      paymentType: 'CREDIT',
+      amountPaidUsd: '0.0000',
+      balanceUsd: '40.0000',
+      creditDueDate: DateTime.now().plus({ days: 30 }),
+      totalPrice: '40.0000',
+      confirmedAt: DateTime.now(),
+    })
+    await OrderLine.create({
+      orderId: creditOrder.id,
+      catalogProductId: product.id,
+      quantity: '1',
+      unitPriceUsd: '40.0000',
+      subtotalUsd: '40.0000',
+      returnedQuantity: '0',
+      costUsd: '10.0000',
+    })
+
+    const dashboardResponse = await client.get('/api/v1/dashboard/overview').loginAs(user)
+    dashboardResponse.assertStatus(200)
+
+    const reportResponse = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ from: hoy, to: hoy, types: 'sales', display_currency: 'USD' })
+      .loginAs(user)
+
+    reportResponse.assertStatus(200)
+
+    const dashboardBody = dashboardResponse.body() as {
+      data: {
+        ventasDelDia: { montoProductosUsd: string; montoCreditoUsd: string }
+      }
+    }
+    const reportBody = reportResponse.body() as {
+      data: { summary: { sales: string } }
+    }
+
+    assert.equal(dashboardBody.data.ventasDelDia.montoProductosUsd, '100.0000')
+    assert.equal(dashboardBody.data.ventasDelDia.montoCreditoUsd, '40.0000')
     assert.equal(reportBody.data.summary.sales, '60.00')
+  })
+
+  test('GET /api/v1/dashboard/overview separates credit sales from net profit and daily credit amount', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente crédito dashboard',
+      creditDays: 30,
+      active: true,
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto mixto dashboard',
+      category: 'Camisas',
+      saleUnit: 'UND',
+      salePriceUsd: '50.0000',
+      costUsd: '32.0000',
+      stockQuantity: '20.000',
+      active: true,
+    })
+
+    const cashOrder = await Order.create({
+      code: 'PED-CASH-DASH',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta contado',
+      totalQuantity: 1,
+      orderDate: DateTime.now(),
+      status: 'DELIVERED',
+      paymentType: 'CASH',
+      amountPaidUsd: '50.0000',
+      balanceUsd: '0.0000',
+      totalPrice: '50.0000',
+      confirmedAt: DateTime.now(),
+    })
+    await OrderLine.create({
+      orderId: cashOrder.id,
+      catalogProductId: product.id,
+      quantity: '1',
+      unitPriceUsd: '50.0000',
+      costUsd: '32.0000',
+      subtotalUsd: '50.0000',
+      returnedQuantity: '0',
+    })
+
+    const creditOrder = await Order.create({
+      code: 'PED-CRED-DASH',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta crédito',
+      totalQuantity: 1,
+      orderDate: DateTime.now(),
+      status: 'DELIVERED',
+      paymentType: 'CREDIT',
+      amountPaidUsd: '0.0000',
+      balanceUsd: '50.0000',
+      creditDueDate: DateTime.now().plus({ days: 30 }),
+      totalPrice: '50.0000',
+      confirmedAt: DateTime.now(),
+    })
+    await OrderLine.create({
+      orderId: creditOrder.id,
+      catalogProductId: product.id,
+      quantity: '1',
+      unitPriceUsd: '50.0000',
+      costUsd: '32.0000',
+      subtotalUsd: '50.0000',
+      returnedQuantity: '0',
+    })
+
+    const response = await client.get('/api/v1/dashboard/overview').loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        ventasDelDia: {
+          montoProductosUsd: string
+          montoCreditoUsd: string
+          pedidosCredito: number
+        }
+        gananciaDelDia: {
+          montoUsd: string
+          gananciaCreditoUsd: string
+          porcentajeSobreVentas: number
+        }
+      }
+    }
+
+    assert.equal(body.data.ventasDelDia.montoProductosUsd, '100.0000')
+    assert.equal(body.data.ventasDelDia.montoCreditoUsd, '50.0000')
+    assert.equal(body.data.ventasDelDia.pedidosCredito, 1)
+    assert.equal(body.data.gananciaDelDia.gananciaCreditoUsd, '18.0000')
+    assert.equal(body.data.gananciaDelDia.montoUsd, '18.0000')
+    assert.equal(body.data.gananciaDelDia.porcentajeSobreVentas, 36)
   })
 })

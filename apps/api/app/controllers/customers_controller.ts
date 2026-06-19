@@ -80,6 +80,53 @@ export default class CustomersControleler {
     })
   }
 
+  async uploadImage({ params, request, response, serialize }: HttpContext) {
+    const image = request.file('image', {
+      size: '5mb',
+      extnames: ['jpg', 'jpeg', 'png', 'webp'],
+    })
+
+    if (!image) {
+      return response.status(422).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Debe adjuntar un archivo en el campo image',
+        },
+      })
+    }
+
+    if (!image.isValid) {
+      return response.status(422).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: image.errors[0]?.message ?? 'El archivo no es válido',
+        },
+      })
+    }
+
+    const customer = await this.service.guardarImagen(Number(params.id), image)
+
+    return serialize({
+      customer: serializeCustomer(customer),
+    })
+  }
+
+  async downloadImage({ params, response }: HttpContext) {
+    const { bytes, contentType, filename } = await this.service.obtenerImagen(Number(params.id))
+    response.header('Content-Type', contentType)
+    response.header('Content-Disposition', `inline; filename="${filename}"`)
+    response.header('Cache-Control', 'public, max-age=86400')
+    return response.send(bytes)
+  }
+
+  async deleteImage({ params, serialize }: HttpContext) {
+    const customer = await this.service.eliminarImagen(Number(params.id))
+
+    return serialize({
+      customer: serializeCustomer(customer),
+    })
+  }
+
   async storePayment({ params, request, serialize }: HttpContext) {
     const payload = await request.validateUsing(createCustomerPaymentValidator)
     const payment = await this.paymentService.registrar({

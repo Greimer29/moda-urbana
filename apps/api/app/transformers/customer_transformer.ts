@@ -15,6 +15,7 @@ export default class CustomerTransformer extends BaseTransformer<Customer> {
         'address',
         'notes',
         'creditDays',
+        'imagePath',
         'createdAt',
         'updatedAt',
       ]),
