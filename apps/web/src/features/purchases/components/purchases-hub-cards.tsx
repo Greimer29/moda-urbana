@@ -118,7 +118,7 @@ function HubCard({ active, onClick, icon, title, kpis, isLoading }: HubCardProps
     >
       <Card
         className={cn(
-          'purchases-hub-card aspect-[3/2] h-full border shadow-none',
+          'purchases-hub-card aspect-[15/7] h-full border shadow-none',
           active && 'purchases-hub-card--active'
         )}
       >

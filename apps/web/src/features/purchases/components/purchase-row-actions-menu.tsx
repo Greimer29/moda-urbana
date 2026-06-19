@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useDeletePurchaseMutation, useReturnPurchaseMutation } from '@/features/purchases/hooks/use-purchases'
+import { PermissionGate } from '@/features/permissions/components/permission-gate'
 import type { Purchase } from '@/features/purchases/types'
 import { getApiError } from '@/lib/api-error'
 
@@ -59,34 +60,38 @@ export function PurchaseRowActionsMenu({ purchase, onActionComplete }: PurchaseR
     <>
       <div className="flex items-center justify-end gap-1">
         {canReturn ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            title="Devolución de compra"
-            aria-label="Devolución de compra"
-            onClick={(e) => {
-              e.stopPropagation()
-              setReturnDialogOpen(true)
-            }}
-          >
-            <RotateCcw />
-          </Button>
+          <PermissionGate permission="purchases.edit">
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Devolución de compra"
+              aria-label="Devolución de compra"
+              onClick={(e) => {
+                e.stopPropagation()
+                setReturnDialogOpen(true)
+              }}
+            >
+              <RotateCcw />
+            </Button>
+          </PermissionGate>
         ) : null}
         {canDelete ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            title="Eliminar borrador"
-            aria-label="Eliminar borrador"
-            className="text-destructive hover:text-destructive"
-            onClick={(e) => {
-              e.stopPropagation()
-              void handleDelete()
-            }}
-            disabled={deleteMutation.isPending}
-          >
-            {deleteMutation.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
-          </Button>
+          <PermissionGate permission="purchases.edit">
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Eliminar borrador"
+              aria-label="Eliminar borrador"
+              className="text-destructive hover:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation()
+                void handleDelete()
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
+            </Button>
+          </PermissionGate>
         ) : null}
       </div>
 

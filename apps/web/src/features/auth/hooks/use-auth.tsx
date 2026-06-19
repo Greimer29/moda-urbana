@@ -9,13 +9,17 @@ import {
 } from 'react'
 import axios from 'axios'
 import * as authService from '@/features/auth/services/auth-service'
+import { canAccess, type PermissionKey } from '@/features/permissions/catalog'
 import { refreshCsrfToken } from '@/lib/api'
 import type { User } from '@/types/auth'
 
 type AuthContextValue = {
   user: User | null
+  permissions: string[]
   isLoading: boolean
   isAuthenticated: boolean
+  can: (permission: PermissionKey) => boolean
+  canAny: (...permissions: PermissionKey[]) => boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -25,6 +29,18 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  const permissions = user?.permissions ?? []
+
+  const can = useCallback(
+    (permission: PermissionKey) => canAccess(user?.role, permissions, permission),
+    [permissions, user?.role]
+  )
+
+  const canAny = useCallback(
+    (...keys: PermissionKey[]) => keys.some((permission) => can(permission)),
+    [can]
+  )
 
   const loadUser = useCallback(async () => {
     try {
@@ -67,12 +83,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       user,
+      permissions,
       isLoading,
       isAuthenticated: user !== null,
+      can,
+      canAny,
       login,
       logout,
     }),
-    [user, isLoading, login, logout]
+    [user, permissions, isLoading, can, canAny, login, logout]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

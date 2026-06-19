@@ -4,6 +4,7 @@ export type User = {
   name: string
   role: string
   active: boolean
+  permissions: string[]
   createdAt: string
   updatedAt: string
 }

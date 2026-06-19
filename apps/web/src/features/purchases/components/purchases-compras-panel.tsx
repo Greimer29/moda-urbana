@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountSelect } from '@/features/accounts/components/account-select'
 import { NuevaPurchaseDialog } from '@/features/purchases/components/new-purchase-dialog'
+import { PermissionGate } from '@/features/permissions/components/permission-gate'
 import { CreditPurchaseBadge } from '@/features/purchases/components/credit-purchase-badge'
 import { PrecioBimonetario } from '@/features/purchases/components/bi-currency-price'
 import { PurchaseRowActionsMenu } from '@/features/purchases/components/purchase-row-actions-menu'
@@ -61,10 +62,12 @@ export function PurchasesComprasPanel() {
             {meta ? `${meta.total} compra${meta.total === 1 ? '' : 's'}` : 'Cargando…'}
           </CardDescription>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus />
-          Comprar
-        </Button>
+        <PermissionGate permission="purchases.edit">
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus />
+            Comprar
+          </Button>
+        </PermissionGate>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">

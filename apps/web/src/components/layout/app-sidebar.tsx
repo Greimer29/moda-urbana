@@ -8,17 +8,21 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
+  Shield,
   Truck,
   Users,
   Wrench,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { useAuth } from '@/features/auth/hooks/use-auth'
+import { canAccessNav } from '@/features/permissions/catalog'
 import { cn } from '@/lib/utils'
 
 type NavLinkItem = {
   to: string
   label: string
   icon: LucideIcon
+  navPath: string
   match?: (pathname: string) => boolean
 }
 
@@ -29,7 +33,7 @@ type NavEntry =
 const navEntries: NavEntry[] = [
   {
     type: 'link',
-    item: { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    item: { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, navPath: '/dashboard' },
   },
   {
     type: 'link',
@@ -37,16 +41,17 @@ const navEntries: NavEntry[] = [
       to: '/ventas',
       label: 'Ventas',
       icon: Banknote,
+      navPath: '/ventas',
       match: (pathname) => pathname.startsWith('/ventas'),
     },
   },
   {
     type: 'link',
-    item: { to: '/customers', label: 'Clientes', icon: Users },
+    item: { to: '/customers', label: 'Clientes', icon: Users, navPath: '/customers' },
   },
   {
     type: 'link',
-    item: { to: '/suppliers', label: 'Proveedores', icon: Truck },
+    item: { to: '/suppliers', label: 'Proveedores', icon: Truck, navPath: '/suppliers' },
   },
   {
     type: 'group',
@@ -58,6 +63,7 @@ const navEntries: NavEntry[] = [
         to: '/productos',
         label: 'Productos',
         icon: Package,
+        navPath: '/productos',
         match: (pathname) =>
           pathname === '/productos' ||
           (pathname.startsWith('/productos') && !pathname.startsWith('/productos/materiales')),
@@ -66,19 +72,21 @@ const navEntries: NavEntry[] = [
         to: '/productos/materiales',
         label: 'Materiales',
         icon: FlaskConical,
+        navPath: '/productos/materiales',
         match: (pathname) => pathname.startsWith('/productos/materiales'),
       },
       {
         to: '/machines',
         label: 'Maquinaria',
         icon: Wrench,
+        navPath: '/machines',
         match: (pathname) => pathname.startsWith('/machines'),
       },
     ],
   },
   {
     type: 'link',
-    item: { to: '/purchases', label: 'Compras', icon: ShoppingCart },
+    item: { to: '/purchases', label: 'Compras', icon: ShoppingCart, navPath: '/purchases' },
   },
   {
     type: 'link',
@@ -86,8 +94,13 @@ const navEntries: NavEntry[] = [
       to: '/reportes',
       label: 'Reportes',
       icon: BarChart3,
+      navPath: '/reportes',
       match: (pathname) => pathname.startsWith('/reportes'),
     },
+  },
+  {
+    type: 'link',
+    item: { to: '/users', label: 'Usuarios', icon: Shield, navPath: '/users' },
   },
 ]
 
@@ -163,6 +176,26 @@ function SidebarNavGroup({
 }
 
 export function AppSidebar() {
+  const { user } = useAuth()
+
+  const visibleEntries = navEntries.filter((entry) => {
+    if (entry.type === 'link') {
+      return canAccessNav(user?.role, user?.permissions, entry.item.navPath)
+    }
+
+    return entry.items.some((item) => canAccessNav(user?.role, user?.permissions, item.navPath))
+  }).map((entry) => {
+    if (entry.type === 'group') {
+      return {
+        ...entry,
+        items: entry.items.filter((item) =>
+          canAccessNav(user?.role, user?.permissions, item.navPath)
+        ),
+      }
+    }
+    return entry
+  })
+
   return (
     <aside className="bg-sidebar text-sidebar-foreground hidden h-svh w-56 shrink-0 flex-col overflow-hidden border-r md:flex">
       <div className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
@@ -175,7 +208,7 @@ export function AppSidebar() {
         <span className="text-lg font-semibold tracking-tight">Moda Urbana</span>
       </div>
       <nav className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
-        {navEntries.map((entry) => {
+        {visibleEntries.map((entry) => {
           if (entry.type === 'link') {
             return <SidebarLinkWithMatch key={entry.item.to} item={entry.item} />
           }

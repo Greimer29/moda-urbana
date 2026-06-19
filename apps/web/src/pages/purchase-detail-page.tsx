@@ -19,6 +19,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmarPurchaseDialog } from '@/features/purchases/components/confirm-purchase-dialog'
+import { PermissionGate } from '@/features/permissions/components/permission-gate'
+import { useAuth } from '@/features/auth/hooks/use-auth'
 import { PurchasePaymentFormDialog } from '@/features/purchases/components/purchase-payment-form-dialog'
 import { AccountSelect } from '@/features/accounts/components/account-select'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
@@ -131,6 +133,8 @@ function formatRateInput(value: string | number | null | undefined) {
 
 export function PurchaseDetallePage() {
   const { id } = useParams<{ id: string }>()
+  const { can } = useAuth()
+  const canEditPurchase = can('purchases.edit')
   const purchaseId = Number(id)
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -623,17 +627,21 @@ export function PurchaseDetallePage() {
 
         {isBorrador ? (
           <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => setConfirmDialogOpen(true)}
-              disabled={sinVencimientoCredito}
-            >
-              <CheckCircle2 />
-              Confirmar
-            </Button>
-            <Button variant="outline" onClick={handleDeletePurchase} disabled={deleteMutation.isPending}>
-              <Trash2 />
-              Eliminar
-            </Button>
+            <PermissionGate permission="purchases.confirm">
+              <Button
+                onClick={() => setConfirmDialogOpen(true)}
+                disabled={sinVencimientoCredito}
+              >
+                <CheckCircle2 />
+                Confirmar
+              </Button>
+            </PermissionGate>
+            <PermissionGate permission="purchases.edit">
+              <Button variant="outline" onClick={handleDeletePurchase} disabled={deleteMutation.isPending}>
+                <Trash2 />
+                Eliminar
+              </Button>
+            </PermissionGate>
           </div>
         ) : purchase.tieneFactura ? (
           <Button variant="outline" onClick={handleDownloadFactura}>
@@ -675,7 +683,7 @@ export function PurchaseDetallePage() {
                   ) : null}
                 </div>
               </div>
-              {isBorrador ? (
+              {isBorrador && canEditPurchase ? (
                 <div className="flex flex-col gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="invoice_number">Número de factura</Label>
@@ -723,7 +731,7 @@ export function PurchaseDetallePage() {
                 </div>
               )}
             </div>
-            {isBorrador ? (
+            {isBorrador && canEditPurchase ? (
                 <div className="grid gap-4 border-t pt-6 md:col-span-2 md:grid-cols-2">
                   <div className="space-y-4">
                     <AccountSelect
@@ -858,7 +866,7 @@ export function PurchaseDetallePage() {
           <div className="space-y-4 border-t pt-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="font-medium">Ítems</h3>
-              {isBorrador ? (
+              {isBorrador && canEditPurchase ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="bg-muted inline-flex rounded-lg p-1">
                     <button
@@ -970,7 +978,7 @@ export function PurchaseDetallePage() {
                       <th className="px-3 py-2 font-medium">Unidad</th>
                       <th className="px-3 py-2 font-medium">Precio unit. ($)</th>
                       <th className="px-3 py-2 font-medium">Subtotal ($)</th>
-                      {isBorrador ? (
+                      {isBorrador && canEditPurchase ? (
                         <th className="px-3 py-2 font-medium text-right">Acciones</th>
                       ) : null}
                     </tr>

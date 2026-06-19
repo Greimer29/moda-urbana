@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { useActiveCategoriesQuery } from '@/features/categories/hooks/use-categories'
 import { CatalogFormDialog } from '@/features/ventas/components/catalog-form-dialog'
 import { CatalogProductCard } from '@/features/ventas/components/catalog-product-card'
+import { PermissionGate } from '@/features/permissions/components/permission-gate'
+import { useAuth } from '@/features/auth/hooks/use-auth'
 import {
   useCatalogProductsQuery,
   useDeleteCatalogProductMutation,
@@ -18,6 +20,8 @@ const PER_PAGE = 30
 
 export function ProductosPage() {
   const navigate = useNavigate()
+  const { can } = useAuth()
+  const canEditCatalog = can('catalog.edit')
   const [page, setPage] = useState(1)
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -93,10 +97,12 @@ export function ProductosPage() {
                 Ver materiales
               </Link>
             </Button>
-            <Button onClick={openCreateDialog}>
-              <Plus />
-              Nuevo producto
-            </Button>
+            <PermissionGate permission="catalog.edit">
+              <Button onClick={openCreateDialog}>
+                <Plus />
+                Nuevo producto
+              </Button>
+            </PermissionGate>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -143,7 +149,7 @@ export function ProductosPage() {
                 <CatalogProductCard
                   key={product.id}
                   product={product}
-                  showActions
+                  showActions={canEditCatalog}
                   onEdit={openEditProduct}
                   onDelete={handleDeleteProduct}
                   onOpen={() => void navigate(`/productos/${product.id}`)}

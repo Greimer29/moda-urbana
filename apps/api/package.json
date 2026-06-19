@@ -33,6 +33,7 @@
     "#utils/*": "./app/utils/*.js",
     "#providers/*": "./providers/*.js",
     "#policies/*": "./app/policies/*.js",
+    "#permissions/*": "./app/permissions/*.js",
     "#abilities/*": "./app/abilities/*.js",
     "#database/*": "./database/*.js",
     "#tests/*": "./tests/*.js",

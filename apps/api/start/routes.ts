@@ -17,6 +17,7 @@ import CurrenciesController from '#controllers/currencies_controller'
 import ReportsController from '#controllers/reports_controller'
 import CategoriesController from '#controllers/categories_controller'
 import CsrfController from '#controllers/csrf_controller'
+import UsersController from '#controllers/users_controller'
 
 router.get('/health', [controllers.Health, 'show'])
 
@@ -172,10 +173,17 @@ router
         router.get('formulas/:id/materials', [FormulasController, 'getMaterials'])
         router.put('formulas/:id/materials', [FormulasController, 'updateMaterials'])
 
+        router.get('users', [UsersController, 'index'])
+        router.get('users/:id', [UsersController, 'show'])
+        router.post('users', [UsersController, 'store'])
+        router.put('users/:id', [UsersController, 'update'])
+        router.patch('users/:id/active', [UsersController, 'updateActive'])
+
         router.get('sales', [SalesController, 'index'])
         router.get('sales/:id', [SalesController, 'show'])
         router.post('sales', [SalesController, 'store'])
       })
       .use(middleware.auth({ guards: ['web'] }))
+      .use(middleware.permission())
   })
   .prefix('/api/v1')

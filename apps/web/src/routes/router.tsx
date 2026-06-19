@@ -24,6 +24,7 @@ import { MachinesPage } from '@/pages/machines-page'
 import { MachineDetailPage } from '@/pages/machine-detail-page'
 import { ReportsPage } from '@/pages/reports-page'
 import { ReportMovementsPage } from '@/pages/report-movements-page'
+import { UsersPage } from '@/pages/users-page'
 
 export const router = createBrowserRouter([
   {
@@ -153,6 +154,10 @@ export const router = createBrowserRouter([
       {
         path: 'reportes/movimientos/:category',
         element: <ReportMovementsPage />,
+      },
+      {
+        path: 'users',
+        element: <UsersPage />,
       },
     ],
   },

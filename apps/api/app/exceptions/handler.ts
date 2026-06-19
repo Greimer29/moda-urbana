@@ -29,9 +29,12 @@ import ArchivoFacturaFaltanteException from '#exceptions/archivo_factura_faltant
 import ArchivoFacturaNoAdjuntoException from '#exceptions/archivo_factura_no_adjunto_exception'
 import NumeroFacturaRequeridoException from '#exceptions/numero_factura_requerido_exception'
 import CustomerNoEncontradoException from '#exceptions/cliente_no_encontrado_exception'
+import EmailDuplicadoException from '#exceptions/email_duplicado_exception'
 import ClienteOInvitadoRequeridoException from '#exceptions/cliente_o_invitado_requerido_exception'
 import CounterOrderExcedidoException from '#exceptions/contador_pedido_excedido_exception'
-import EmailDuplicadoException from '#exceptions/email_duplicado_exception'
+import PermisoDenegadoException from '#exceptions/permiso_denegado_exception'
+import UltimoAdminException from '#exceptions/ultimo_admin_exception'
+import UsuarioNoEncontradoException from '#exceptions/usuario_no_encontrado_exception'
 import OrderNoCancelableException from '#exceptions/pedido_no_cancelable_exception'
 import OrderNoDevolvableException from '#exceptions/pedido_no_devolvable_exception'
 import OrderNoEditableException from '#exceptions/pedido_no_editable_exception'
@@ -146,6 +149,33 @@ export default class HttpExceptionHandler extends ExceptionHandler {
         error: {
           code: TelefonoInvalidoException.code,
           message: error.message || TelefonoInvalidoException.message,
+        },
+      })
+    }
+
+    if (error instanceof PermisoDenegadoException) {
+      return ctx.response.status(403).json({
+        error: {
+          code: PermisoDenegadoException.code,
+          message: error.message || PermisoDenegadoException.message,
+        },
+      })
+    }
+
+    if (error instanceof UsuarioNoEncontradoException) {
+      return ctx.response.status(404).json({
+        error: {
+          code: UsuarioNoEncontradoException.code,
+          message: error.message || UsuarioNoEncontradoException.message,
+        },
+      })
+    }
+
+    if (error instanceof UltimoAdminException) {
+      return ctx.response.status(422).json({
+        error: {
+          code: UltimoAdminException.code,
+          message: error.message || UltimoAdminException.message,
         },
       })
     }

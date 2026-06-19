@@ -288,13 +288,14 @@ Si `NNNN` excede 9999 en un mes (improbable en Hebra), el sistema debe lanzar ex
 | id         | bigint       | PK                           |                          |
 | email      | varchar(150) | NOT NULL, unique             |                          |
 | password   | varchar(255) | NOT NULL                     | Hash (scrypt vía Adonis) |
-| nombre     | varchar(100) | NOT NULL                     |                          |
-| rol        | enum         | NOT NULL, default 'OPERADOR' | `OPERADOR`, `ADMIN`      |
-| activo     | boolean      | NOT NULL, default true       |                          |
+| nombre     | varchar(100) | NOT NULL                     | Campo API: `name`        |
+| role       | enum         | NOT NULL, default 'OPERATOR' | `OPERATOR`, `ADMIN`      |
+| permissions| json         | NULL                         | Array de claves; solo OPERATOR |
+| activo     | boolean      | NOT NULL, default true       | Campo API: `active`      |
 | created_at | timestamp    | NOT NULL                     |                          |
 | updated_at | timestamp    | NOT NULL                     |                          |
 
-**Mes 1:** solo se crea 1 usuario manualmente (el dueño). UI de gestión de usuarios queda para más adelante.
+**Reglas:** `ADMIN` ignora `permissions`. Debe existir al menos un admin activo. UI de gestión en `/users`.
 
 ### Maquina
 

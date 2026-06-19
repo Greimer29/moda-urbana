@@ -698,7 +698,7 @@ export class SystemSettingSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['active', 'createdAt', 'email', 'id', 'name', 'password', 'role', 'updatedAt'] as const
+  static $columns = ['active', 'createdAt', 'email', 'id', 'name', 'password', 'permissions', 'role', 'updatedAt'] as const
   $columns = UserSchema.$columns
   @column()
   declare active: boolean
@@ -712,6 +712,15 @@ export class UserSchema extends BaseModel {
   declare name: string
   @column({ serializeAs: null })
   declare password: string
+  @column({
+    prepare: (value: string[] | null) => (value ? JSON.stringify(value) : null),
+    consume: (value: string | string[] | null) => {
+      if (value === null || value === undefined) return null
+      if (Array.isArray(value)) return value
+      return JSON.parse(value) as string[]
+    },
+  })
+  declare permissions: string[] | null
   @column()
   declare role: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })

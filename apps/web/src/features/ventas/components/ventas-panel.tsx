@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CustomerFormDialog } from '@/features/customers/components/customer-form-dialog'
 import type { Customer } from '@/features/customers/types'
+import { useAuth } from '@/features/auth/hooks/use-auth'
 import {
   useCreateOrderMutation,
   useCreateOrderLineMutation,
@@ -59,6 +60,9 @@ export function VentasPanel() {
 
 function VentasCreateView() {
   const navigate = useNavigate()
+  const { can } = useAuth()
+  const canConfirmSale = can('ventas.confirm')
+  const canCreditSale = can('ventas.credit')
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [category, setCategory] = useState('')
@@ -432,13 +436,13 @@ function VentasCreateView() {
                     </button>
                     <button
                       type="button"
-                      disabled={!customerId}
+                      disabled={!customerId || !canCreditSale}
                       className={cn(
                         'rounded-md px-3 py-1.5 text-xs font-medium',
                         paymentType === 'CREDIT'
                           ? 'bg-background shadow-sm'
                           : 'text-muted-foreground',
-                        !customerId && 'cursor-not-allowed opacity-50'
+                        (!customerId || !canCreditSale) && 'cursor-not-allowed opacity-50'
                       )}
                       onClick={() => setPaymentType('CREDIT')}
                     >
@@ -480,14 +484,20 @@ function VentasCreateView() {
               ) : null}
               {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
 
-              <Button
-                className="w-full"
-                disabled={isSubmitting || cart.length === 0 || stockBlocked}
-                onClick={() => void confirmOrder()}
-              >
-                {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
-                {billingMethod === 'FAST' ? 'Confirmar venta' : 'Confirmar pedido'}
-              </Button>
+              {canConfirmSale ? (
+                <Button
+                  className="w-full"
+                  disabled={isSubmitting || cart.length === 0 || stockBlocked}
+                  onClick={() => void confirmOrder()}
+                >
+                  {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {billingMethod === 'FAST' ? 'Confirmar venta' : 'Confirmar pedido'}
+                </Button>
+              ) : (
+                <p className="text-muted-foreground text-center text-sm">
+                  No tenés permiso para confirmar ventas.
+                </p>
+              )}
             </div>
           </VentasOrderCart>
         </div>
