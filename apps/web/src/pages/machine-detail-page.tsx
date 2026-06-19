@@ -102,7 +102,7 @@ export function MachineDetailPage() {
             <CardTitle className="text-base">Total gastado</CardTitle>
           </CardHeader>
           <CardContent>
-            <DisplayMoney amount={machine.totalSpent ?? '0'} currencyCode="VES" size="lg" />
+            <DisplayMoney amount={machine.totalSpent ?? '0'} currencyCode="USD" size="lg" />
           </CardContent>
         </Card>
 
@@ -130,7 +130,7 @@ export function MachineDetailPage() {
             <p>
               <span className="text-muted-foreground">Costo:</span>{' '}
               {machine.acquisitionCost ? (
-                <DisplayMoney amount={machine.acquisitionCost} currencyCode="VES" size="sm" />
+                <DisplayMoney amount={machine.acquisitionCost} currencyCode="USD" size="sm" />
               ) : (
                 '—'
               )}
@@ -203,7 +203,7 @@ export function MachineDetailPage() {
                       <td className="px-4 py-3">
                         <DisplayMoney
                           amount={expense.amount}
-                          currencyCode={expense.currencyCode ?? 'VES'}
+                          currencyCode={expense.currencyCode ?? 'USD'}
                         />
                       </td>
                       <td className="text-muted-foreground px-4 py-3">

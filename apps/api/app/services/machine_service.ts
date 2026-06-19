@@ -1,6 +1,8 @@
 import MachineNoEncontradaException from '#exceptions/maquina_no_encontrada_exception'
 import MachineExpense from '#models/machine_expense'
 import Machine from '#models/machine'
+import CurrencyService from '#services/currency_service'
+import { sumMachineExpenseRowsUsd } from '#utils/machine_expense_totals'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
@@ -122,13 +124,14 @@ export default class MachineService {
   }
 
   static async calcularTotalGastado(machineId: number): Promise<string> {
-    const result = await db
+    const currencyService = new CurrencyService()
+    const rates = await currencyService.getActiveRates()
+    const rows = await db
       .from('machine_expenses')
       .where('machine_id', machineId)
-      .sum('amount as total')
-      .first()
+      .select('amount', 'currency_code')
 
-    const total = Number(result?.total ?? 0)
+    const total = sumMachineExpenseRowsUsd(rows, rates, currencyService)
     return total.toFixed(2)
   }
 

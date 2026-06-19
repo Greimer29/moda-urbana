@@ -10,7 +10,7 @@ Guía para desplegar **API** y **MySQL** en [Railway](https://railway.com).
 |----------|--------|-------|
 | `hebra-mysql` | Railway (plugin MySQL) | Solo red interna |
 | `hebra-api` | Railway — `apps/api/Dockerfile` | URL pública de la API |
-| `hebra-web` | **Local** (`http://localhost:5173`) | No crear servicio web en Railway |
+| `hebra-web` | **Local** (`http://localhost:5174`) | No crear servicio web en Railway |
 
 El Dockerfile de la API usa **contexto = raíz del monorepo** (no cambiar el root directory del repo en Railway).
 
@@ -55,7 +55,8 @@ node ace generate:key
 | `APP_KEY` | *(output de generate:key)* |
 | `APP_URL` | URL pública de la API, ej. `https://hebra-api-production.up.railway.app` |
 | `SESSION_DRIVER` | `cookie` |
-| `FRONTEND_URL` | `http://localhost:5173` *(web en local; si usás otro puerto de Vite, ajustalo)* |
+| `FRONTEND_URL` | `http://localhost:5174` *(web en local; si usás otro puerto de Vite, ajustalo)* |
+| `DESKTOP_APP_ORIGIN` | `http://127.0.0.1:51740` *(app desktop Electron)* |
 | `DB_HOST` | `${{hebra-mysql.MYSQLHOST}}` |
 | `DB_PORT` | `${{hebra-mysql.MYSQLPORT}}` |
 | `DB_USER` | `${{hebra-mysql.MYSQLUSER}}` |
@@ -101,6 +102,19 @@ Tras adjuntar el Volume, en **Variables** del servicio `hebra-api`:
 Railway inyecta automáticamente `RAILWAY_VOLUME_MOUNT_PATH` y `RAILWAY_VOLUME_NAME`. El código usa `STORAGE_LOCAL_PATH` primero; si falta, cae en `RAILWAY_VOLUME_MOUNT_PATH` (`apps/api/app/utils/storage_path.ts`).
 
 **Redeploy obligatorio** después de adjuntar el Volume o cambiar `STORAGE_LOCAL_PATH`.
+
+#### Checklist de deploy (Moda Urbana / producción)
+
+Antes de dar por listo un deploy en Railway, verificá:
+
+| Item | Variable / recurso | Valor esperado |
+|------|-------------------|----------------|
+| Volume de adjuntos | Mount path | `/data/uploads` |
+| Ruta de storage | `STORAGE_LOCAL_PATH` | `/data/uploads` |
+| Web local (CORS) | `FRONTEND_URL` | `http://localhost:5174` *(solo la URL, sin prefijo `FRONTEND_URL=`)* |
+| App desktop (CORS) | `DESKTOP_APP_ORIGIN` | `http://127.0.0.1:51740` |
+| Health | `GET /health` | HTTP 200 |
+| Smoke opcional | `scripts/smoke-railway.ps1` | Health + preflight CORS desktop |
 
 #### Prueba manual: factura sobrevive redeploy
 

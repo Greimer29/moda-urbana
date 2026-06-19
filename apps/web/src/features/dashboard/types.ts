@@ -52,7 +52,7 @@ export type ProveedorCreditoItem = {
 export type DashboardOverview = {
   bajoStock: BajoStockItem[]
   bajoStockProductos: BajoStockProductoItem[]
-  purchasesMonth: { quantity: number; totalBs: string }
+  purchasesMonth: { quantity: number; totalUsd: string }
   machineExpensesMonth: { quantity: number; totalAmount: string }
   ventasDelDia: VentasDelDia
   gananciaDelDia: GananciaDelDia
@@ -90,4 +90,26 @@ export type DailyProductSales = {
 
 export type DailyProductSalesResponse = {
   data: DailyProductSales
+}
+
+export type DailyExpenseItem = {
+  id: number
+  kind: 'expense' | 'machine_expense'
+  description: string
+  amount_usd: string
+  machine_name: string | null
+  category: string | null
+}
+
+export type DailyExpenses = {
+  date: string
+  items: DailyExpenseItem[]
+  summary: {
+    gastos_cantidad: number
+    gastos_monto_usd: string
+  }
+}
+
+export type DailyExpensesResponse = {
+  data: DailyExpenses
 }

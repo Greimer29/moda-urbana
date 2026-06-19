@@ -11,6 +11,7 @@ import type { CostWarning } from '#types/cost_warning'
 import drive from '@adonisjs/drive/services/main'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { randomUUID } from 'node:crypto'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
 
@@ -186,16 +187,23 @@ export default class MaterialService {
   private formulaService = new FormulaService()
   private orderService = new OrderService()
   private productCodeService = new ProductCodeService()
-  async calcularStock(materialId: number): Promise<number> {
-    await this.obtener(materialId)
+  async calcularStock(materialId: number, trx?: TransactionClientContract): Promise<number> {
+    if (!trx) {
+      await this.obtener(materialId)
+    }
 
-    const result = await db
-      .from('inventory_movements')
-      .where('material_id', materialId)
-      .sum('quantity as total')
-      .first()
+    const result = trx
+      ? await InventoryMovement.query({ client: trx })
+          .where('materialId', materialId)
+          .sum('quantity as total')
+          .first()
+      : await db
+          .from('inventory_movements')
+          .where('material_id', materialId)
+          .sum('quantity as total')
+          .first()
 
-    const total = result?.total
+    const total = result?.total ?? result?.$extras?.total
     if (total === null || total === undefined) {
       return 0
     }
@@ -420,27 +428,37 @@ export default class MaterialService {
   }
 
   async ajustar(id: number, input: AjusteMaterialInput): Promise<InventoryMovement> {
-    const material = await this.obtener(id)
-    const stockActual = await this.calcularStock(Number(material.id))
-    const { delta, movementType } = resolveInventoryAdjustment(input.mode, input.quantity, stockActual)
+    return db.transaction(async (trx) => {
+      const material = await Material.query({ client: trx }).where('id', id).forUpdate().first()
 
-    if (stockActual + delta < 0) {
-      throw new StockInsuficienteException([
+      if (!material) {
+        throw new MaterialNoEncontradoException()
+      }
+
+      const stockActual = await this.calcularStock(Number(material.id), trx)
+      const { delta, movementType } = resolveInventoryAdjustment(input.mode, input.quantity, stockActual)
+
+      if (stockActual + delta < 0) {
+        throw new StockInsuficienteException([
+          {
+            material_id: Number(material.id),
+            name: material.name,
+            stock_actual: stockActual,
+            consumo_proyectado: Math.abs(delta),
+            faltante: Math.abs(stockActual + delta),
+          },
+        ])
+      }
+
+      return InventoryMovement.create(
         {
-          material_id: Number(material.id),
-          name: material.name,
-          stock_actual: stockActual,
-          consumo_proyectado: Math.abs(delta),
-          faltante: Math.abs(stockActual + delta),
+          materialId: Number(material.id),
+          type: movementType,
+          quantity: String(delta),
+          note: input.note?.trim() || null,
         },
-      ])
-    }
-
-    return InventoryMovement.create({
-      materialId: Number(material.id),
-      type: movementType,
-      quantity: String(delta),
-      note: input.note?.trim() || null,
+        { client: trx }
+      )
     })
   }
 

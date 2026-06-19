@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
+  getDailyExpenses,
   getDailyProductSales,
   getDashboardOverview,
 } from '@/features/dashboard/services/dashboard-service'
@@ -8,6 +9,7 @@ import type { DashboardChartMode } from '@/features/dashboard/types'
 export const dashboardOverviewQueryKey = ['dashboard', 'overview'] as const
 export const dashboardQueryKey = ['dashboard'] as const
 export const dailyProductSalesQueryKey = ['dashboard', 'daily-product-sales'] as const
+export const dailyExpensesQueryKey = ['dashboard', 'daily-expenses'] as const
 
 export function useDashboardOverviewQuery(chart: DashboardChartMode = 'weekly') {
   return useQuery({
@@ -20,5 +22,12 @@ export function useDailyProductSalesQuery() {
   return useQuery({
     queryKey: dailyProductSalesQueryKey,
     queryFn: () => getDailyProductSales(),
+  })
+}
+
+export function useDailyExpensesQuery() {
+  return useQuery({
+    queryKey: dailyExpensesQueryKey,
+    queryFn: () => getDailyExpenses(),
   })
 }

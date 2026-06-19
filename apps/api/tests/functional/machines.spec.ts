@@ -1,3 +1,5 @@
+import { MONETARY_REGISTRATION_USD_MESSAGE } from '#exceptions/moneda_registro_usd_requerida_exception'
+import Currency from '#models/currency'
 import MachineExpense from '#models/machine_expense'
 import Machine from '#models/machine'
 import Supplier from '#models/supplier'
@@ -107,6 +109,40 @@ test.group('Machines API', (group) => {
     assert.equal(total, '200.00')
   })
 
+  test('MachineService.calcularTotalGastado converts legacy VES expenses to USD', async ({
+    assert,
+  }) => {
+    await Currency.query().where('code', 'VES').update({ ratePerUsd: '40.0000' })
+
+    const machine = await Machine.create({
+      name: 'Overlock mixta',
+      type: 'OVERLOCK',
+      status: 'OPERATIONAL',
+      active: true,
+    })
+
+    await MachineExpense.create({
+      machineId: machine.id,
+      date: DateTime.fromISO('2026-05-01'),
+      category: 'REPAIR',
+      description: 'Repuesto en Bs',
+      amount: '400.00',
+      currencyCode: 'VES',
+    })
+
+    await MachineExpense.create({
+      machineId: machine.id,
+      date: DateTime.fromISO('2026-05-02'),
+      category: 'SUPPLY',
+      description: 'Aceite USD',
+      amount: '50.00',
+      currencyCode: 'USD',
+    })
+
+    const total = await MachineService.calcularTotalGastado(Number(machine.id))
+    assert.equal(total, '60.00')
+  })
+
   test('GET /api/v1/machines/:id returns total_spent and expenses', async ({ client }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const machine = await Machine.create({
@@ -170,6 +206,37 @@ test.group('Machines API', (group) => {
           amount: '500.00',
           category: 'REPAIR',
         },
+      },
+    })
+  })
+
+  test('POST /api/v1/machines/:id/expenses rejects VES currency with USD registration message', async ({
+    client,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const machine = await Machine.create({
+      name: 'Collaretera VES',
+      type: 'COVERSTITCH',
+      status: 'OPERATIONAL',
+      active: true,
+    })
+
+    const response = await client
+      .post(`/api/v1/machines/${machine.id}/expenses`)
+      .loginAs(user)
+      .json({
+        date: '2026-05-12',
+        category: 'REPAIR',
+        description: 'Motor',
+        amount: 500,
+        currency_code: 'VES',
+      })
+
+    response.assertStatus(422)
+    response.assertBodyContains({
+      error: {
+        code: 'MONEDA_REGISTRO_USD_REQUERIDA',
+        message: MONETARY_REGISTRATION_USD_MESSAGE,
       },
     })
   })

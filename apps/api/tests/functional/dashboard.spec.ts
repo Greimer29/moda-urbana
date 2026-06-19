@@ -10,6 +10,7 @@ import Customer from '#models/customer'
 import CatalogProduct from '#models/catalog_product'
 import Order from '#models/order'
 import OrderLine from '#models/order_line'
+import Currency from '#models/currency'
 import testUtils from '@adonisjs/core/services/test_utils'
 import { resetTestDatabase } from '#tests/helpers/reset_test_database'
 import { DateTime } from 'luxon'
@@ -56,7 +57,7 @@ test.group('Dashboard API', (group) => {
         bajoStock: [],
         purchasesMonth: {
           quantity: 0,
-          totalBs: '0.00',
+          totalUsd: '0.00',
         },
         machineExpensesMonth: {
           quantity: 0,
@@ -111,6 +112,7 @@ test.group('Dashboard API', (group) => {
       date: DateTime.fromISO(mesActual),
       invoiceNumber: 'F-100',
       totalBs: '1500.50',
+      totalUsd: '1500.50',
       status: 'CONFIRMED',
     })
     await Purchase.create({
@@ -118,6 +120,7 @@ test.group('Dashboard API', (group) => {
       date: DateTime.fromISO(mesActual),
       invoiceNumber: 'F-101',
       totalBs: '500.00',
+      totalUsd: '500.00',
       status: 'CONFIRMED',
     })
     await Purchase.create({
@@ -138,7 +141,7 @@ test.group('Dashboard API', (group) => {
 
     response.assertStatus(200)
     assert.equal(response.body().data.purchasesMonth.quantity, 2)
-    assert.equal(response.body().data.purchasesMonth.totalBs, '2000.50')
+    assert.equal(response.body().data.purchasesMonth.totalUsd, '2000.50')
   })
 
   test('GET /api/v1/dashboard/summary sums machine expenses of current month', async ({
@@ -160,6 +163,7 @@ test.group('Dashboard API', (group) => {
       category: 'REPAIR',
       description: 'Needles replacement',
       amount: '150.50',
+      currencyCode: 'USD',
     })
     await MachineExpense.create({
       machineId: Number(machine.id),
@@ -167,6 +171,7 @@ test.group('Dashboard API', (group) => {
       category: 'SUPPLY',
       description: 'Machine oil',
       amount: '49.50',
+      currencyCode: 'USD',
     })
     await MachineExpense.create({
       machineId: Number(machine.id),
@@ -297,6 +302,7 @@ test.group('Dashboard API', (group) => {
       category: 'REPAIR',
       description: 'Repuesto',
       amount: '6.0000',
+      currencyCode: 'USD',
     })
 
     const response = await client.get('/api/v1/dashboard/overview').loginAs(user)
@@ -312,5 +318,274 @@ test.group('Dashboard API', (group) => {
     assert.equal(body.data.ventasDelDia.gastosMontoUsd, '10.0000')
     assert.equal(body.data.gananciaDelDia.montoUsd, '4.0000')
     assert.equal(body.data.gananciaDelDia.porcentajeSobreVentas, 16.67)
+  })
+
+  test('GET /api/v1/dashboard/daily-expenses returns expenses for today', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const hoy = DateTime.now().toISODate()!
+
+    await Expense.create({
+      date: DateTime.fromISO(hoy),
+      description: 'Transporte',
+      amountUsd: '4.0000',
+      currencyCode: 'USD',
+    })
+
+    const machine = await Machine.create({
+      name: 'Overlock gastos',
+      type: 'OVERLOCK',
+      status: 'OPERATIONAL',
+      active: true,
+    })
+    await MachineExpense.create({
+      machineId: Number(machine.id),
+      date: DateTime.fromISO(hoy),
+      category: 'REPAIR',
+      description: 'Repuesto',
+      amount: '6.0000',
+      currencyCode: 'USD',
+    })
+
+    const response = await client.get('/api/v1/dashboard/daily-expenses').loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        items: Array<{ kind: string; description: string; amount_usd: string }>
+        summary: { gastos_cantidad: number; gastos_monto_usd: string }
+      }
+    }
+
+    assert.equal(body.data.summary.gastos_cantidad, 2)
+    assert.equal(body.data.summary.gastos_monto_usd, '10.0000')
+    assert.lengthOf(body.data.items, 2)
+  })
+
+  test('GET /api/v1/dashboard/overview converts machine expenses in VES to USD', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const hoy = DateTime.now().toISODate()!
+
+    await Currency.query().where('code', 'VES').update({ ratePerUsd: '40.0000' })
+
+    const machine = await Machine.create({
+      name: 'Overlock VES',
+      type: 'OVERLOCK',
+      status: 'OPERATIONAL',
+      active: true,
+    })
+    await MachineExpense.create({
+      machineId: Number(machine.id),
+      date: DateTime.fromISO(hoy),
+      category: 'REPAIR',
+      description: 'Repuesto en bolívares',
+      amount: '4000.0000',
+      currencyCode: 'VES',
+    })
+
+    const response = await client.get('/api/v1/dashboard/overview').loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        ventasDelDia: { gastosMontoUsd: string }
+        machineExpensesMonth: { totalAmount: string }
+      }
+    }
+
+    assert.equal(body.data.ventasDelDia.gastosMontoUsd, '100.0000')
+    assert.equal(body.data.machineExpensesMonth.totalAmount, '100.00')
+  })
+
+  test('GET /api/v1/dashboard/overview uses order_date for sales of the day', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const hoy = DateTime.now().toISODate()!
+    const ayer = DateTime.now().minus({ days: 1 }).toISODate()!
+    const customer = await Customer.create({ name: 'Cliente Fecha', active: true })
+    const product = await CatalogProduct.create({
+      name: 'Producto fecha venta',
+      category: 'Camisas',
+      saleUnit: 'UND',
+      salePriceUsd: '10.0000',
+      costUsd: '4.0000',
+      stockQuantity: '5.000',
+      active: true,
+    })
+
+    const orderHoy = await Order.create({
+      code: 'PED-FECHA-HOY',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta por order_date hoy',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO(hoy),
+      status: 'DELIVERED',
+      totalPrice: '10.0000',
+      confirmedAt: DateTime.now().minus({ days: 2 }),
+    })
+    await OrderLine.create({
+      orderId: orderHoy.id,
+      catalogProductId: product.id,
+      quantity: '1',
+      unitPriceUsd: '10.0000',
+      subtotalUsd: '10.0000',
+      returnedQuantity: '0',
+      costUsd: '4.0000',
+    })
+
+    const orderAyer = await Order.create({
+      code: 'PED-FECHA-AYER',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta por order_date ayer',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO(ayer),
+      status: 'DELIVERED',
+      totalPrice: '10.0000',
+      confirmedAt: DateTime.now(),
+    })
+    await OrderLine.create({
+      orderId: orderAyer.id,
+      catalogProductId: product.id,
+      quantity: '1',
+      unitPriceUsd: '10.0000',
+      subtotalUsd: '10.0000',
+      returnedQuantity: '0',
+      costUsd: '4.0000',
+    })
+
+    const response = await client.get('/api/v1/dashboard/overview').loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        ventasDelDia: { productosVendidos: number; montoProductosUsd: string }
+        gananciaDelDia: { montoUsd: string }
+      }
+    }
+
+    assert.equal(body.data.ventasDelDia.productosVendidos, 1)
+    assert.equal(body.data.ventasDelDia.montoProductosUsd, '10.0000')
+    assert.equal(body.data.gananciaDelDia.montoUsd, '6.0000')
+  })
+
+  test('GET /api/v1/dashboard/overview uses frozen line cost for ganancia del dia', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const hoy = DateTime.now().toISODate()!
+    const customer = await Customer.create({ name: 'Cliente Costo', active: true })
+    const product = await CatalogProduct.create({
+      name: 'Producto costo congelado',
+      category: 'Camisas',
+      saleUnit: 'UND',
+      salePriceUsd: '20.0000',
+      costUsd: '5.0000',
+      stockQuantity: '5.000',
+      active: true,
+    })
+
+    const order = await Order.create({
+      code: 'PED-COSTO-1',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta con costo histórico',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO(hoy),
+      status: 'DELIVERED',
+      totalPrice: '20.0000',
+      confirmedAt: DateTime.now(),
+    })
+    await OrderLine.create({
+      orderId: order.id,
+      catalogProductId: product.id,
+      quantity: '1',
+      unitPriceUsd: '20.0000',
+      subtotalUsd: '20.0000',
+      returnedQuantity: '0',
+      costUsd: '5.0000',
+    })
+
+    product.costUsd = '12.0000'
+    await product.save()
+
+    const response = await client.get('/api/v1/dashboard/overview').loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: { gananciaDelDia: { montoUsd: string } }
+    }
+
+    assert.equal(body.data.gananciaDelDia.montoUsd, '15.0000')
+  })
+
+  test('GET /api/v1/dashboard/overview matches report sales for same order_date', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const hoy = DateTime.now().toISODate()!
+    const mes = DateTime.now().toFormat('yyyy-MM')
+    const customer = await Customer.create({ name: 'Cliente coherencia', active: true })
+    const product = await CatalogProduct.create({
+      name: 'Producto coherencia reporte',
+      category: 'Camisas',
+      saleUnit: 'UND',
+      salePriceUsd: '30.0000',
+      costUsd: '10.0000',
+      stockQuantity: '5.000',
+      active: true,
+    })
+
+    await Order.create({
+      code: 'PED-COH-1',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta coherencia',
+      totalQuantity: 2,
+      orderDate: DateTime.fromISO(hoy),
+      status: 'DELIVERED',
+      totalPrice: '60.0000',
+      confirmedAt: DateTime.now().minus({ days: 3 }),
+    }).then(async (order) => {
+      await OrderLine.create({
+        orderId: order.id,
+        catalogProductId: product.id,
+        quantity: '2',
+        unitPriceUsd: '30.0000',
+        subtotalUsd: '60.0000',
+        returnedQuantity: '0',
+        costUsd: '10.0000',
+      })
+    })
+
+    const dashboardResponse = await client.get('/api/v1/dashboard/overview').loginAs(user)
+    dashboardResponse.assertStatus(200)
+
+    const reportResponse = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: mes, types: 'sales', display_currency: 'USD' })
+      .loginAs(user)
+
+    reportResponse.assertStatus(200)
+
+    const dashboardBody = dashboardResponse.body() as {
+      data: { ventasDelDia: { montoProductosUsd: string } }
+    }
+    const reportBody = reportResponse.body() as {
+      data: { summary: { sales: string } }
+    }
+
+    assert.equal(dashboardBody.data.ventasDelDia.montoProductosUsd, '60.0000')
+    assert.equal(reportBody.data.summary.sales, '60.00')
   })
 })

@@ -1,7 +1,13 @@
 import MaterialService from '#services/material_service'
+import CurrencyService from '#services/currency_service'
 import CatalogProduct from '#models/catalog_product'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
+import {
+  creditPurchaseVisibleInReport,
+  type CreditPurchaseReportContext,
+} from '#utils/credit_purchase_report'
+import { sumMachineExpenseRowsUsd } from '#utils/machine_expense_totals'
 
 export type BajoStockItem = {
   id: number
@@ -23,7 +29,7 @@ export type BajoStockProductoItem = {
 
 export type PurchasesMonthSummary = {
   quantity: number
-  totalBs: string
+  totalUsd: string
 }
 
 export type MachineExpensesMonthSummary = {
@@ -85,6 +91,24 @@ export type DailyProductSalesResult = {
   }
 }
 
+export type DailyExpenseItem = {
+  id: number
+  kind: 'expense' | 'machine_expense'
+  description: string
+  amountUsd: string
+  machineName: string | null
+  category: string | null
+}
+
+export type DailyExpensesResult = {
+  date: string
+  items: DailyExpenseItem[]
+  summary: {
+    gastosCantidad: number
+    gastosMontoUsd: string
+  }
+}
+
 export type DashboardOverview = {
   bajoStock: BajoStockItem[]
   bajoStockProductos: BajoStockProductoItem[]
@@ -101,6 +125,14 @@ const SALE_STATUSES = ['CONFIRMED', 'IN_PRODUCTION', 'DELIVERED'] as const
 
 export default class DashboardService {
   private materialService = new MaterialService()
+  private currencyService = new CurrencyService()
+
+  private sumMachineExpensesUsd(
+    rows: Array<{ amount: string | number; currency_code?: string | null }>,
+    rates: Record<string, number>
+  ): number {
+    return sumMachineExpenseRowsUsd(rows, rates, this.currencyService)
+  }
 
   async overview(chart: 'weekly' | 'monthly' = 'weekly'): Promise<DashboardOverview> {
     const [
@@ -181,61 +213,99 @@ export default class DashboardService {
   private async comprasDelMes(): Promise<PurchasesMonthSummary> {
     const inicioMes = DateTime.now().startOf('month').toISODate()!
     const finMes = DateTime.now().endOf('month').toISODate()!
-    const hoy = DateTime.now().toISODate()!
+    const period = { from: inicioMes, to: finMes }
 
-    const stats = await db
+    const purchases = await db
       .from('purchases')
       .where('status', 'CONFIRMED')
-      .where((builder) => {
-        builder
-          .where((cashBuilder) => {
-            cashBuilder
-              .where('is_credit', false)
-              .where('date', '>=', inicioMes)
-              .where('date', '<=', finMes)
-          })
-          .orWhere((creditBuilder) => {
-            creditBuilder
-              .where('is_credit', true)
-              .whereNotNull('credit_due_date')
-              .where('credit_due_date', '>=', inicioMes)
-              .where('credit_due_date', '<=', finMes)
-              .where('credit_due_date', '<=', hoy)
-          })
-      })
-      .select(db.raw('COALESCE(SUM(total_bs), 0) as total_bs'), db.raw('COUNT(*) as quantity'))
-      .first()
+      .select(
+        'id',
+        'date',
+        'is_credit',
+        'credit_due_date',
+        'balance_usd',
+        'total_usd',
+        'total_usd_snapshot',
+        'total_bs',
+        'usd_rate'
+      )
+
+    let quantity = 0
+    let totalUsd = 0
+
+    for (const purchase of purchases) {
+      const purchaseDate =
+        purchase.date instanceof Date
+          ? DateTime.fromJSDate(purchase.date).toISODate()!
+          : String(purchase.date).slice(0, 10)
+      const creditDueDate = purchase.credit_due_date
+        ? purchase.credit_due_date instanceof Date
+          ? DateTime.fromJSDate(purchase.credit_due_date).toISODate()!
+          : String(purchase.credit_due_date).slice(0, 10)
+        : null
+
+      const reportContext: CreditPurchaseReportContext = {
+        isCredit: Boolean(purchase.is_credit),
+        purchaseDate,
+        creditDueDate,
+        balanceUsd: Number(purchase.balance_usd ?? 0),
+      }
+
+      if (!creditPurchaseVisibleInReport(reportContext, period)) {
+        continue
+      }
+
+      quantity += 1
+      totalUsd += this.resolvePurchaseTotalUsd(purchase)
+    }
 
     return {
-      quantity: Number(stats?.quantity ?? 0),
-      totalBs: Number(stats?.total_bs ?? 0).toFixed(2),
+      quantity,
+      totalUsd: totalUsd.toFixed(2),
     }
+  }
+
+  private resolvePurchaseTotalUsd(purchase: {
+    total_usd?: string | null
+    total_usd_snapshot?: string | null
+    total_bs?: string | null
+    usd_rate?: string | null
+  }): number {
+    if (purchase.total_usd) {
+      return Number(purchase.total_usd)
+    }
+    if (purchase.total_usd_snapshot) {
+      return Number(purchase.total_usd_snapshot)
+    }
+    const rate = purchase.usd_rate ? Number(purchase.usd_rate) : null
+    if (rate && rate > 0) {
+      return Number(purchase.total_bs ?? 0) / rate
+    }
+    return 0
   }
 
   private async gastosMaquinasDelMes(): Promise<MachineExpensesMonthSummary> {
     const inicioMes = DateTime.now().startOf('month').toISODate()!
     const finMes = DateTime.now().endOf('month').toISODate()!
+    const rates = await this.currencyService.getActiveRates()
 
-    const machineExpenses = await db
+    const machineRows = await db
       .from('machine_expenses')
       .where('date', '>=', inicioMes)
       .where('date', '<=', finMes)
-      .select(db.raw('COALESCE(SUM(amount), 0) as total_amount'), db.raw('COUNT(*) as quantity'))
-      .first()
+      .select('amount', 'currency_code')
+
+    const totalAmount = this.sumMachineExpensesUsd(machineRows, rates)
 
     return {
-      quantity: Number(machineExpenses?.quantity ?? 0),
-      totalAmount: Number(machineExpenses?.total_amount ?? 0).toFixed(2),
+      quantity: machineRows.length,
+      totalAmount: totalAmount.toFixed(2),
     }
-  }
-
-  private todayRange() {
-    const hoy = DateTime.now().toISODate()!
-    return { desde: `${hoy} 00:00:00`, hasta: `${hoy} 23:59:59` }
   }
 
   private async gastosDelDia(): Promise<{ cantidad: number; montoUsd: number }> {
     const hoy = DateTime.now().toISODate()!
+    const rates = await this.currencyService.getActiveRates()
 
     const expenses = await db
       .from('expenses')
@@ -246,27 +316,28 @@ export default class DashboardService {
       )
       .first()
 
-    const machine = await db
+    const machineRows = await db
       .from('machine_expenses')
       .where('date', hoy)
-      .select(db.raw('COUNT(*) as qty'), db.raw('COALESCE(SUM(amount), 0) as total_amount'))
-      .first()
+      .select('amount', 'currency_code')
+
+    const machineUsd = this.sumMachineExpensesUsd(machineRows, rates)
 
     return {
-      cantidad: Number(expenses?.qty ?? 0) + Number(machine?.qty ?? 0),
-      montoUsd: Number(expenses?.total_usd ?? 0) + Number(machine?.total_amount ?? 0),
+      cantidad: Number(expenses?.qty ?? 0) + machineRows.length,
+      montoUsd: Number(expenses?.total_usd ?? 0) + machineUsd,
     }
   }
 
+  /** Ventas del dashboard usan order_date (mismo criterio que reportes), no confirmed_at. */
   private async ventasDelDia(): Promise<VentasDelDia> {
-    const { desde, hasta } = this.todayRange()
+    const hoy = DateTime.now().toISODate()!
 
     const ventas = await db
       .from('orders')
       .join('order_lines', 'order_lines.order_id', 'orders.id')
       .whereIn('orders.status', [...SALE_STATUSES])
-      .whereNotNull('orders.confirmed_at')
-      .whereBetween('orders.confirmed_at', [desde, hasta])
+      .where('orders.order_date', hoy)
       .select(
         db.raw(
           'COALESCE(SUM(order_lines.quantity - order_lines.returned_quantity), 0) as qty'
@@ -289,15 +360,13 @@ export default class DashboardService {
 
   async productosVendidosDelDia(): Promise<DailyProductSalesResult> {
     const hoy = DateTime.now().toISODate()!
-    const { desde, hasta } = this.todayRange()
 
     const rows = await db
       .from('orders')
       .join('order_lines', 'order_lines.order_id', 'orders.id')
       .join('catalog_products', 'catalog_products.id', 'order_lines.catalog_product_id')
       .whereIn('orders.status', [...SALE_STATUSES])
-      .whereNotNull('orders.confirmed_at')
-      .whereBetween('orders.confirmed_at', [desde, hasta])
+      .where('orders.order_date', hoy)
       .whereNotNull('order_lines.catalog_product_id')
       .groupBy(
         'catalog_products.id',
@@ -354,19 +423,82 @@ export default class DashboardService {
     }
   }
 
+  async gastosDelDiaDetalle(): Promise<DailyExpensesResult> {
+    const hoy = DateTime.now().toISODate()!
+    const rates = await this.currencyService.getActiveRates()
+
+    const expenseRows = await db
+      .from('expenses')
+      .where('date', hoy)
+      .select('id', 'description', 'amount_usd as amountUsd')
+      .orderBy('amount_usd', 'desc')
+
+    const machineRows = await db
+      .from('machine_expenses')
+      .join('machines', 'machines.id', 'machine_expenses.machine_id')
+      .where('machine_expenses.date', hoy)
+      .select(
+        'machine_expenses.id',
+        'machine_expenses.description',
+        'machine_expenses.amount',
+        'machine_expenses.currency_code as currencyCode',
+        'machine_expenses.category',
+        'machines.name as machineName'
+      )
+      .orderBy('machine_expenses.amount', 'desc')
+
+    const items: DailyExpenseItem[] = [
+      ...expenseRows.map((row) => ({
+        id: Number(row.id),
+        kind: 'expense' as const,
+        description: String(row.description),
+        amountUsd: Number(row.amountUsd ?? 0).toFixed(4),
+        machineName: null,
+        category: null,
+      })),
+      ...machineRows.map((row) => {
+        const currencyCode = row.currencyCode ? String(row.currencyCode) : 'USD'
+        const amountUsd = this.currencyService.toUsd(
+          Number(row.amount ?? 0),
+          currencyCode,
+          rates
+        )
+
+        return {
+          id: Number(row.id),
+          kind: 'machine_expense' as const,
+          description: String(row.description),
+          amountUsd: amountUsd.toFixed(4),
+          machineName: row.machineName ? String(row.machineName) : null,
+          category: row.category ? String(row.category) : null,
+        }
+      }),
+    ].sort((a, b) => Number(b.amountUsd) - Number(a.amountUsd))
+
+    const summary = await this.gastosDelDia()
+
+    return {
+      date: hoy,
+      items,
+      summary: {
+        gastosCantidad: summary.cantidad,
+        gastosMontoUsd: summary.montoUsd.toFixed(4),
+      },
+    }
+  }
+
   private async gananciaDelDia(): Promise<GananciaDelDia> {
-    const { desde, hasta } = this.todayRange()
+    const hoy = DateTime.now().toISODate()!
 
     const row = await db
       .from('orders')
       .join('order_lines', 'order_lines.order_id', 'orders.id')
       .join('catalog_products', 'catalog_products.id', 'order_lines.catalog_product_id')
       .whereIn('orders.status', [...SALE_STATUSES])
-      .whereNotNull('orders.confirmed_at')
-      .whereBetween('orders.confirmed_at', [desde, hasta])
+      .where('orders.order_date', hoy)
       .select(
         db.raw(
-          'COALESCE(SUM((order_lines.unit_price_usd - catalog_products.cost_usd) * (order_lines.quantity - order_lines.returned_quantity)), 0) as profit'
+          'COALESCE(SUM((order_lines.unit_price_usd - COALESCE(order_lines.cost_usd, catalog_products.cost_usd)) * (order_lines.quantity - order_lines.returned_quantity)), 0) as profit'
         ),
         db.raw(
           'COALESCE(SUM((order_lines.quantity - order_lines.returned_quantity) * order_lines.unit_price_usd), 0) as sales'
@@ -420,9 +552,8 @@ export default class DashboardService {
         .from('orders')
         .join('order_lines', 'order_lines.order_id', 'orders.id')
         .whereIn('orders.status', [...SALE_STATUSES])
-        .whereNotNull('orders.confirmed_at')
-        .where('orders.confirmed_at', '>=', `${bucket.desde} 00:00:00`)
-        .where('orders.confirmed_at', '<=', `${bucket.hasta} 23:59:59`)
+        .where('orders.order_date', '>=', bucket.desde)
+        .where('orders.order_date', '<=', bucket.hasta)
         .select(
           db.raw(
             'COALESCE(SUM((order_lines.quantity - order_lines.returned_quantity) * order_lines.unit_price_usd), 0) as total_usd'

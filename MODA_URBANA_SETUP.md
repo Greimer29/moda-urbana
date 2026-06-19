@@ -45,13 +45,13 @@ Login: `admin@modaurbana.local` (contraseña en `apps/api/.env`).
 4. Volume `/data/uploads` + `STORAGE_LOCAL_PATH=/data/uploads`.
 5. Variables: `APP_KEY`, `FRONTEND_URL=http://localhost:5174`, `DESKTOP_APP_ORIGIN=http://127.0.0.1:51740`, `ADMIN_*`, `DB_*` referenciando MySQL.
 6. Tras el deploy: seed manual → `railway ssh -- node ace db:seed`
-7. Web local: `VITE_API_URL=https://moda-urbana-production.up.railway.app`
+7. **Desarrollo y pruebas:** usá API local (`VITE_API_URL=http://localhost:3334` en `apps/web/.env.production`). No apuntes el frontend a Railway salvo smoke puntual de prod.
 
 Ver `docs/RAILWAY_DEPLOY.md` (misma arquitectura; renombrá servicios `hebra-*` → `moda-urbana-*`).
 
 ## App de escritorio (Windows)
 
-Instalable `.exe` con Electron que empaqueta el frontend y se conecta a la API pública en Railway.
+Instalable `.exe` con Electron. Por defecto apunta a la **API local** (`http://localhost:3334`); la API pública de Railway solo se usa si configurás `api-url.json` o `MODA_URBANA_API_URL` al distribuir el instalador.
 
 ### Requisitos
 
@@ -68,6 +68,14 @@ pnpm build:desktop
 ```
 
 El instalador queda en `apps/desktop/release/Moda Urbana Setup 1.0.0.exe`.
+
+Opcional: colocá `api-url.json` junto al `.exe` para apuntar a Railway en producción (sin recompilar):
+
+```json
+{ "apiUrl": "http://localhost:3334" }
+```
+
+Por defecto (repo y build local): `http://localhost:3334`. Para distribución contra Railway, cambiá solo ese archivo junto al instalador.
 
 ### CORS en Railway (obligatorio para login en desktop)
 

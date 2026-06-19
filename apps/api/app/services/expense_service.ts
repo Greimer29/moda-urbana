@@ -2,6 +2,7 @@ import ExpenseNoEncontradoException from '#exceptions/gasto_no_encontrado_except
 import Expense from '#models/expense'
 import AccountService from '#services/account_service'
 import CurrencyService from '#services/currency_service'
+import { assertRegistroMonedaUsd } from '#utils/monetary_registration'
 import { DateTime } from 'luxon'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
 import type { ExpenseValidatorPayload } from '#validators/expense'
@@ -60,6 +61,7 @@ export default class ExpenseService {
   async crear(input: ExpenseInput): Promise<Expense> {
     const amount = resolveExpenseAmount(input)
     const currencyCode = (input.currency_code ?? 'USD').toUpperCase()
+    assertRegistroMonedaUsd(currencyCode)
     await this.currencyService.assertActiva(currencyCode)
     const accountId = await this.resolveAccountId(input.account_id)
 
@@ -76,6 +78,7 @@ export default class ExpenseService {
     const expense = await this.obtener(id)
     const amount = resolveExpenseAmount(input)
     const currencyCode = (input.currency_code ?? expense.currencyCode ?? 'USD').toUpperCase()
+    assertRegistroMonedaUsd(currencyCode)
     await this.currencyService.assertActiva(currencyCode)
     const accountId = await this.resolveAccountId(input.account_id)
 

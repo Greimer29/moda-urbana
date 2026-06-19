@@ -1,5 +1,10 @@
+import { MONETARY_REGISTRATION_USD_MESSAGE } from '#exceptions/moneda_registro_usd_requerida_exception'
 import User from '#models/user'
+import Currency from '#models/currency'
+import Machine from '#models/machine'
+import MachineExpense from '#models/machine_expense'
 import testUtils from '@adonisjs/core/services/test_utils'
+import { DateTime } from 'luxon'
 import { resetTestDatabase } from '#tests/helpers/reset_test_database'
 import { test } from '@japa/runner'
 
@@ -75,6 +80,30 @@ test.group('Expenses and settings API', (group) => {
     deleteResponse.assertBodyContains({ data: { eliminado: true } })
   })
 
+  test('POST /api/v1/expenses rejects VES currency with USD registration message', async ({
+    client,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+
+    const response = await client
+      .post('/api/v1/expenses')
+      .loginAs(user)
+      .json({
+        date: '2026-06-01',
+        description: 'Gasto en bolívares',
+        amount_usd: 100,
+        currency_code: 'VES',
+      })
+
+    response.assertStatus(422)
+    response.assertBodyContains({
+      error: {
+        code: 'MONEDA_REGISTRO_USD_REQUERIDA',
+        message: MONETARY_REGISTRATION_USD_MESSAGE,
+      },
+    })
+  })
+
   test('GET /api/v1/expenses/summary includes weekly spent', async ({ client }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
 
@@ -138,5 +167,37 @@ test.group('Expenses and settings API', (group) => {
     const getResponse = await client.get('/api/v1/settings/profit-margin').loginAs(user)
     getResponse.assertStatus(200)
     getResponse.assertBodyContains({ data: { profitMarginPercent: '30.00' } })
+  })
+
+  test('GET /api/v1/dashboard/overview fails when VES exchange rate is invalid', async ({
+    client,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const hoy = DateTime.now().toISODate()!
+    const machine = await Machine.create({
+      name: 'Overlock tasa inválida',
+      type: 'OVERLOCK',
+      status: 'OPERATIONAL',
+      active: true,
+    })
+
+    await Currency.query().where('code', 'VES').update({ ratePerUsd: '0.0000' })
+    await MachineExpense.create({
+      machineId: Number(machine.id),
+      date: DateTime.fromISO(hoy),
+      category: 'REPAIR',
+      description: 'Gasto en VES',
+      amount: '100.0000',
+      currencyCode: 'VES',
+    })
+
+    const response = await client.get('/api/v1/dashboard/overview').loginAs(user)
+
+    response.assertStatus(422)
+    response.assertBodyContains({
+      error: {
+        code: 'TASA_CAMBIO_INVALIDA',
+      },
+    })
   })
 })

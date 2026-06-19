@@ -51,7 +51,7 @@ export function serializeMachineExpense(expense: MachineExpense) {
     category: expense.category,
     description: expense.description,
     amount: expense.amount,
-    currencyCode: expense.currencyCode ?? 'VES',
+    currencyCode: expense.currencyCode ?? 'USD',
     accountId: expense.accountId ? Number(expense.accountId) : null,
     supplierId: expense.supplierId ? Number(expense.supplierId) : null,
     tieneComprobante: Boolean(expense.receiptFile),

@@ -398,7 +398,7 @@ export function OrderDetallePage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="total_price">Precio total (Bs)</Label>
+                  <Label htmlFor="total_price">Precio total (USD $)</Label>
                   <MoneyInput id="total_price" min={0} {...register('total_price')} />
                 </div>
                 <div className="space-y-2">
@@ -435,7 +435,7 @@ export function OrderDetallePage() {
                 <dd>{formatFecha(order.estimatedDeliveryDate)}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Precio total</dt>
+                <dt className="text-muted-foreground">Precio total (USD $)</dt>
                 <dd>
                   <DisplayMoneyFromUsd amountUsd={catalogNetTotalUsd} />
                   {catalogLines.some((line) => Number(line.returned_quantity ?? 0) > 0) ? (

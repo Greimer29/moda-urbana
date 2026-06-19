@@ -3,6 +3,10 @@ import Material from '#models/material'
 import InventoryMovement from '#models/inventory_movement'
 import Order from '#models/order'
 import OrderMaterial from '#models/order_material'
+import OrderLine from '#models/order_line'
+import CatalogProduct from '#models/catalog_product'
+import Formula from '#models/formula'
+import FormulaMaterial from '#models/formula_material'
 import User from '#models/user'
 import { NOTA_FORZADO_SIN_STOCK, RECETA_VACIA_WARNING } from '#services/order_stock'
 import testUtils from '@adonisjs/core/services/test_utils'
@@ -447,6 +451,71 @@ test.group('Order receta y stock API', (group) => {
       .first()
 
     assert.equal(Number(stockResult?.total), 100)
+  })
+
+  test('CONFIRMED to IN_PRODUCTION does not double-count legacy recipe with formula lines', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await seedCustomer()
+    const material = await seedMaterial({ code: 'DEDUP-1' })
+    const formula = await Formula.create({ name: 'Formula dedupe', active: true })
+    await FormulaMaterial.create({
+      formulaId: Number(formula.id),
+      materialId: Number(material.id),
+      quantity: '2.000',
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto dedupe',
+      category: 'UNIFORM',
+      formulaId: Number(formula.id),
+      salePriceUsd: '15.0000',
+      costUsd: '6.0000',
+      stockQuantity: '0.000',
+      active: true,
+    })
+    const order = await Order.create({
+      code: 'PED-202605-0298',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Pedido mixto legacy + formula',
+      totalQuantity: 10,
+      orderDate: DateTime.fromISO('2026-05-01'),
+      status: 'CONFIRMED',
+    })
+    await OrderLine.create({
+      orderId: Number(order.id),
+      catalogProductId: Number(product.id),
+      quantity: '10.000',
+      unitPriceUsd: '15.0000',
+      subtotalUsd: '150.0000',
+    })
+    await OrderMaterial.create({
+      orderId: Number(order.id),
+      materialId: Number(material.id),
+      quantityPerGarment: '3.000',
+    })
+
+    await InventoryMovement.create({
+      materialId: Number(material.id),
+      type: 'PURCHASE_IN',
+      quantity: '100',
+    })
+
+    const response = await client
+      .post(`/api/v1/orders/${order.id}/transition`)
+      .loginAs(user)
+      .json({ new_status: 'IN_PRODUCTION' })
+
+    response.assertStatus(200)
+
+    const salidas = await InventoryMovement.query()
+      .where('orderId', Number(order.id))
+      .where('type', 'ORDER_OUT')
+
+    assert.lengthOf(salidas, 1)
+    assert.equal(salidas[0].quantity, '-20.000')
   })
 
   test('GET /api/v1/orders/:id/material-availability reports missing stock', async ({

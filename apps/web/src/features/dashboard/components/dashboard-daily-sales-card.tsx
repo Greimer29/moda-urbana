@@ -49,8 +49,16 @@ export function DashboardDailySalesCard({ ventas, ganancia }: DashboardDailySale
                 {ventas.productosVendidos.toLocaleString('es-VE')}
               </p>
             </Link>
-            <div className="space-y-1">
-              <p className="text-sm text-white/70">Gastos del día</p>
+            <Link
+              to="/dashboard/gastos-del-dia"
+              className="group space-y-1 rounded-xl transition-colors hover:bg-white/5"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm text-white/70">Gastos del día</p>
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white/80 transition-colors group-hover:bg-white/15 group-hover:text-white">
+                  <ArrowUpRight className="size-4" aria-hidden />
+                </span>
+              </div>
               <DisplayMoneyFromUsd
                 amountUsd={ventas.gastosMontoUsd}
                 className="text-[1.2rem] font-semibold text-white"
@@ -58,7 +66,7 @@ export function DashboardDailySalesCard({ ventas, ganancia }: DashboardDailySale
               <p className="text-sm tabular-nums text-white/80">
                 {ventas.gastosCantidad.toLocaleString('es-VE')}
               </p>
-            </div>
+            </Link>
           </div>
         </div>
 

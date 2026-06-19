@@ -54,4 +54,24 @@ export default class DashboardControleler {
       },
     })
   }
+
+  async dailyExpenses({ serialize }: HttpContext) {
+    const data = await this.service.gastosDelDiaDetalle()
+
+    return serialize({
+      date: data.date,
+      items: data.items.map((item) => ({
+        id: item.id,
+        kind: item.kind,
+        description: item.description,
+        amount_usd: item.amountUsd,
+        machine_name: item.machineName,
+        category: item.category,
+      })),
+      summary: {
+        gastos_cantidad: data.summary.gastosCantidad,
+        gastos_monto_usd: data.summary.gastosMontoUsd,
+      },
+    })
+  }
 }

@@ -503,7 +503,7 @@ export default class ReportService {
 
       for (const expense of machineExpenses) {
 
-        const currencyCode = expense.currencyCode ?? 'VES'
+        const currencyCode = expense.currencyCode ?? 'USD'
 
         const native = Number(expense.amount ?? 0)
 

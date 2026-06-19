@@ -64,8 +64,8 @@ export function CurrenciesConfigCard() {
             Monedas y tasas
           </CardTitle>
           <CardDescription>
-            Configurá monedas y su tasa respecto al USD. Los reportes consolidan en $ y se
-            visualizan en la moneda que elijas.
+            Los registros monetarios se guardan en dólares (USD). Configurá monedas y tasas de
+            referencia; los reportes consolidan en $.
           </CardDescription>
         </div>
         <Button size="sm" onClick={openCreate}>

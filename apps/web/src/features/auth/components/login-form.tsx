@@ -18,6 +18,18 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
+function safeRedirectPath(from: string | undefined): string {
+  if (!from || !from.startsWith('/') || from.startsWith('//') || from.includes('://')) {
+    return '/dashboard'
+  }
+
+  if (from === '/login' || from.startsWith('/login/')) {
+    return '/dashboard'
+  }
+
+  return from
+}
+
 export function LoginForm() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -44,10 +56,10 @@ export function LoginForm() {
 
     try {
       await login(values.email, values.password)
-      const redirectTo =
-        (location.state as { from?: string } | null)?.from?.replace(/\/login\/?$/, '') ||
-        '/dashboard'
-      navigate(redirectTo === '/login' ? '/dashboard' : redirectTo, { replace: true })
+      const redirectTo = safeRedirectPath(
+        (location.state as { from?: string } | null)?.from?.replace(/\/login\/?$/, '')
+      )
+      navigate(redirectTo, { replace: true })
     } catch (error) {
       setSubmitError(getApiError(error).message)
     } finally {

@@ -200,6 +200,8 @@
 | created_at             | timestamp     | NOT NULL                                    |                                                                           |
 | updated_at             | timestamp     | NOT NULL                                    |                                                                           |
 
+**Líneas de pedido (`order_lines`):** al confirmar el pedido, se congela `cost_usd` desde `catalog_products.cost_usd` en cada línea. La ganancia del dashboard y reportes históricos usan ese snapshot; si `cost_usd` es NULL (datos viejos), se usa el costo actual del catálogo como fallback.
+
 **Máquina de estados:**
 
 ```

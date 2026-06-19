@@ -42,7 +42,8 @@ export function ExchangeRateConfigCard() {
           Tasa de cambio
         </CardTitle>
         <CardDescription>
-          Bolívares por dólar (Bs/USD). No modifica montos ya registrados en compras confirmadas.
+          Bolívares por dólar (Bs/USD) para referencia en compras. Los montos se registran en $; esta
+          tasa no modifica registros ya confirmados.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

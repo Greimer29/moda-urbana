@@ -537,7 +537,12 @@ export default class PurchaseService {
 
       for (const item of items) {
         if (item.materialId) {
-          const stock = await this.materialService.calcularStock(Number(item.materialId))
+          await Material.query({ client: trx })
+            .where('id', Number(item.materialId))
+            .forUpdate()
+            .first()
+
+          const stock = await this.materialService.calcularStock(Number(item.materialId), trx)
           const required = Number(item.quantity)
 
           if (stock < required) {

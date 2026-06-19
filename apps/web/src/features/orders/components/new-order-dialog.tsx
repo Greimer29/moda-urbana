@@ -151,7 +151,7 @@ export function NuevoOrderDialog({ open, onOpenChange }: NuevoOrderDialogProps) 
               ) : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="total_price">Precio total (Bs)</Label>
+              <Label htmlFor="total_price">Precio total (USD $)</Label>
               <MoneyInput id="total_price" min={0} {...register('total_price')} />
             </div>
           </div>

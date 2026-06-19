@@ -32,6 +32,14 @@ async function resetDatabase() {
   await db.from('suppliers').delete()
   await db.from('accounts').delete()
   await db.from('users').delete()
+  await db.from('currencies').where('code', 'USD').update({
+    rate_per_usd: '1.0000',
+    is_active: true,
+  })
+  await db.from('currencies').where('code', 'VES').update({
+    rate_per_usd: '1.0000',
+    is_active: true,
+  })
 }
 
 async function seedAdminUser() {

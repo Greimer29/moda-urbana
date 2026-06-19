@@ -5,6 +5,7 @@ import { GuestRoute, ProtectedRoute } from '@/components/auth/auth-route'
 import { AppLayout } from '@/components/layout/app-layout'
 import { DashboardPage } from '@/pages/dashboard-page'
 import { DashboardDailyProductsPage } from '@/pages/dashboard-daily-products-page'
+import { DashboardDailyExpensesPage } from '@/pages/dashboard-daily-expenses-page'
 import { LoginPage } from '@/pages/login-page'
 import { MaterialsPage } from '@/pages/materials-page'
 import { MaterialDetallePage } from '@/pages/material-detail-page'
@@ -51,6 +52,10 @@ export const router = createBrowserRouter([
       {
         path: 'dashboard/productos-vendidos-hoy',
         element: <DashboardDailyProductsPage />,
+      },
+      {
+        path: 'dashboard/gastos-del-dia',
+        element: <DashboardDailyExpensesPage />,
       },
       {
         path: 'customers',

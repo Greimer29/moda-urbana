@@ -1,6 +1,7 @@
 import CodigoMonedaDuplicadoException from '#exceptions/codigo_moneda_duplicado_exception'
 import MonedaNoEncontradaException from '#exceptions/moneda_no_encontrada_exception'
 import MonedaProtegidaException from '#exceptions/moneda_protegida_exception'
+import TasaCambioInvalidaException from '#exceptions/tasa_cambio_invalida_exception'
 import AppSetting from '#models/app_setting'
 import Currency from '#models/currency'
 import { DateTime } from 'luxon'
@@ -103,8 +104,19 @@ export default class CurrencyService {
     const rates: Record<string, number> = {}
 
     for (const currency of currencies) {
+      if (currency.code === 'USD') {
+        rates.USD = 1
+        continue
+      }
+
       const rate = Number(currency.ratePerUsd)
-      rates[currency.code] = Number.isFinite(rate) && rate > 0 ? rate : 1
+      if (!Number.isFinite(rate) || rate <= 0) {
+        throw new TasaCambioInvalidaException(
+          `La tasa de cambio de ${currency.code} no es válida`
+        )
+      }
+
+      rates[currency.code] = rate
     }
 
     if (!rates.USD) {
@@ -119,8 +131,17 @@ export default class CurrencyService {
     if (code === 'USD') {
       return amount
     }
-    const rate = rates[code] ?? 1
-    return rate > 0 ? amount / rate : amount
+
+    const rate = rates[code]
+    if (rate === undefined) {
+      throw new MonedaNoEncontradaException()
+    }
+
+    if (rate <= 0) {
+      throw new TasaCambioInvalidaException(`La tasa de cambio de ${code} no es válida`)
+    }
+
+    return amount / rate
   }
 
   fromUsd(amountUsd: number, currencyCode: string, rates: Record<string, number>): number {

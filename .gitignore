@@ -6,6 +6,7 @@ dist/
 build/
 apps/desktop/release/
 apps/desktop/release-v2/
+apps/desktop/release-build/
 .adonisjs/
 tmp/
 

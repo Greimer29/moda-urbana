@@ -10,6 +10,8 @@ import CodigoDuplicadoException from '#exceptions/codigo_duplicado_exception'
 import CodigoMonedaDuplicadoException from '#exceptions/codigo_moneda_duplicado_exception'
 import MonedaNoEncontradaException from '#exceptions/moneda_no_encontrada_exception'
 import MonedaProtegidaException from '#exceptions/moneda_protegida_exception'
+import MonedaRegistroUsdRequeridaException from '#exceptions/moneda_registro_usd_requerida_exception'
+import TasaCambioInvalidaException from '#exceptions/tasa_cambio_invalida_exception'
 import PurchaseItemNoEncontradoException from '#exceptions/compra_item_no_encontrado_exception'
 import PurchaseNoEditableException from '#exceptions/compra_no_editable_exception'
 import PurchaseNoEncontradaException from '#exceptions/compra_no_encontrada_exception'
@@ -223,6 +225,24 @@ export default class HttpExceptionHandler extends ExceptionHandler {
         error: {
           code: MonedaProtegidaException.code,
           message: error.message || MonedaProtegidaException.message,
+        },
+      })
+    }
+
+    if (error instanceof TasaCambioInvalidaException) {
+      return ctx.response.status(422).json({
+        error: {
+          code: TasaCambioInvalidaException.code,
+          message: error.message || TasaCambioInvalidaException.message,
+        },
+      })
+    }
+
+    if (error instanceof MonedaRegistroUsdRequeridaException) {
+      return ctx.response.status(422).json({
+        error: {
+          code: MonedaRegistroUsdRequeridaException.code,
+          message: error.message || MonedaRegistroUsdRequeridaException.message,
         },
       })
     }

@@ -120,7 +120,12 @@ export function buildOrderConsumoMap(order: Order): {
     }
   }
 
-  if (recipeLegacy.length > 0) {
+  const hasFormulaLines = orderLines.some(
+    (line) => (line.catalogProduct?.formula?.materials?.length ?? 0) > 0
+  )
+
+  // Evitar doble consumo: si hay fórmulas en líneas de catálogo, no sumar orderMaterials legacy.
+  if (recipeLegacy.length > 0 && !hasFormulaLines) {
     hasRecipe = true
 
     for (const item of recipeLegacy) {

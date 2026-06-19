@@ -88,4 +88,25 @@ test.group('Auth API', (group) => {
     const meResponse = await client.get('/api/v1/auth/me')
     meResponse.assertStatus(401)
   })
+
+  test('POST /api/v1/auth/login rate limits repeated attempts from same IP', async ({ client }) => {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await client.post('/api/v1/auth/login').json({
+        email: TEST_EMAIL,
+        password: 'wrong-password',
+      })
+    }
+
+    const response = await client.post('/api/v1/auth/login').json({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+    })
+
+    response.assertStatus(429)
+    response.assertBodyContains({
+      error: {
+        code: 'TOO_MANY_LOGIN_ATTEMPTS',
+      },
+    })
+  })
 })

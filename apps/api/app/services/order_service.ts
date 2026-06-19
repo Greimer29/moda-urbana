@@ -553,6 +553,7 @@ export default class OrderService {
 
       if (statusActual === 'DRAFT' && nuevoEstado === 'CONFIRMED') {
         await this.assertStockLineasCatalogo(order, trx)
+        await this.congelarCostoLineas(order, trx)
         await this.procesarDescuentoStockProductos(order, trx)
         order.confirmedAt = DateTime.now()
         await this.aplicarPagoAlConfirmar(order, options.payment_type ?? 'CASH', trx)
@@ -560,6 +561,7 @@ export default class OrderService {
 
       if (statusActual === 'DRAFT' && nuevoEstado === 'DELIVERED') {
         await this.assertStockLineasCatalogo(order, trx)
+        await this.congelarCostoLineas(order, trx)
         await this.procesarDescuentoStockProductos(order, trx)
         order.confirmedAt = DateTime.now()
         await this.aplicarPagoAlConfirmar(order, options.payment_type ?? 'CASH', trx)
@@ -580,6 +582,7 @@ export default class OrderService {
           trx,
           `Reversión cancelación order #${order.id}`
         )
+        await this.revertirStockProductos(order, trx, `Cancelación pedido ${order.code}`)
       }
 
       order.status = nuevoEstado
@@ -680,7 +683,34 @@ export default class OrderService {
             .where('orderId', Number(order.id))
             .where('type', 'REVERSAL_ADJUSTMENT')
 
-          if (reversiones.length < salidas.length) {
+          const consumedByMaterial = new Map<number, number>()
+          for (const salida of salidas) {
+            const materialId = Number(salida.materialId)
+            consumedByMaterial.set(
+              materialId,
+              (consumedByMaterial.get(materialId) ?? 0) + Math.abs(Number(salida.quantity))
+            )
+          }
+
+          const revertedByMaterial = new Map<number, number>()
+          for (const reversion of reversiones) {
+            const materialId = Number(reversion.materialId)
+            revertedByMaterial.set(
+              materialId,
+              (revertedByMaterial.get(materialId) ?? 0) + Math.abs(Number(reversion.quantity))
+            )
+          }
+
+          let needsFullRevert = false
+          for (const [materialId, consumed] of consumedByMaterial) {
+            const reverted = revertedByMaterial.get(materialId) ?? 0
+            if (reverted + 0.0005 < consumed) {
+              needsFullRevert = true
+              break
+            }
+          }
+
+          if (needsFullRevert) {
             await this.revertirMovimientosOrder(Number(order.id), trx, note)
           }
         }
@@ -753,7 +783,10 @@ export default class OrderService {
     return { bytes, contentType, filename }
   }
 
-  async calcularMaterialComprometido(excludeOrderId?: number): Promise<Map<number, number>> {
+  async calcularMaterialComprometido(
+    excludeOrderId?: number,
+    trx?: TransactionClientContract
+  ): Promise<Map<number, number>> {
     const query = Order.query()
       .whereIn('status', ['DRAFT', 'CONFIRMED'])
       .preload('orderLines', (q) =>
@@ -764,6 +797,10 @@ export default class OrderService {
         )
       )
       .preload('orderMaterials', (q) => q.preload('material'))
+
+    if (trx) {
+      query.useTransaction(trx)
+    }
 
     if (excludeOrderId) {
       query.whereNot('id', excludeOrderId)
@@ -843,6 +880,8 @@ export default class OrderService {
 
           if (locked.status === 'DRAFT') {
             await locked.load('customer')
+            await this.assertStockLineasCatalogo(locked, trx)
+            await this.congelarCostoLineas(locked, trx)
             await this.procesarDescuentoStockProductos(locked, trx)
             locked.status = 'CONFIRMED'
             locked.confirmedAt = DateTime.now()
@@ -1037,7 +1076,7 @@ export default class OrderService {
   ): Promise<Map<number, number>> {
     const materialIds = [...consumoPorMaterial.keys()]
     const stockFisico = await this.getStockFisicoPorMaterialIds(materialIds, trx)
-    const comprometido = await this.calcularMaterialComprometido(excludeOrderId)
+    const comprometido = await this.calcularMaterialComprometido(excludeOrderId, trx)
     const stockDisponible = new Map<number, number>()
 
     for (const materialId of materialIds) {
@@ -1176,6 +1215,24 @@ export default class OrderService {
 
     if (faltantes.length > 0) {
       throw new StockInsuficienteException(faltantes)
+    }
+  }
+
+  private async congelarCostoLineas(order: Order, trx: TransactionClientContract) {
+    for (const line of order.orderLines) {
+      const product =
+        line.catalogProduct ??
+        (await CatalogProduct.query({ client: trx })
+          .where('id', Number(line.catalogProductId))
+          .first())
+
+      if (!product) {
+        continue
+      }
+
+      line.costUsd = product.costUsd
+      line.useTransaction(trx)
+      await line.save()
     }
   }
 

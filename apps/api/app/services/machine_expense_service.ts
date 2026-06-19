@@ -8,6 +8,8 @@ import Machine from '#models/machine'
 import Supplier from '#models/supplier'
 import AccountService from '#services/account_service'
 import CurrencyService from '#services/currency_service'
+import { assertRegistroMonedaUsd } from '#utils/monetary_registration'
+import { sumMachineExpenseRowsUsd } from '#utils/machine_expense_totals'
 import drive from '@adonisjs/drive/services/main'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import db from '@adonisjs/lucid/services/db'
@@ -84,10 +86,11 @@ export default class MachineExpenseService {
 
     const paginator = await query.paginate(page, perPage)
 
-    const sumQuery = db.from('machine_expenses')
+    const sumQuery = db.from('machine_expenses').select('amount', 'currency_code')
     this.applyFiltersToBuilder(sumQuery, filters)
-    const sumResult = await sumQuery.sum('amount as total').first()
-    const totalMonto = Number(sumResult?.total ?? 0).toFixed(2)
+    const sumRows = await sumQuery
+    const rates = await this.currencyService.getActiveRates()
+    const totalMonto = sumMachineExpenseRowsUsd(sumRows, rates, this.currencyService).toFixed(2)
 
     return { paginator, totalMonto }
   }
@@ -103,7 +106,8 @@ export default class MachineExpenseService {
   async crear(machineId: number, input: MachineExpenseInput): Promise<MachineExpense> {
     await this.assertMachineExiste(machineId)
     await this.assertSupplierExiste(input.supplier_id)
-    const currencyCode = (input.currency_code ?? 'VES').toUpperCase()
+    const currencyCode = (input.currency_code ?? 'USD').toUpperCase()
+    assertRegistroMonedaUsd(currencyCode)
     await this.currencyService.assertActiva(currencyCode)
     const accountId = await this.resolveAccountId(input.account_id)
 
@@ -117,7 +121,8 @@ export default class MachineExpenseService {
   async actualizar(id: number, input: MachineExpenseInput): Promise<MachineExpense> {
     const expense = await this.obtener(id)
     await this.assertSupplierExiste(input.supplier_id)
-    const currencyCode = (input.currency_code ?? expense.currencyCode ?? 'VES').toUpperCase()
+    const currencyCode = (input.currency_code ?? expense.currencyCode ?? 'USD').toUpperCase()
+    assertRegistroMonedaUsd(currencyCode)
     await this.currencyService.assertActiva(currencyCode)
     const accountId = await this.resolveAccountId(input.account_id)
 
@@ -184,7 +189,7 @@ export default class MachineExpenseService {
   }
 
   private prepareInput(input: MachineExpenseInput) {
-    const currencyCode = (input.currency_code ?? 'VES').toUpperCase()
+    const currencyCode = (input.currency_code ?? 'USD').toUpperCase()
 
     return {
       date: DateTime.fromISO(input.date),

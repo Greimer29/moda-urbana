@@ -121,6 +121,7 @@ router
         router.get('dashboard/summary', [controllers.Dashboard, 'resumen'])
         router.get('dashboard/overview', [controllers.Dashboard, 'overview'])
         router.get('dashboard/daily-product-sales', [controllers.Dashboard, 'dailyProductSales'])
+        router.get('dashboard/daily-expenses', [controllers.Dashboard, 'dailyExpenses'])
 
         router.get('machines', [controllers.Machines, 'index'])
         router.get('machines/:id', [controllers.Machines, 'show'])

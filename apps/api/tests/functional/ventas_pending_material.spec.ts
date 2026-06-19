@@ -6,6 +6,7 @@ import InventoryMovement from '#models/inventory_movement'
 import Material from '#models/material'
 import Order from '#models/order'
 import OrderLine from '#models/order_line'
+import OrderMaterial from '#models/order_material'
 import Purchase from '#models/purchase'
 import PurchaseItem from '#models/purchase_item'
 import Supplier from '#models/supplier'
@@ -156,5 +157,87 @@ test.group('Ventas — material pendiente y compra', (group) => {
 
     assert.lengthOf(salidas, 1)
     assert.equal(salidas[0].quantity, '-10.000')
+  })
+
+  test('confirm purchase does not auto-produce DRAFT order when manual product stock is insufficient', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente stock producto',
+      type: 'CORPORATE',
+      active: true,
+    })
+    const supplier = await Supplier.create({
+      name: 'Proveedor stock producto',
+      rif: 'J888888888',
+      active: true,
+    })
+    const material = await Material.create({
+      code: 'TEL-STK-PROD',
+      name: 'Tela stock producto',
+      category: 'FABRIC',
+      unit: 'ROL',
+      minimumStock: '1',
+      lastPurchasePriceUsd: '2.0000',
+      active: true,
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto manual bajo stock',
+      category: 'UNIFORM',
+      salePriceUsd: '20.0000',
+      costUsd: '10.0000',
+      stockQuantity: '2.000',
+      active: true,
+    })
+    const order = await Order.create({
+      code: 'PED-202605-0301',
+      customerId: Number(customer.id),
+      modality: 'CORPORATE',
+      description: 'Venta sin stock de producto',
+      totalQuantity: 5,
+      orderDate: DateTime.fromISO('2026-05-01'),
+      status: 'DRAFT',
+    })
+    await OrderLine.create({
+      orderId: Number(order.id),
+      catalogProductId: Number(product.id),
+      quantity: '5.000',
+      unitPriceUsd: '20.0000',
+      subtotalUsd: '100.0000',
+    })
+    await OrderMaterial.create({
+      orderId: Number(order.id),
+      materialId: Number(material.id),
+      quantityPerGarment: '1.000',
+    })
+    const purchase = await Purchase.create({
+      supplierId: Number(supplier.id),
+      date: DateTime.fromISO('2026-05-20'),
+      invoiceNumber: 'F-STK-PROD',
+      status: 'DRAFT',
+      totalBs: '0.00',
+    })
+    await PurchaseItem.create({
+      purchaseId: Number(purchase.id),
+      materialId: Number(material.id),
+      quantity: '20.000',
+      unitPriceUsd: '2.0000',
+      unitPriceBs: '100.00',
+      subtotalUsd: '40.0000',
+      subtotalBs: '2000.00',
+    })
+
+    const confirmResponse = await client
+      .post(`/api/v1/purchases/${purchase.id}/confirm`)
+      .loginAs(user)
+      .json({})
+
+    confirmResponse.assertStatus(200)
+    assert.deepEqual(confirmResponse.body().data.fulfilled_orders, [])
+
+    await order.refresh()
+    assert.equal(order.status, 'DRAFT')
   })
 })

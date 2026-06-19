@@ -6,6 +6,7 @@ import InventoryMovement from '#models/inventory_movement'
 import Material from '#models/material'
 import Order from '#models/order'
 import OrderLine from '#models/order_line'
+import OrderMaterial from '#models/order_material'
 import ProductInventoryMovement from '#models/product_inventory_movement'
 import User from '#models/user'
 import testUtils from '@adonisjs/core/services/test_utils'
@@ -291,5 +292,96 @@ test.group('Order devolución venta API', (group) => {
 
     assert.lengthOf(productReversals, 1)
     assert.equal(productReversals[0].quantity, '4.000')
+  })
+
+  test('partial return followed by full return does not duplicate material stock', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente devolución parcial',
+      type: 'CORPORATE',
+      active: true,
+    })
+    const material = await Material.create({
+      code: 'TEL-PARCIAL',
+      name: 'Tela parcial',
+      category: 'FABRIC',
+      unit: 'ROL',
+      minimumStock: '1',
+      active: true,
+    })
+    const formula = await Formula.create({ name: 'Formula parcial', active: true })
+    await FormulaMaterial.create({
+      formulaId: Number(formula.id),
+      materialId: Number(material.id),
+      quantity: '2.000',
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto parcial',
+      category: 'UNIFORM',
+      formulaId: Number(formula.id),
+      salePriceUsd: '20.0000',
+      costUsd: '10.0000',
+      stockQuantity: '0.000',
+      active: true,
+    })
+    const order = await Order.create({
+      code: 'PED-202606-0200',
+      customerId: Number(customer.id),
+      modality: 'CORPORATE',
+      description: 'Venta parcial + total',
+      totalQuantity: 5,
+      orderDate: DateTime.fromISO('2026-06-01'),
+      status: 'IN_PRODUCTION',
+    })
+    const line = await OrderLine.create({
+      orderId: Number(order.id),
+      catalogProductId: Number(product.id),
+      quantity: '5.000',
+      unitPriceUsd: '20.0000',
+      subtotalUsd: '100.0000',
+    })
+
+    await InventoryMovement.create({
+      materialId: Number(material.id),
+      type: 'PURCHASE_IN',
+      quantity: '100',
+    })
+    await InventoryMovement.create({
+      materialId: Number(material.id),
+      type: 'ORDER_OUT',
+      quantity: '-10.000',
+      orderId: Number(order.id),
+    })
+
+    const partialResponse = await client
+      .post(`/api/v1/orders/${order.id}/return`)
+      .loginAs(user)
+      .json({
+        lines: [{ line_id: Number(line.id), quantity: 2 }],
+      })
+
+    partialResponse.assertStatus(200)
+
+    const fullResponse = await client.post(`/api/v1/orders/${order.id}/return`).loginAs(user)
+
+    fullResponse.assertStatus(200)
+    fullResponse.assertBodyContains({
+      data: {
+        order: {
+          status: 'RETURNED',
+        },
+      },
+    })
+
+    const materialStock = await db
+      .from('inventory_movements')
+      .where('material_id', Number(material.id))
+      .sum('quantity as total')
+      .first()
+
+    assert.equal(Number(materialStock?.total), 100)
   })
 })

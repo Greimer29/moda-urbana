@@ -359,10 +359,12 @@ export class MaterialSchema extends BaseModel {
 }
 
 export class OrderLineSchema extends BaseModel {
-  static $columns = ['catalogProductId', 'createdAt', 'id', 'orderId', 'quantity', 'returnedQuantity', 'subtotalUsd', 'unitPriceUsd', 'updatedAt'] as const
+  static $columns = ['catalogProductId', 'costUsd', 'createdAt', 'id', 'orderId', 'quantity', 'returnedQuantity', 'subtotalUsd', 'unitPriceUsd', 'updatedAt'] as const
   $columns = OrderLineSchema.$columns
   @column()
   declare catalogProductId: bigint | number
+  @column()
+  declare costUsd: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column({ isPrimary: true })

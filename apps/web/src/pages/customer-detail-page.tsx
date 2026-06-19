@@ -149,7 +149,7 @@ export function CustomerDetallePage() {
                       <td className="px-4 py-3">{order.totalQuantity}</td>
                       <td className="px-4 py-3">{formatFecha(order.dateOrder)}</td>
                       <td className="px-4 py-3">
-                        <DisplayMoney amount={order.totalPrice} currencyCode="VES" size="sm" />
+                        <DisplayMoney amount={order.totalPrice} currencyCode="USD" size="sm" />
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Button variant="ghost" size="sm" asChild>

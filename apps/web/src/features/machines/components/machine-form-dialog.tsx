@@ -203,7 +203,7 @@ export function MachineFormDialog({ open, onOpenChange, machine }: MachineFormDi
               <Input id="date_adquisicion" type="date" {...register('date_adquisicion')} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="costo_adquisicion">Costo de adquisición</Label>
+              <Label htmlFor="costo_adquisicion">Costo de adquisición (USD $)</Label>
               <MoneyInput id="costo_adquisicion" min="0" {...register('costo_adquisicion')} />
             </div>
           </div>

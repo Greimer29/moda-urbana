@@ -168,7 +168,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
 
     try {
 
-      const payload = { ...values, account_id: accountId, currency_code: currencyCode }
+      const payload = { ...values, account_id: accountId, currency_code: 'USD' }
 
       if (isEditing) {
 
@@ -203,9 +203,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
           <DialogTitle>{isEditing ? 'Editar gasto' : 'Registrar gasto'}</DialogTitle>
 
           <DialogDescription>
-
-            Registrá el monto en la moneda original. Los reportes lo consolidan en USD.
-
+            Registrá el monto en dólares (USD). Los reportes consolidan en $.
           </DialogDescription>
 
         </DialogHeader>
@@ -248,11 +246,11 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
 
           <div className="grid gap-4 sm:grid-cols-2">
 
-            <CurrencySelect value={currencyCode} onChange={setCurrencyCode} />
+            <CurrencySelect registrationOnly value={currencyCode} onChange={setCurrencyCode} />
 
             <div className="space-y-2">
 
-              <Label htmlFor="expense-amount">Monto *</Label>
+              <Label htmlFor="expense-amount">Monto (USD $) *</Label>
 
               <MoneyInput
 

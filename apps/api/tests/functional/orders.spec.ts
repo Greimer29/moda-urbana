@@ -1,5 +1,7 @@
 import Customer from '#models/customer'
+import CatalogProduct from '#models/catalog_product'
 import Order from '#models/order'
+import OrderLine from '#models/order_line'
 import User from '#models/user'
 import testUtils from '@adonisjs/core/services/test_utils'
 import { resetTestDatabase } from '#tests/helpers/reset_test_database'
@@ -273,5 +275,62 @@ test.group('Orders API', (group) => {
     assert.lengthOf(body.data.orders, 1)
     assert.equal(body.data.orders[0].description, 'Listado B')
     assert.equal(body.data.orders[0].customer.name, 'Customer Orders')
+  })
+
+  test('POST transition cancel from IN_PRODUCTION reverts catalog product stock', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await seedCustomer()
+    const product = await CatalogProduct.create({
+      name: 'Polo manual',
+      category: 'UNIFORM',
+      saleUnit: 'UND',
+      salePriceUsd: '12.0000',
+      costUsd: '5.0000',
+      stockQuantity: '10.000',
+      active: true,
+    })
+
+    const order = await Order.create({
+      code: 'PED-202605-0300',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Pedido con producto manual',
+      totalQuantity: 2,
+      orderDate: DateTime.fromISO('2026-05-01'),
+      status: 'DRAFT',
+    })
+    await OrderLine.create({
+      orderId: order.id,
+      catalogProductId: product.id,
+      quantity: '2.000',
+      unitPriceUsd: '12.0000',
+      subtotalUsd: '24.0000',
+    })
+
+    await client
+      .post(`/api/v1/orders/${order.id}/transition`)
+      .loginAs(user)
+      .json({ new_status: 'CONFIRMED' })
+
+    await product.refresh()
+    assert.equal(product.stockQuantity, '8.000')
+
+    await client
+      .post(`/api/v1/orders/${order.id}/transition`)
+      .loginAs(user)
+      .json({ new_status: 'IN_PRODUCTION' })
+
+    const cancel = await client
+      .post(`/api/v1/orders/${order.id}/transition`)
+      .loginAs(user)
+      .json({ new_status: 'CANCELLED' })
+
+    cancel.assertStatus(200)
+
+    await product.refresh()
+    assert.equal(product.stockQuantity, '10.000')
   })
 })

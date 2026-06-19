@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import type {
   DashboardChartMode,
   DashboardOverviewResponse,
+  DailyExpensesResponse,
   DailyProductSalesResponse,
 } from '@/features/dashboard/types'
 
@@ -14,5 +15,10 @@ export async function getDashboardOverview(chart: DashboardChartMode = 'weekly')
 
 export async function getDailyProductSales() {
   const { data } = await api.get<DailyProductSalesResponse>('/dashboard/daily-product-sales')
+  return data.data
+}
+
+export async function getDailyExpenses() {
+  const { data } = await api.get<DailyExpensesResponse>('/dashboard/daily-expenses')
   return data.data
 }
