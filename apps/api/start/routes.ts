@@ -16,11 +16,13 @@ import AccountsController from '#controllers/accounts_controller'
 import CurrenciesController from '#controllers/currencies_controller'
 import ReportsController from '#controllers/reports_controller'
 import CategoriesController from '#controllers/categories_controller'
+import CsrfController from '#controllers/csrf_controller'
 
 router.get('/health', [controllers.Health, 'show'])
 
 router
   .group(() => {
+    router.get('csrf', [CsrfController, 'show'])
     router.post('auth/login', [controllers.Auth, 'login'])
 
     router

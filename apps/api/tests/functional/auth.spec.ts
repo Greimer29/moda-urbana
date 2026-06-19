@@ -23,6 +23,17 @@ test.group('Auth API', (group) => {
     await testUtils.db().truncate()
   })
 
+  test('GET /api/v1/csrf returns csrf payload', async ({ client }) => {
+    const response = await client.get('/api/v1/csrf')
+
+    response.assertStatus(200)
+    response.assertBodyContains({
+      data: {
+        csrf_token: null,
+      },
+    })
+  })
+
   test('POST /api/v1/auth/login returns user and session cookie', async ({ client, assert }) => {
     const response = await client.post('/api/v1/auth/login').json({
       email: TEST_EMAIL,

@@ -9,6 +9,7 @@ import {
 } from 'react'
 import axios from 'axios'
 import * as authService from '@/features/auth/services/auth-service'
+import { refreshCsrfToken } from '@/lib/api'
 import type { User } from '@/types/auth'
 
 type AuthContextValue = {
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const authenticatedUser = await authService.login({ email, password })
+    await refreshCsrfToken()
     setUser(authenticatedUser)
   }, [])
 

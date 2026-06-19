@@ -3,36 +3,145 @@ import axios from 'axios'
 const PUBLIC_API_URL = 'https://moda-urbana-production.up.railway.app'
 
 let apiBaseUrl = import.meta.env.VITE_API_URL ?? PUBLIC_API_URL
+let cachedCsrfToken: string | null = null
+let csrfBootstrapPromise: Promise<string | null> | null = null
 
 export const api = axios.create({
   withCredentials: true,
+  maxRedirects: 0,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
   },
 })
 
+function usesDevProxy(): boolean {
+  return import.meta.env.DEV && typeof window !== 'undefined'
+}
+
+function resolveApiBasePath(): string {
+  if (usesDevProxy()) {
+    return '/api/v1'
+  }
+
+  return `${apiBaseUrl.replace(/\/$/, '')}/api/v1`
+}
+
 function getCsrfTokenFromCookie(): string | null {
   const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/)
   return match ? decodeURIComponent(match[1]) : null
 }
 
-api.interceptors.request.use((config) => {
-  config.baseURL = `${apiBaseUrl.replace(/\/$/, '')}/api/v1`
+function isCrossOriginApi(): boolean {
+  if (usesDevProxy()) {
+    return false
+  }
+
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  try {
+    const apiOrigin = new URL(apiBaseUrl.replace(/\/$/, '')).origin
+    return apiOrigin !== window.location.origin
+  } catch {
+    return false
+  }
+}
+
+async function fetchCsrfTokenFromApi(): Promise<string | null> {
+  const { data } = await api.get<{ data: { csrf_token: string | null } }>('/csrf', {
+    baseURL: resolveApiBasePath(),
+  })
+
+  return data.data.csrf_token
+}
+
+export async function ensureCsrfToken(): Promise<void> {
+  if (getCsrfTokenFromCookie()) {
+    return
+  }
+
+  if (!isCrossOriginApi()) {
+    return
+  }
+
+  if (cachedCsrfToken) {
+    return
+  }
+
+  if (!csrfBootstrapPromise) {
+    csrfBootstrapPromise = fetchCsrfTokenFromApi()
+      .then((token) => {
+        cachedCsrfToken = token
+        return token
+      })
+      .catch(() => {
+        cachedCsrfToken = null
+        return null
+      })
+      .finally(() => {
+        csrfBootstrapPromise = null
+      })
+  }
+
+  await csrfBootstrapPromise
+}
+
+export async function refreshCsrfToken(): Promise<void> {
+  cachedCsrfToken = null
+  csrfBootstrapPromise = null
+  await ensureCsrfToken()
+}
+
+function applyCsrfHeader(config: import('axios').InternalAxiosRequestConfig) {
+  const cookieToken = getCsrfTokenFromCookie()
+  if (cookieToken) {
+    config.headers.set('X-XSRF-TOKEN', cookieToken)
+    return
+  }
+
+  if (cachedCsrfToken) {
+    config.headers.set('X-CSRF-TOKEN', cachedCsrfToken)
+  }
+}
+
+api.interceptors.request.use(async (config) => {
+  config.baseURL = resolveApiBasePath()
 
   const method = config.method?.toUpperCase()
   if (method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-    const token = getCsrfTokenFromCookie()
-    if (token) {
-      config.headers.set('X-XSRF-TOKEN', token)
-    }
+    await ensureCsrfToken()
+    applyCsrfHeader(config)
   }
 
   return config
 })
 
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (!axios.isAxiosError(error) || !error.config || error.response?.status !== 403) {
+      throw error
+    }
+
+    const code = (error.response.data as { error?: { code?: string } } | undefined)?.error?.code
+    if (code !== 'CSRF_TOKEN_MISMATCH' || error.config.headers.get('X-Retry-Csrf')) {
+      throw error
+    }
+
+    await refreshCsrfToken()
+    error.config.headers.set('X-Retry-Csrf', '1')
+    applyCsrfHeader(error.config)
+
+    return api.request(error.config)
+  }
+)
+
 export function configureApiBaseUrl(url: string) {
   apiBaseUrl = url.replace(/\/$/, '')
+  cachedCsrfToken = null
+  csrfBootstrapPromise = null
 }
 
 export async function loadRuntimeApiConfig(): Promise<void> {
@@ -56,4 +165,8 @@ export async function loadRuntimeApiConfig(): Promise<void> {
 
 export function getApiBaseUrl() {
   return apiBaseUrl
+}
+
+export function isApiCrossOrigin() {
+  return isCrossOriginApi()
 }

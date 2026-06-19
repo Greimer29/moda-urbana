@@ -1,6 +1,7 @@
 import app from '@adonisjs/core/services/app'
 import { ExceptionHandler, type HttpContext } from '@adonisjs/core/http'
 import { errors as authErrors } from '@adonisjs/auth'
+import { errors as shieldErrors } from '@adonisjs/shield'
 import { errors as vineErrors } from '@vinejs/vine'
 import UserInactiveException from '#exceptions/user_inactive_exception'
 import MachineExpenseNoEncontradoException from '#exceptions/gasto_maquina_no_encontrado_exception'
@@ -57,6 +58,15 @@ export default class HttpExceptionHandler extends ExceptionHandler {
   protected debug = !app.inProduction
 
   async handle(error: unknown, ctx: HttpContext) {
+    if (error instanceof shieldErrors.E_BAD_CSRF_TOKEN) {
+      return ctx.response.status(403).json({
+        error: {
+          code: 'CSRF_TOKEN_MISMATCH',
+          message: 'La sesión expiró o el token de seguridad no es válido. Recargá la página e intentá de nuevo.',
+        },
+      })
+    }
+
     if (error instanceof authErrors.E_INVALID_CREDENTIALS) {
       return ctx.response.status(401).json({
         error: {
