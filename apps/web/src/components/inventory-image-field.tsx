@@ -2,10 +2,11 @@ import { Loader2 } from 'lucide-react'
 import { useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { useAuthenticatedAsset } from '@/hooks/use-authenticated-asset'
 
 type InventoryImageFieldProps = {
   label: string
-  imageUrl?: string | null
+  assetPath?: string | null
   pendingPreviewUrl?: string | null
   hasRemovableImage: boolean
   pending?: boolean
@@ -17,7 +18,7 @@ type InventoryImageFieldProps = {
 
 export function InventoryImageField({
   label,
-  imageUrl,
+  assetPath,
   pendingPreviewUrl,
   hasRemovableImage,
   pending = false,
@@ -27,7 +28,8 @@ export function InventoryImageField({
   onRemove,
 }: InventoryImageFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const previewUrl = pendingPreviewUrl ?? imageUrl ?? null
+  const { objectUrl: serverPreviewUrl } = useAuthenticatedAsset(assetPath)
+  const previewUrl = pendingPreviewUrl ?? serverPreviewUrl ?? null
 
   return (
     <div className="space-y-2">

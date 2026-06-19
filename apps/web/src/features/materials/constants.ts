@@ -83,9 +83,13 @@ export const MOVIMIENTO_TIPO_LABELS: Record<string, string> = {
   REVERSAL_ADJUSTMENT: 'Reversión',
 }
 
+export function materialImagePath(materialId: number) {
+  return `/materials/${materialId}/image`
+}
+
+/** @deprecated Usar materialImagePath con AuthenticatedImage o useAuthenticatedAsset */
 export function materialImageUrl(materialId: number) {
-  const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3333'
-  return `${apiUrl}/api/v1/materials/${materialId}/image`
+  return materialImagePath(materialId)
 }
 
 export function formatMaterialUsd(value: string | null | undefined) {

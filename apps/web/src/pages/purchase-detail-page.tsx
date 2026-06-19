@@ -46,7 +46,8 @@ import { CatalogFormDialog } from '@/features/ventas/components/catalog-form-dia
 import { catalogProductCode } from '@/features/ventas/components/ventas-order-cart'
 import { productSaleUnitAbrev } from '@/features/ventas/constants'
 import { useSuppliersQuery } from '@/features/suppliers/hooks/use-suppliers'
-import { supplierImageUrl } from '@/features/suppliers/constants'
+import { supplierImagePath } from '@/features/suppliers/constants'
+import { AuthenticatedImage } from '@/components/authenticated-image'
 import { getApiError } from '@/lib/api-error'
 import { parseDecimalInput } from '@/lib/numeric-input'
 import { cn } from '@/lib/utils'
@@ -654,8 +655,8 @@ export function PurchaseDetallePage() {
             <div className="grid gap-4 md:col-span-2 md:grid-cols-2">
               <div className="flex items-center gap-4">
                 {purchase.supplierId && supplier?.imagePath ? (
-                  <img
-                    src={supplierImageUrl(purchase.supplierId)}
+                  <AuthenticatedImage
+                    assetPath={supplierImagePath(purchase.supplierId)}
                     alt={supplierNombre}
                     className="bg-muted size-[115px] shrink-0 rounded-full object-cover"
                   />

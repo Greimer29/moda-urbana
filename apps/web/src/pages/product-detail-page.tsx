@@ -9,7 +9,8 @@ import { CatalogProductDeleteDialog } from '@/features/ventas/components/catalog
 import { ProfitMarginLink } from '@/features/purchases/components/profit-margin-link'
 import { ProductStockAdjustmentDialog } from '@/features/ventas/components/product-stock-adjustment-dialog'
 import { catalogProductCode } from '@/features/ventas/components/ventas-order-cart'
-import { catalogImageUrl, categoryLabel, productSaleUnitLabel } from '@/features/ventas/constants'
+import { catalogImagePath, categoryLabel, productSaleUnitLabel } from '@/features/ventas/constants'
+import { AuthenticatedImage } from '@/components/authenticated-image'
 import { PRODUCT_MOVIMIENTO_LABELS } from '@/features/ventas/product-inventory-constants'
 import { productSaleUnitAbrev } from '@/features/ventas/constants'
 import { useCatalogProductQuery, useDeleteCatalogProductMutation } from '@/features/ventas/hooks/use-catalog'
@@ -156,8 +157,8 @@ export function ProductDetailPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {product.image_path ? (
-              <img
-                src={catalogImageUrl(product.id)}
+              <AuthenticatedImage
+                assetPath={catalogImagePath(product.id)}
                 alt={product.name}
                 className="aspect-square w-full rounded-lg border object-cover"
               />

@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveCategoriesQuery } from '@/features/categories/hooks/use-categories'
-import { PRODUCT_SALE_UNITS, catalogImageUrl, productSaleUnitLabel } from '@/features/ventas/constants'
+import { PRODUCT_SALE_UNITS, catalogImagePath, productSaleUnitLabel } from '@/features/ventas/constants'
 import { useFormatMoney } from '@/features/currencies/context/display-currency-context'
 import {
   useCatalogProductQuery,
@@ -334,8 +334,8 @@ export function CatalogFormDialog({
           <div className="flex items-start gap-4">
             <div className="flex w-1/3 shrink-0 justify-center">
               <CircularImageField
-                imageUrl={
-                  displayProduct?.image_path ? catalogImageUrl(displayProduct.id) : null
+                assetPath={
+                  displayProduct?.image_path ? catalogImagePath(displayProduct.id) : null
                 }
                 pendingPreviewUrl={pendingPreviewUrl}
                 alt={name || 'Producto'}

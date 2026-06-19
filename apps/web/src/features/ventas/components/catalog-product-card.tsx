@@ -1,7 +1,8 @@
 import { Package, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
-import { catalogImageUrl, productSaleUnitAbrev } from '@/features/ventas/constants'
+import { AuthenticatedImage } from '@/components/authenticated-image'
+import { catalogImagePath, productSaleUnitAbrev } from '@/features/ventas/constants'
 import {
   CatalogCardActionButton,
   catalogImageTone,
@@ -111,10 +112,12 @@ export function CatalogProductCard({
         )}
       >
         {hasImage ? (
-          <img
-            src={catalogImageUrl(product.id)}
+          <AuthenticatedImage
+            assetPath={catalogImagePath(product.id)}
             alt={product.name}
             className="size-full object-cover"
+            showFallbackIcon
+            fallbackClassName="size-full"
           />
         ) : (
           <Package className="text-muted-foreground/60 size-7" />

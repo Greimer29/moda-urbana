@@ -1,13 +1,14 @@
 import { Package, Pencil, Star, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
+import { AuthenticatedImage } from '@/components/authenticated-image'
 import {
   CATEGORIA_LABELS,
   MATERIAL_STATUS_LABELS,
   MATERIAL_STATUS_STYLES,
   UNIT_ABREV,
   deriveMaterialStatus,
-  materialImageUrl,
+  materialImagePath,
   materialStockDisponible,
 } from '@/features/materials/constants'
 import type { Material } from '@/features/materials/types'
@@ -59,10 +60,12 @@ export function MaterialProductCard({
         aria-label={`Ver ${material.name}`}
       >
         {hasImage ? (
-          <img
-            src={materialImageUrl(material.id)}
+          <AuthenticatedImage
+            assetPath={materialImagePath(material.id)}
             alt={material.name}
             className="size-full object-cover"
+            showFallbackIcon
+            fallbackClassName="size-full"
           />
         ) : (
           <Package className="text-muted-foreground size-7" />

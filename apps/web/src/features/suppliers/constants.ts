@@ -1,5 +1,8 @@
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3333'
+export function supplierImagePath(supplierId: number) {
+  return `/suppliers/${supplierId}/image`
+}
 
+/** @deprecated Usar supplierImagePath con AuthenticatedImage o useAuthenticatedAsset */
 export function supplierImageUrl(supplierId: number) {
-  return `${apiUrl}/api/v1/suppliers/${supplierId}/image`
+  return supplierImagePath(supplierId)
 }

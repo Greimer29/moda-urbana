@@ -36,9 +36,13 @@ export const PAYMENT_METHODS = [
 
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]['value']
 
+export function catalogImagePath(productId: number) {
+  return `/catalog-products/${productId}/image`
+}
+
+/** @deprecated Usar catalogImagePath con AuthenticatedImage o useAuthenticatedAsset */
 export function catalogImageUrl(productId: number) {
-  const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3333'
-  return `${apiUrl}/api/v1/catalog-products/${productId}/image`
+  return catalogImagePath(productId)
 }
 
 export function formatUsd(value: string | number | null | undefined) {
