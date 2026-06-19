@@ -15,12 +15,20 @@ export const api = axios.create({
   },
 })
 
-function usesDevProxy(): boolean {
-  return import.meta.env.DEV && typeof window !== 'undefined'
+function usesLocalApiProxy(): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  if (import.meta.env.DEV) {
+    return true
+  }
+
+  return window.location.port === '51740'
 }
 
 function resolveApiBasePath(): string {
-  if (usesDevProxy()) {
+  if (usesLocalApiProxy()) {
     return '/api/v1'
   }
 
@@ -33,7 +41,7 @@ function getCsrfTokenFromCookie(): string | null {
 }
 
 function isCrossOriginApi(): boolean {
-  if (usesDevProxy()) {
+  if (usesLocalApiProxy()) {
     return false
   }
 
@@ -148,8 +156,8 @@ export async function loadRuntimeApiConfig(): Promise<void> {
   try {
     const response = await fetch('/runtime-config.json', { credentials: 'same-origin' })
     if (response.ok) {
-      const config = (await response.json()) as { apiUrl?: string }
-      if (config.apiUrl) {
+      const config = (await response.json()) as { apiUrl?: string; useLocalApiProxy?: boolean }
+      if (config.apiUrl && !config.useLocalApiProxy && !usesLocalApiProxy()) {
         configureApiBaseUrl(config.apiUrl)
         return
       }
@@ -159,7 +167,7 @@ export async function loadRuntimeApiConfig(): Promise<void> {
   }
 
   if (typeof window !== 'undefined' && window.location.port === '51740') {
-    configureApiBaseUrl(import.meta.env.VITE_API_URL ?? PUBLIC_API_URL)
+    configureApiBaseUrl('')
   }
 }
 

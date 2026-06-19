@@ -23,7 +23,7 @@ export function useAuthenticatedAsset(assetPath: string | null | undefined) {
     void api
       .get(assetPath, {
         responseType: 'blob',
-        validateStatus: (status) => status === 200 || status === 404,
+        validateStatus: (status) => status === 200 || status === 404 || status === 401,
       })
       .then((response) => {
         if (cancelled) {
