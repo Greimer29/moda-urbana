@@ -49,6 +49,7 @@ export default class CatalogProductsController {
     })
 
     const products = paginator.all()
+    await this.service.sincronizarCostosFormulaEnLote(products)
     const catalogProducts = await this.serializeManyWithStock(products)
 
     return serialize({

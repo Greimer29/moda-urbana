@@ -22,7 +22,9 @@ let server: Server | null = null
 
 let mainWindow: BrowserWindow | null = null
 
-let runtimeApiUrl = 'http://localhost:3334'
+const PUBLIC_API_URL = 'https://moda-urbana-production.up.railway.app'
+
+let runtimeApiUrl = PUBLIC_API_URL
 
 
 
@@ -53,9 +55,10 @@ function resolveApiUrl(): string {
 
 
   const candidates = app.isPackaged
-
-    ? [path.join(path.dirname(process.execPath), 'api-url.json')]
-
+    ? [
+        path.join(path.dirname(process.execPath), 'api-url.json'),
+        path.join(process.resourcesPath, 'api-url.json'),
+      ]
     : [path.join(app.getAppPath(), 'api-url.json')]
 
 
@@ -90,8 +93,7 @@ function resolveApiUrl(): string {
 
 
 
-  return 'http://localhost:3334'
-
+  return PUBLIC_API_URL
 }
 
 

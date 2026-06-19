@@ -18,6 +18,7 @@ import {
   transicionarOrder,
   updateOrder,
 } from '@/features/orders/services/order-service'
+import { CatalogFormDialog } from '@/features/ventas/components/catalog-form-dialog'
 import { CatalogProductCard } from '@/features/ventas/components/catalog-product-card'
 import { VentasCustomerPickDialog } from '@/features/ventas/components/ventas-customer-pick-dialog'
 import {
@@ -71,6 +72,8 @@ function VentasCreateView() {
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false)
   const [customerPickOpen, setCustomerPickOpen] = useState(false)
   const [loadDraftOpen, setLoadDraftOpen] = useState(false)
+  const [editProduct, setEditProduct] = useState<CatalogProduct | null>(null)
+  const [editProductOpen, setEditProductOpen] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -135,6 +138,11 @@ function VentasCreateView() {
       }
       return [...prev, { product, quantity: 1 }]
     })
+  }
+
+  function openEditProduct(product: CatalogProduct) {
+    setEditProduct(product)
+    setEditProductOpen(true)
   }
 
   function updateCartQty(productId: number, quantity: number) {
@@ -525,6 +533,8 @@ function VentasCreateView() {
                     <CatalogProductCard
                       key={product.id}
                       product={product}
+                      showActions
+                      onEdit={openEditProduct}
                       onAddToCart={addToCart}
                     />
                   ))}
@@ -549,6 +559,16 @@ function VentasCreateView() {
         open={loadDraftOpen}
         onOpenChange={setLoadDraftOpen}
         onLoaded={handleLoadedDraft}
+      />
+      <CatalogFormDialog
+        open={editProductOpen}
+        onOpenChange={(open) => {
+          setEditProductOpen(open)
+          if (!open) {
+            setEditProduct(null)
+          }
+        }}
+        product={editProduct}
       />
     </div>
   )

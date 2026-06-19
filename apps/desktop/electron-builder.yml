@@ -12,6 +12,11 @@ extraResources:
     to: web-dist
     filter:
       - '**/*'
+  - from: api-url.json
+    to: api-url.json
+extraFiles:
+  - from: api-url.json
+    to: api-url.json
 afterPack: scripts/after-pack.cjs
 win:
   target: nsis

@@ -438,6 +438,49 @@ test.group('Ventas API — catálogo y ventas', (group) => {
     assert.equal(response.body().data.catalog_product.stock_source, 'formula')
   })
 
+  test('PUT catalog product with formula syncs cost_usd from materials', async ({ client, assert }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const material = await seedMaterial({ code: 'MAT-FORM-COST', lastPurchasePriceUsd: '0.4000' })
+
+    const formula = await Formula.create({ name: 'Fórmula costo', active: true })
+    await FormulaMaterial.create({
+      formulaId: Number(formula.id),
+      materialId: Number(material.id),
+      quantity: '2.000',
+    })
+
+    const createResponse = await client.post('/api/v1/catalog-products').loginAs(user).json({
+      name: 'Producto con costo manual',
+      category: 'Camisa',
+      sale_price_usd: 12,
+      cost_usd: 5,
+    })
+
+    createResponse.assertStatus(200)
+    const productId = createResponse.body().data.catalog_product.id
+
+    const updateResponse = await client
+      .put(`/api/v1/catalog-products/${productId}`)
+      .loginAs(user)
+      .json({
+        name: 'Producto con costo manual',
+        category: 'Camisa',
+        sale_price_usd: 12,
+        formula_id: Number(formula.id),
+      })
+
+    updateResponse.assertStatus(200)
+    assert.equal(updateResponse.body().data.catalog_product.cost_usd, '0.8000')
+
+    const listResponse = await client.get('/api/v1/catalog-products').loginAs(user)
+
+    listResponse.assertStatus(200)
+    const listed = listResponse
+      .body()
+      .data.catalog_products.find((item: { id: number }) => item.id === productId)
+    assert.equal(listed.cost_usd, '0.8000')
+  })
+
   test('POST sale rejects catalog product without stock', async ({ client }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
 

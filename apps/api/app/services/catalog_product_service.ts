@@ -147,6 +147,7 @@ export default class CatalogProductService {
       throw new ProductoCatalogoNoEncontradoException()
     }
 
+    await this.sincronizarCostoDesdeFormula(product)
     return product
   }
 
@@ -188,8 +189,8 @@ export default class CatalogProductService {
 
   async actualizar(id: number, input: CatalogProductUpdateInput): Promise<CatalogProductUpdateResult> {
     const product = await this.obtener(id)
-    let costUsd = Number(product.costUsd)
     const costWarnings: CostWarning[] = []
+    const previousFormulaId = product.formulaId
 
     if (input.formula_id !== undefined) {
       if (input.formula_id === null) {
@@ -197,24 +198,9 @@ export default class CatalogProductService {
       } else {
         await this.assertFormulaExiste(input.formula_id)
         product.formulaId = input.formula_id
-        product.stockQuantity = '0.000'
-        if (input.cost_usd === undefined) {
-          costUsd = await this.formulaService.calcularCosto(input.formula_id)
-          product.costUsd = costUsd.toFixed(4)
-          const warning = this.buildCostWarningIfNeeded(product, costUsd)
-          if (warning) {
-            costWarnings.push(warning)
-          }
+        if (input.formula_id !== previousFormulaId) {
+          product.stockQuantity = '0.000'
         }
-      }
-    }
-
-    if (input.cost_usd !== undefined) {
-      costUsd = input.cost_usd
-      product.costUsd = costUsd.toFixed(4)
-      const warning = this.buildCostWarningIfNeeded(product, costUsd)
-      if (warning) {
-        costWarnings.push(warning)
       }
     }
 
@@ -256,6 +242,18 @@ export default class CatalogProductService {
 
     if (input.active !== undefined) {
       product.active = input.active
+    }
+
+    if (input.cost_usd !== undefined) {
+      product.costUsd = input.cost_usd.toFixed(4)
+    } else if (product.formulaId) {
+      product.costUsd = await this.calcularCostoFormula(product)
+    }
+
+    const effectiveCostUsd = Number(product.costUsd)
+    const warning = this.buildCostWarningIfNeeded(product, effectiveCostUsd)
+    if (warning) {
+      costWarnings.push(warning)
     }
 
     await product.save()
@@ -418,6 +416,31 @@ export default class CatalogProductService {
     const filename = `catalog-${id}.${extension}`
 
     return { bytes, contentType, filename }
+  }
+
+  async sincronizarCostosFormulaEnLote(products: CatalogProduct[]): Promise<void> {
+    for (const product of products) {
+      await this.sincronizarCostoDesdeFormula(product)
+    }
+  }
+
+  private async calcularCostoFormula(product: CatalogProduct): Promise<string> {
+    const costUsd = await this.formulaService.calcularCosto(Number(product.formulaId))
+    return costUsd.toFixed(4)
+  }
+
+  private async sincronizarCostoDesdeFormula(product: CatalogProduct): Promise<void> {
+    if (!product.formulaId) {
+      return
+    }
+
+    const formatted = await this.calcularCostoFormula(product)
+    if (product.costUsd === formatted) {
+      return
+    }
+
+    product.costUsd = formatted
+    await product.save()
   }
 
   private buildCostWarningIfNeeded(product: CatalogProduct, costUsd: number): CostWarning | null {

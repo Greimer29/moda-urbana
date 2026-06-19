@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-let apiBaseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3334'
+const PUBLIC_API_URL = 'https://moda-urbana-production.up.railway.app'
+
+let apiBaseUrl = import.meta.env.VITE_API_URL ?? PUBLIC_API_URL
 
 export const api = axios.create({
   withCredentials: true,
@@ -36,16 +38,19 @@ export function configureApiBaseUrl(url: string) {
 export async function loadRuntimeApiConfig(): Promise<void> {
   try {
     const response = await fetch('/runtime-config.json', { credentials: 'same-origin' })
-    if (!response.ok) {
-      return
-    }
-
-    const config = (await response.json()) as { apiUrl?: string }
-    if (config.apiUrl) {
-      configureApiBaseUrl(config.apiUrl)
+    if (response.ok) {
+      const config = (await response.json()) as { apiUrl?: string }
+      if (config.apiUrl) {
+        configureApiBaseUrl(config.apiUrl)
+        return
+      }
     }
   } catch {
-    // Web local o build sin runtime-config: se usa VITE_API_URL.
+    // Web local o build sin runtime-config: continuar con fallbacks.
+  }
+
+  if (typeof window !== 'undefined' && window.location.port === '51740') {
+    configureApiBaseUrl(import.meta.env.VITE_API_URL ?? PUBLIC_API_URL)
   }
 }
 
