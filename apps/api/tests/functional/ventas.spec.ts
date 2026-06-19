@@ -643,9 +643,7 @@ test.group('Ventas API — catálogo y ventas', (group) => {
       imagePath: 'catalog-products/999999/missing.webp',
     })
 
-    const imageResponse = await client
-      .get(`/api/v1/catalog-products/${catalog.id}/image`)
-      .loginAs(user)
+    const imageResponse = await client.get(`/api/v1/catalog-products/${catalog.id}/image`)
 
     imageResponse.assertStatus(404)
     imageResponse.assertBodyContains({

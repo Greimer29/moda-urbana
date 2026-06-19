@@ -15,7 +15,7 @@ import {
   MATERIAL_CATEGORIAS,
   MATERIAL_UNITES,
   UNIT_ABREV,
-  materialImagePath,
+  materialImageUrl,
   materialStockDisponible,
 } from '@/features/materials/constants'
 import { StockBadge } from '@/features/materials/components/stock-badge'
@@ -282,8 +282,8 @@ export function MaterialForm({
       <div className="flex gap-4">
         <div className="flex w-1/3 justify-center">
           <CircularImageField
-            assetPath={
-              displayMaterial?.imagePath ? materialImagePath(displayMaterial.id) : null
+            imageUrl={
+              displayMaterial?.imagePath ? materialImageUrl(displayMaterial.id) : null
             }
             pendingPreviewUrl={pendingPreviewUrl}
             alt={displayMaterial?.name ?? 'Material'}

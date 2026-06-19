@@ -1,3 +1,4 @@
+import { resolvePublicAssetUrl } from '@/lib/api'
 import {
   INVENTORY_UNIT_OPTIONS,
   type InventoryUnit,
@@ -36,13 +37,8 @@ export const PAYMENT_METHODS = [
 
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]['value']
 
-export function catalogImagePath(productId: number) {
-  return `/catalog-products/${productId}/image`
-}
-
-/** @deprecated Usar catalogImagePath con AuthenticatedImage o useAuthenticatedAsset */
 export function catalogImageUrl(productId: number) {
-  return catalogImagePath(productId)
+  return resolvePublicAssetUrl(`/catalog-products/${productId}/image`)
 }
 
 export function formatUsd(value: string | number | null | undefined) {

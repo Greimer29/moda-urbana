@@ -2,8 +2,8 @@ import { Package } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { catalogProductCode } from '@/features/ventas/components/ventas-order-cart'
-import { AuthenticatedImage } from '@/components/authenticated-image'
-import { catalogImagePath, categoryLabel, productSaleUnitAbrev } from '@/features/ventas/constants'
+import { PublicImage } from '@/components/public-image'
+import { catalogImageUrl, categoryLabel, productSaleUnitAbrev } from '@/features/ventas/constants'
 import type { DailySoldProduct } from '@/features/dashboard/types'
 
 type DailySoldProductCardProps = {
@@ -45,8 +45,8 @@ export function DailySoldProductCard({ product }: DailySoldProductCardProps) {
         aria-label={`Ver ${product.name}`}
       >
         {hasImage ? (
-          <AuthenticatedImage
-            assetPath={catalogImagePath(product.id)}
+          <PublicImage
+            src={catalogImageUrl(product.id)}
             alt={product.name}
             className="size-full object-cover"
             showFallbackIcon

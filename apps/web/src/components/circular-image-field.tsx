@@ -1,11 +1,10 @@
 import { Camera, Loader2, Trash2 } from 'lucide-react'
 import { useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { useAuthenticatedAsset } from '@/hooks/use-authenticated-asset'
 import { cn } from '@/lib/utils'
 
 type CircularImageFieldProps = {
-  assetPath?: string | null
+  imageUrl?: string | null
   pendingPreviewUrl?: string | null
   alt?: string
   size?: number
@@ -17,7 +16,7 @@ type CircularImageFieldProps = {
 }
 
 export function CircularImageField({
-  assetPath,
+  imageUrl,
   pendingPreviewUrl,
   alt = '',
   size = 150,
@@ -28,8 +27,7 @@ export function CircularImageField({
   className,
 }: CircularImageFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const { objectUrl: serverPreviewUrl } = useAuthenticatedAsset(assetPath)
-  const previewUrl = pendingPreviewUrl ?? serverPreviewUrl ?? null
+  const previewUrl = pendingPreviewUrl ?? imageUrl ?? null
 
   return (
     <div className={cn('flex flex-col items-center gap-2', className)}>

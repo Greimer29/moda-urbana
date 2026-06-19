@@ -175,6 +175,20 @@ export function getApiBaseUrl() {
   return apiBaseUrl
 }
 
+export function getApiV1BaseUrl(): string {
+  if (usesLocalApiProxy() && typeof window !== 'undefined') {
+    return `${window.location.origin}/api/v1`
+  }
+
+  const base = apiBaseUrl.replace(/\/$/, '') || PUBLIC_API_URL.replace(/\/$/, '')
+  return `${base}/api/v1`
+}
+
+export function resolvePublicAssetUrl(assetPath: string): string {
+  const normalizedPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`
+  return `${getApiV1BaseUrl()}${normalizedPath}`
+}
+
 export function isApiCrossOrigin() {
   return isCrossOriginApi()
 }

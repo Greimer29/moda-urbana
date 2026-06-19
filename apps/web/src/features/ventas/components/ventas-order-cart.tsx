@@ -1,4 +1,4 @@
-import { AuthenticatedImage } from '@/components/authenticated-image'
+import { PublicImage } from '@/components/public-image'
 import type { ProductSaleUnit } from '@/features/ventas/constants'
 import type { ReactNode } from 'react'
 import { LayoutGrid, Package, Trash2, X } from 'lucide-react'
@@ -17,7 +17,7 @@ export type VentasCartLine = {
   quantity: number
   unitPriceUsd: number
   saleUnit?: ProductSaleUnit
-  imageAssetPath?: string | null
+  imageUrl?: string | null
   imageTone?: 'orange' | 'violet' | 'amber' | 'sky'
   metaLabel?: string
 }
@@ -118,12 +118,12 @@ export function VentasOrderCart({
                 <div
                   className={cn(
                     'flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl',
-                    line.imageAssetPath ? 'bg-muted' : IMAGE_TONE_CLASS[line.imageTone ?? 'violet']
+                    line.imageUrl ? 'bg-muted' : IMAGE_TONE_CLASS[line.imageTone ?? 'violet']
                   )}
                 >
-                  {line.imageAssetPath ? (
-                    <AuthenticatedImage
-                      assetPath={line.imageAssetPath}
+                   {line.imageUrl ? (
+                    <PublicImage
+                      src={line.imageUrl}
                       alt={line.name}
                       className="size-full object-cover"
                       showFallbackIcon

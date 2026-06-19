@@ -32,7 +32,7 @@ import {
   type VentasCartLine,
 } from '@/features/ventas/components/ventas-order-cart'
 import { useActiveCategoriesQuery } from '@/features/categories/hooks/use-categories'
-import { catalogImagePath } from '@/features/ventas/constants'
+import { catalogImageUrl } from '@/features/ventas/constants'
 import { useCatalogProductsQuery } from '@/features/ventas/hooks/use-catalog'
 import type { CatalogProduct } from '@/features/ventas/types'
 import { cartHasStockIssues } from '@/features/ventas/utils/product-stock'
@@ -117,7 +117,7 @@ function VentasCreateView() {
         quantity: line.quantity,
         unitPriceUsd: Number(line.product.sale_price_usd),
         saleUnit: line.product.sale_unit ?? 'UND',
-        imageAssetPath: line.product.image_path ? catalogImagePath(line.product.id) : null,
+        imageUrl: line.product.image_path ? catalogImageUrl(line.product.id) : null,
         imageTone: catalogImageTone(line.product.id),
       })),
     [cart]

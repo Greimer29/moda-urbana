@@ -1,29 +1,25 @@
 import { Package } from 'lucide-react'
-import { useAuthenticatedAsset } from '@/hooks/use-authenticated-asset'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
-type AuthenticatedImageProps = {
-  assetPath: string
+type PublicImageProps = {
+  src: string
   alt: string
   className?: string
   fallbackClassName?: string
   showFallbackIcon?: boolean
 }
 
-export function AuthenticatedImage({
-  assetPath,
+export function PublicImage({
+  src,
   alt,
   className,
   fallbackClassName,
   showFallbackIcon = false,
-}: AuthenticatedImageProps) {
-  const { objectUrl, isLoading, error } = useAuthenticatedAsset(assetPath)
+}: PublicImageProps) {
+  const [failed, setFailed] = useState(false)
 
-  if (isLoading) {
-    return <div className={cn('bg-muted animate-pulse', className)} aria-hidden />
-  }
-
-  if (error || !objectUrl) {
+  if (failed || !src) {
     if (!showFallbackIcon) {
       return null
     }
@@ -35,5 +31,7 @@ export function AuthenticatedImage({
     )
   }
 
-  return <img src={objectUrl} alt={alt} className={className} />
+  return (
+    <img src={src} alt={alt} className={className} onError={() => setFailed(true)} />
+  )
 }

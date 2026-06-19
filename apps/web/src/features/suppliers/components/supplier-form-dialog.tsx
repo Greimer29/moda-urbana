@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { supplierImagePath } from '@/features/suppliers/constants'
+import { supplierImageUrl } from '@/features/suppliers/constants'
 import {
   useCreateSupplierMutation,
   useDeleteSupplierImageMutation,
@@ -210,7 +210,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onCreated }: 
         <form className="flex flex-col gap-5" onSubmit={onSubmit}>
           <section className="flex gap-5">
             <CircularImageField
-              assetPath={supplier?.imagePath ? supplierImagePath(supplier.id) : null}
+              imageUrl={supplier?.imagePath ? supplierImageUrl(supplier.id) : null}
               pendingPreviewUrl={pendingPreviewUrl}
               alt={supplier?.name ?? 'Proveedor'}
               pending={imagePending}

@@ -142,6 +142,7 @@ export default class CatalogProductsController {
 
     response.header('Content-Type', image.contentType)
     response.header('Content-Disposition', `inline; filename="${image.filename}"`)
+    response.header('Cache-Control', 'public, max-age=86400')
     return response.send(image.bytes)
   }
 

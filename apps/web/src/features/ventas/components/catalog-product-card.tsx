@@ -1,8 +1,8 @@
 import { Package, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
-import { AuthenticatedImage } from '@/components/authenticated-image'
-import { catalogImagePath, productSaleUnitAbrev } from '@/features/ventas/constants'
+import { PublicImage } from '@/components/public-image'
+import { catalogImageUrl, productSaleUnitAbrev } from '@/features/ventas/constants'
 import {
   CatalogCardActionButton,
   catalogImageTone,
@@ -112,8 +112,8 @@ export function CatalogProductCard({
         )}
       >
         {hasImage ? (
-          <AuthenticatedImage
-            assetPath={catalogImagePath(product.id)}
+          <PublicImage
+            src={catalogImageUrl(product.id)}
             alt={product.name}
             className="size-full object-cover"
             showFallbackIcon

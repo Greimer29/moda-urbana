@@ -159,6 +159,7 @@ export default class SuppliersControleler {
     const { bytes, contentType, filename } = await this.service.obtenerImagen(Number(params.id))
     response.header('Content-Type', contentType)
     response.header('Content-Disposition', `inline; filename="${filename}"`)
+    response.header('Cache-Control', 'public, max-age=86400')
     return response.send(bytes)
   }
 
