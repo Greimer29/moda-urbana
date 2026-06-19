@@ -50,6 +50,7 @@ import FormulaNoEncontradaException from '#exceptions/formula_no_encontrada_exce
 import PrecioVentaMenorCostoException from '#exceptions/precio_venta_menor_costo_exception'
 import ProductoCatalogoEnPedidosActivosException from '#exceptions/producto_catalogo_en_pedidos_activos_exception'
 import ProductoCatalogoStockFormulaException from '#exceptions/producto_catalogo_stock_formula_exception'
+import ArchivoImagenNoDisponibleException from '#exceptions/archivo_imagen_no_disponible_exception'
 import VentaNoEncontradaException from '#exceptions/venta_no_encontrada_exception'
 import PedidoLineaNoEncontradaException from '#exceptions/pedido_linea_no_encontrada_exception'
 import LineaVentaInvalidaException from '#exceptions/linea_venta_invalida_exception'
@@ -480,6 +481,15 @@ export default class HttpExceptionHandler extends ExceptionHandler {
         error: {
           code: FormulaEnUsoException.code,
           message: error.message || FormulaEnUsoException.message,
+        },
+      })
+    }
+
+    if (error instanceof ArchivoImagenNoDisponibleException) {
+      return ctx.response.status(ArchivoImagenNoDisponibleException.status).json({
+        error: {
+          code: ArchivoImagenNoDisponibleException.code,
+          message: error.message || ArchivoImagenNoDisponibleException.message,
         },
       })
     }

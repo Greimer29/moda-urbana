@@ -21,11 +21,21 @@ export function useAuthenticatedAsset(assetPath: string | null | undefined) {
     setError(false)
 
     void api
-      .get(assetPath, { responseType: 'blob' })
+      .get(assetPath, {
+        responseType: 'blob',
+        validateStatus: (status) => status === 200 || status === 404,
+      })
       .then((response) => {
         if (cancelled) {
           return
         }
+
+        if (response.status === 404) {
+          setObjectUrl(null)
+          setError(true)
+          return
+        }
+
         blobUrl = URL.createObjectURL(response.data)
         setObjectUrl(blobUrl)
       })

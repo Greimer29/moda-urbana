@@ -1,6 +1,7 @@
 import FormulaNoEncontradaException from '#exceptions/formula_no_encontrada_exception'
 import ProductoCatalogoEnPedidosActivosException from '#exceptions/producto_catalogo_en_pedidos_activos_exception'
 import ProductoCatalogoNoEncontradoException from '#exceptions/producto_catalogo_no_encontrado_exception'
+import ArchivoImagenNoDisponibleException from '#exceptions/archivo_imagen_no_disponible_exception'
 import CatalogProduct from '#models/catalog_product'
 import Formula from '#models/formula'
 import OrderLine from '#models/order_line'
@@ -406,7 +407,9 @@ export default class CatalogProductService {
 
     const exists = await drive.use().exists(product.imagePath)
     if (!exists) {
-      throw new ProductoCatalogoNoEncontradoException()
+      product.imagePath = null
+      await product.save()
+      throw new ArchivoImagenNoDisponibleException()
     }
 
     const bytes = await drive.use().getBytes(product.imagePath)

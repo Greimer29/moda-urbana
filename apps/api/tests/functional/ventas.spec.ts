@@ -626,4 +626,40 @@ test.group('Ventas API — catálogo y ventas', (group) => {
       error: { code: 'PRODUCTO_CON_FORMULA_SIN_STOCK_MANUAL' },
     })
   })
+
+  test('GET catalog product image clears stale image_path when file is missing', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+
+    const catalog = await CatalogProduct.create({
+      name: 'Producto imagen huérfana',
+      category: 'Uniforme',
+      salePriceUsd: '12.0000',
+      costUsd: '1.0000',
+      stockQuantity: '10.000',
+      active: true,
+      imagePath: 'catalog-products/999999/missing.webp',
+    })
+
+    const imageResponse = await client
+      .get(`/api/v1/catalog-products/${catalog.id}/image`)
+      .loginAs(user)
+
+    imageResponse.assertStatus(404)
+    imageResponse.assertBodyContains({
+      error: { code: 'IMAGE_NOT_AVAILABLE' },
+    })
+
+    await catalog.refresh()
+    assert.isNull(catalog.imagePath)
+
+    const detailResponse = await client
+      .get(`/api/v1/catalog-products/${catalog.id}`)
+      .loginAs(user)
+
+    detailResponse.assertStatus(200)
+    assert.isNull(detailResponse.body().data.catalog_product.image_path)
+  })
 })
