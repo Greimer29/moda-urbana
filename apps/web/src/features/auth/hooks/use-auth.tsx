@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         axios.isAxiosError(error) &&
         (error.code === 'ERR_NETWORK' || error.message === 'Network Error')
 
-      if (!isUnauthorized && !isApiUnreachable) {
+      if (!isUnauthorized && !isApiUnreachable && import.meta.env.DEV) {
         console.error('No se pudo cargar la sesión', error)
       }
       setUser(null)

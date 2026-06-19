@@ -291,7 +291,13 @@ export function CatalogFormDialog({
 
     try {
       if (isEditing) {
-        const { costWarnings } = await updateMutation.mutateAsync({ id: product.id, payload })
+        const productId = displayProduct?.id ?? product?.id
+        if (productId == null) {
+          setError('No se pudo identificar el producto a editar.')
+          return
+        }
+
+        const { costWarnings } = await updateMutation.mutateAsync({ id: productId, payload })
         const warningMessage = formatCostWarningsMessage(costWarnings)
         if (warningMessage) {
           setCostWarning(warningMessage)

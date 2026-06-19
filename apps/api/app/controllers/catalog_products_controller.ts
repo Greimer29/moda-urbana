@@ -24,14 +24,18 @@ export default class CatalogProductsController {
 
   private async serializeWithStock(product: CatalogProduct) {
     const stock = await this.stockService.calcularStockDisponible(product)
-    return serializeCatalogProduct(product, { stock })
+    const costUsd = await this.service.resolverCostoUsd(product)
+    return serializeCatalogProduct(product, { stock, costUsd })
   }
 
   private async serializeManyWithStock(products: CatalogProduct[]) {
     const stockById = await this.stockService.calcularStockForProducts(products)
+    const costById = await this.service.resolverCostosUsdEnLote(products)
+
     return products.map((product) =>
       serializeCatalogProduct(product, {
         stock: stockById.get(Number(product.id)),
+        costUsd: costById.get(Number(product.id)),
       })
     )
   }
@@ -49,7 +53,6 @@ export default class CatalogProductsController {
     })
 
     const products = paginator.all()
-    await this.service.sincronizarCostosFormulaEnLote(products)
     const catalogProducts = await this.serializeManyWithStock(products)
 
     return serialize({
@@ -63,8 +66,10 @@ export default class CatalogProductsController {
     const movimientos = await this.inventoryService.listarMovimientos(Number(params.id))
     const stock = await this.stockService.calcularStockDisponible(product)
 
+    const costUsd = await this.service.resolverCostoUsd(product)
+
     return serialize({
-      catalog_product: serializeCatalogProductDetail(product, { movimientos, stock }),
+      catalog_product: serializeCatalogProductDetail(product, { movimientos, stock, costUsd }),
     })
   }
 

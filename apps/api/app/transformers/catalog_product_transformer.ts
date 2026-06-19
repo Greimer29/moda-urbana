@@ -21,7 +21,7 @@ export function serializeProductMovimientos(movimientos: ProductInventoryMovemen
 
 export function serializeCatalogProduct(
   product: CatalogProduct,
-  extras?: { soldQty?: number; stock?: CatalogProductStockExtras }
+  extras?: { soldQty?: number; stock?: CatalogProductStockExtras; costUsd?: string }
 ) {
   const stockQuantity = extras?.stock?.quantity ?? product.stockQuantity
   const stockSource = extras?.stock?.source ?? (product.formulaId ? 'formula' : 'manual')
@@ -36,7 +36,7 @@ export function serializeCatalogProduct(
     image_path: product.imagePath,
     sale_price_usd: product.salePriceUsd,
     previous_sale_price_usd: product.previousSalePriceUsd,
-    cost_usd: product.costUsd,
+    cost_usd: extras?.costUsd ?? product.costUsd,
     stock_quantity: typeof stockQuantity === 'number' ? stockQuantity.toFixed(3) : stockQuantity,
     stock_source: stockSource,
     minimum_stock: product.minimumStock,
@@ -58,6 +58,7 @@ export function serializeCatalogProductDetail(
     soldQty?: number
     movimientos?: ProductInventoryMovement[]
     stock?: CatalogProductStockExtras
+    costUsd?: string
   }
 ) {
   return {

@@ -481,6 +481,42 @@ test.group('Ventas API — catálogo y ventas', (group) => {
     assert.equal(listed.cost_usd, '0.8000')
   })
 
+  test('GET catalog products exposes formula cost without persisting on read', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const material = await seedMaterial({ code: 'MAT-FORM-READ', lastPurchasePriceUsd: '0.5000' })
+
+    const formula = await Formula.create({ name: 'Fórmula lectura', active: true })
+    await FormulaMaterial.create({
+      formulaId: Number(formula.id),
+      materialId: Number(material.id),
+      quantity: '1.000',
+    })
+
+    const catalog = await CatalogProduct.create({
+      name: 'Producto costo stale',
+      category: 'Camisa',
+      formulaId: Number(formula.id),
+      salePriceUsd: '12.0000',
+      costUsd: '0.0000',
+      stockQuantity: '0.000',
+      active: true,
+    })
+
+    const response = await client.get('/api/v1/catalog-products').loginAs(user)
+
+    response.assertStatus(200)
+    const listed = response
+      .body()
+      .data.catalog_products.find((item: { id: number }) => item.id === Number(catalog.id))
+    assert.equal(listed.cost_usd, '0.5000')
+
+    await catalog.refresh()
+    assert.equal(catalog.costUsd, '0.0000')
+  })
+
   test('POST sale rejects catalog product without stock', async ({ client }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
 

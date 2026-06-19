@@ -147,7 +147,6 @@ export default class CatalogProductService {
       throw new ProductoCatalogoNoEncontradoException()
     }
 
-    await this.sincronizarCostoDesdeFormula(product)
     return product
   }
 
@@ -247,7 +246,7 @@ export default class CatalogProductService {
     if (input.cost_usd !== undefined) {
       product.costUsd = input.cost_usd.toFixed(4)
     } else if (product.formulaId) {
-      product.costUsd = await this.calcularCostoFormula(product)
+      product.costUsd = await this.calcularCostoFormulaPersistible(product)
     }
 
     const effectiveCostUsd = Number(product.costUsd)
@@ -418,29 +417,49 @@ export default class CatalogProductService {
     return { bytes, contentType, filename }
   }
 
-  async sincronizarCostosFormulaEnLote(products: CatalogProduct[]): Promise<void> {
+  async resolverCostosUsdEnLote(products: CatalogProduct[]): Promise<Map<number, string>> {
+    const costByProductId = new Map<number, string>()
+    const costByFormulaId = new Map<number, string>()
+
     for (const product of products) {
-      await this.sincronizarCostoDesdeFormula(product)
+      const productId = Number(product.id)
+
+      if (!product.formulaId) {
+        costByProductId.set(productId, this.normalizeCostUsd(product.costUsd))
+        continue
+      }
+
+      const formulaId = Number(product.formulaId)
+      let formulaCost = costByFormulaId.get(formulaId)
+
+      if (formulaCost === undefined) {
+        try {
+          formulaCost = (await this.formulaService.calcularCosto(formulaId)).toFixed(4)
+        } catch {
+          formulaCost = this.normalizeCostUsd(product.costUsd)
+        }
+        costByFormulaId.set(formulaId, formulaCost)
+      }
+
+      costByProductId.set(productId, formulaCost)
     }
+
+    return costByProductId
   }
 
-  private async calcularCostoFormula(product: CatalogProduct): Promise<string> {
+  async resolverCostoUsd(product: CatalogProduct): Promise<string> {
+    const resolved = await this.resolverCostosUsdEnLote([product])
+    return resolved.get(Number(product.id)) ?? this.normalizeCostUsd(product.costUsd)
+  }
+
+  private async calcularCostoFormulaPersistible(product: CatalogProduct): Promise<string> {
     const costUsd = await this.formulaService.calcularCosto(Number(product.formulaId))
     return costUsd.toFixed(4)
   }
 
-  private async sincronizarCostoDesdeFormula(product: CatalogProduct): Promise<void> {
-    if (!product.formulaId) {
-      return
-    }
-
-    const formatted = await this.calcularCostoFormula(product)
-    if (product.costUsd === formatted) {
-      return
-    }
-
-    product.costUsd = formatted
-    await product.save()
+  private normalizeCostUsd(value: string | null | undefined): string {
+    const parsed = Number(value ?? 0)
+    return Number.isFinite(parsed) ? parsed.toFixed(4) : '0.0000'
   }
 
   private buildCostWarningIfNeeded(product: CatalogProduct, costUsd: number): CostWarning | null {

@@ -560,16 +560,18 @@ function VentasCreateView() {
         onOpenChange={setLoadDraftOpen}
         onLoaded={handleLoadedDraft}
       />
-      <CatalogFormDialog
-        open={editProductOpen}
-        onOpenChange={(open) => {
-          setEditProductOpen(open)
-          if (!open) {
-            setEditProduct(null)
-          }
-        }}
-        product={editProduct}
-      />
+      {editProduct ? (
+        <CatalogFormDialog
+          open={editProductOpen}
+          onOpenChange={(open) => {
+            setEditProductOpen(open)
+            if (!open) {
+              setEditProduct(null)
+            }
+          }}
+          product={editProduct}
+        />
+      ) : null}
     </div>
   )
 }
