@@ -8,6 +8,8 @@ import Supplier from '#models/supplier'
 import User from '#models/user'
 import Customer from '#models/customer'
 import CatalogProduct from '#models/catalog_product'
+import Formula from '#models/formula'
+import FormulaMaterial from '#models/formula_material'
 import Order from '#models/order'
 import OrderLine from '#models/order_line'
 import Currency from '#models/currency'
@@ -242,6 +244,83 @@ test.group('Dashboard API', (group) => {
     assert.equal(body.data.products[0].total_usd, '24.0000')
     assert.equal(body.data.summary.productos_vendidos, 2)
     assert.equal(body.data.summary.monto_productos_usd, '24.0000')
+  })
+
+  test('GET daily-product-sales uses formula stock for catalog products', async ({ client, assert }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const material = await Material.create({
+      code: 'MAT-DASH-FORM',
+      name: 'Material dashboard',
+      category: 'FABRIC',
+      unit: 'UND',
+      minimumStock: '0',
+      lastPurchasePriceUsd: '1.0000',
+      active: true,
+    })
+    await InventoryMovement.create({
+      materialId: material.id,
+      type: 'MANUAL_ADJUSTMENT',
+      quantity: '20',
+    })
+
+    const formula = await Formula.create({ name: 'Fórmula dashboard', active: true })
+    await FormulaMaterial.create({
+      formulaId: Number(formula.id),
+      materialId: Number(material.id),
+      quantity: '2.000',
+    })
+
+    const product = await CatalogProduct.create({
+      name: 'Producto fórmula dashboard',
+      category: 'Credito',
+      saleUnit: 'UND',
+      salePriceUsd: '12.0000',
+      costUsd: '2.0000',
+      formulaId: Number(formula.id),
+      stockQuantity: '0.000',
+      active: true,
+    })
+
+    const response = await client.get('/api/v1/dashboard/daily-product-sales').loginAs(user)
+
+    response.assertStatus(200)
+    const item = response
+      .body()
+      .data.products.find((row: { id: number }) => row.id === Number(product.id))
+
+    assert.isUndefined(item)
+
+    const customer = await Customer.create({ name: 'Cliente fórmula', active: true })
+    const order = await Order.create({
+      code: 'PED-DASH-FORM',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta fórmula',
+      totalQuantity: 2,
+      orderDate: DateTime.now(),
+      status: 'DELIVERED',
+      totalPrice: '24.0000',
+      confirmedAt: DateTime.now(),
+    })
+    await OrderLine.create({
+      orderId: order.id,
+      catalogProductId: product.id,
+      quantity: '2',
+      unitPriceUsd: '12.0000',
+      subtotalUsd: '24.0000',
+      returnedQuantity: '0',
+    })
+
+    const afterSale = await client.get('/api/v1/dashboard/daily-product-sales').loginAs(user)
+
+    afterSale.assertStatus(200)
+    const soldItem = afterSale
+      .body()
+      .data.products.find((row: { id: number }) => row.id === Number(product.id))
+
+    assert.exists(soldItem)
+    assert.equal(soldItem.quantity_sold, 2)
+    assert.equal(soldItem.stock_quantity, '10.000')
   })
 
   test('GET /api/v1/dashboard/overview subtracts daily expenses from ganancia del dia', async ({

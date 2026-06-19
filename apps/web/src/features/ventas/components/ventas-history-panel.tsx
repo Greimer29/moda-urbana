@@ -1,9 +1,9 @@
-import { Loader2, RotateCcw, Search } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { ChevronDown, Loader2, RotateCcw, Search } from 'lucide-react'
+import { Fragment, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { VentasHistoryOrderLines } from '@/features/ventas/components/ventas-history-order-lines'
 import { VentasOrderReturnDialog } from '@/features/ventas/components/ventas-order-return-dialog'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { formatFecha } from '@/features/orders/constants'
@@ -11,6 +11,7 @@ import { OrderEstadoBadge } from '@/features/orders/components/order-status-badg
 import { useOrdersQuery } from '@/features/orders/hooks/use-orders'
 import type { OrderEstado } from '@/features/orders/types'
 import { getApiError } from '@/lib/api-error'
+import { cn } from '@/lib/utils'
 
 const PER_PAGE = 20
 const RETURNABLE: OrderEstado[] = ['CONFIRMED', 'IN_PRODUCTION', 'DELIVERED']
@@ -48,6 +49,7 @@ export function VentasHistoryPanel() {
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
   const [returnOrderId, setReturnOrderId] = useState<number | null>(null)
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null)
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -161,55 +163,82 @@ export function VentasHistoryPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((order) => (
-                    <tr key={order.id} className="border-b last:border-b-0">
-                      <td className="px-4 py-3 font-medium">
-                        <Link to={`/ventas/${order.id}`} className="hover:underline">
-                          {order.code}
-                        </Link>
-                      </td>
-                      <td className="text-muted-foreground px-4 py-3">
-                        {formatFecha(order.confirmedAt ?? order.dateOrder)}
-                      </td>
-                      <td className="px-4 py-3">
-                        {order.customer?.name ?? order.guestName ?? 'Sin cliente'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <OrderEstadoBadge status={order.status} />
-                      </td>
-                      <td className="px-4 py-3">
-                        {order.paymentType === 'CREDIT' ? (
-                          <span className="text-amber-800 dark:text-amber-300">
-                            Crédito
-                            {Number(order.balanceUsd) > 0 ? (
-                              <span className="text-muted-foreground block text-xs">
-                                Saldo: <DisplayMoneyFromUsd amountUsd={order.balanceUsd} size="sm" />
+                  {orders.map((order) => {
+                    const isExpanded = expandedOrderId === order.id
+
+                    return (
+                      <Fragment key={order.id}>
+                        <tr
+                          className={cn(
+                            'border-b cursor-pointer hover:bg-muted/30',
+                            isExpanded && 'bg-muted/20'
+                          )}
+                          onClick={() =>
+                            setExpandedOrderId((current) =>
+                              current === order.id ? null : order.id
+                            )
+                          }
+                        >
+                          <td className="px-4 py-3 font-medium">
+                            <span className="inline-flex items-center gap-2">
+                              <ChevronDown
+                                className={cn(
+                                  'text-muted-foreground size-4 shrink-0 transition-transform',
+                                  isExpanded && 'rotate-180'
+                                )}
+                              />
+                              {order.code}
+                            </span>
+                          </td>
+                          <td className="text-muted-foreground px-4 py-3">
+                            {formatFecha(order.confirmedAt ?? order.dateOrder)}
+                          </td>
+                          <td className="px-4 py-3">
+                            {order.customer?.name ?? order.guestName ?? 'Sin cliente'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <OrderEstadoBadge status={order.status} />
+                          </td>
+                          <td className="px-4 py-3">
+                            {order.paymentType === 'CREDIT' ? (
+                              <span className="text-amber-800 dark:text-amber-300">
+                                Crédito
+                                {Number(order.balanceUsd) > 0 ? (
+                                  <span className="text-muted-foreground block text-xs">
+                                    Saldo:{' '}
+                                    <DisplayMoneyFromUsd amountUsd={order.balanceUsd} size="sm" />
+                                  </span>
+                                ) : null}
                               </span>
-                            ) : null}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">Contado</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <DisplayMoneyFromUsd amountUsd={order.totalPrice} size="sm" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-1">
-                          {RETURNABLE.includes(order.status) ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`Devolver ${order.code}`}
-                              onClick={() => setReturnOrderId(order.id)}
-                            >
-                              <RotateCcw />
-                            </Button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            ) : (
+                              <span className="text-muted-foreground">Contado</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <DisplayMoneyFromUsd amountUsd={order.totalPrice} size="sm" />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-1">
+                              {RETURNABLE.includes(order.status) ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`Devolver ${order.code}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    setReturnOrderId(order.id)
+                                  }}
+                                >
+                                  <RotateCcw />
+                                </Button>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded ? <VentasHistoryOrderLines orderId={order.id} /> : null}
+                      </Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

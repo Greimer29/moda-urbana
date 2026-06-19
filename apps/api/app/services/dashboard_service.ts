@@ -1,5 +1,6 @@
 import MaterialService from '#services/material_service'
 import CurrencyService from '#services/currency_service'
+import CatalogProductStockService from '#services/catalog_product_stock_service'
 import CatalogProduct from '#models/catalog_product'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
@@ -126,6 +127,7 @@ const SALE_STATUSES = ['CONFIRMED', 'IN_PRODUCTION', 'DELIVERED'] as const
 export default class DashboardService {
   private materialService = new MaterialService()
   private currencyService = new CurrencyService()
+  private catalogProductStockService = new CatalogProductStockService()
 
   private sumMachineExpensesUsd(
     rows: Array<{ amount: string | number; currency_code?: string | null }>,
@@ -392,19 +394,33 @@ export default class DashboardService {
       )
       .orderBy('totalUsd', 'desc')
 
+    const productIds = rows.map((row) => Number(row.id))
+    const catalogProducts =
+      productIds.length > 0
+        ? await CatalogProduct.query()
+            .whereIn('id', productIds)
+            .preload('formula', (query) =>
+              query.preload('materials', (materialQuery) => materialQuery.preload('material'))
+            )
+        : []
+    const stockByProductId =
+      await this.catalogProductStockService.calcularStockForProducts(catalogProducts)
+
     const products: DailySoldProductItem[] = rows.map((row) => {
       const quantitySold = Number(row.quantitySold ?? 0)
       const totalUsd = Number(row.totalUsd ?? 0)
       const unitPriceUsd =
         quantitySold > 0 ? (totalUsd / quantitySold).toFixed(4) : '0.0000'
+      const productId = Number(row.id)
+      const stock = stockByProductId.get(productId)
 
       return {
-        id: Number(row.id),
+        id: productId,
         name: String(row.name),
         category: String(row.category),
         saleUnit: String(row.saleUnit),
         imagePath: row.imagePath ? String(row.imagePath) : null,
-        stockQuantity: String(row.stockQuantity ?? '0'),
+        stockQuantity: (stock?.quantity ?? Number(row.stockQuantity ?? 0)).toFixed(3),
         quantitySold,
         unitPriceUsd,
         totalUsd: totalUsd.toFixed(4),
