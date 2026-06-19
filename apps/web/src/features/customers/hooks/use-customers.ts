@@ -4,6 +4,7 @@ import {
   createCustomerPayment,
   deleteCustomer,
   getCustomer,
+  getCustomerAccountStatement,
   listCustomers,
   updateCustomer,
 } from '@/features/customers/services/customer-service'
@@ -67,6 +68,14 @@ export function useDeleteCustomerMutation() {
   })
 }
 
+export function useCustomerAccountStatementQuery(customerId: number) {
+  return useQuery({
+    queryKey: [...customersQueryKey, 'account-statement', customerId],
+    queryFn: () => getCustomerAccountStatement(customerId),
+    enabled: customerId > 0,
+  })
+}
+
 export function useCreateCustomerPaymentMutation() {
   const queryClient = useQueryClient()
 
@@ -80,6 +89,9 @@ export function useCreateCustomerPaymentMutation() {
     }) => createCustomerPayment(customerId, payload),
     onSuccess: (_, { customerId }) => {
       void queryClient.invalidateQueries({ queryKey: [...customersQueryKey, 'detail', customerId] })
+      void queryClient.invalidateQueries({
+        queryKey: [...customersQueryKey, 'account-statement', customerId],
+      })
       invalidateCustomerPayments(queryClient)
     },
   })

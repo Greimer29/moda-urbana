@@ -71,10 +71,15 @@ export function CustomerDetallePage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {(customer.creditDays ?? 0) > 0 ? (
-            <Button onClick={() => setPaymentOpen(true)}>
-              <Plus />
-              Registrar abono
-            </Button>
+            <>
+              <Button variant="outline" asChild>
+                <Link to={`/customers/${customerId}/cuenta`}>Ver estado de cuenta</Link>
+              </Button>
+              <Button onClick={() => setPaymentOpen(true)}>
+                <Plus />
+                Registrar abono
+              </Button>
+            </>
           ) : null}
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil />

@@ -17,6 +17,7 @@ import { SuppliersPage } from '@/pages/suppliers-page'
 import { SupplierAccountPage } from '@/pages/supplier-account-page'
 import { CustomersPage } from '@/pages/customers-page'
 import { CustomerDetallePage } from '@/pages/customer-detail-page'
+import { CustomerAccountPage } from '@/pages/customer-account-page'
 import { VentasPage } from '@/pages/ventas-page'
 import { OrderDetallePage } from '@/pages/order-detail-page'
 import { MachinesPage } from '@/pages/machines-page'
@@ -60,6 +61,10 @@ export const router = createBrowserRouter([
       {
         path: 'customers',
         element: <CustomersPage />,
+      },
+      {
+        path: 'customers/:id/cuenta',
+        element: <CustomerAccountPage />,
       },
       {
         path: 'customers/:id',

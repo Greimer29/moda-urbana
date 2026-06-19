@@ -4,11 +4,16 @@ node_modules/
 # Build outputs
 dist/
 build/
-apps/desktop/release/
-apps/desktop/release-v2/
-apps/desktop/release-build/
 .adonisjs/
 tmp/
+
+# Electron / electron-builder (release, release-build, installers, unpacked app)
+apps/desktop/release*/
+*.blockmap
+
+# Local scratch / npm lockfiles (monorepo uses pnpm)
+package-lock.json
+tmp-*.json
 
 # Environment
 .env

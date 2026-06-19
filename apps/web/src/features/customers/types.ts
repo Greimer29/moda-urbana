@@ -89,6 +89,31 @@ export type CustomerPayment = {
   note: string | null
 }
 
+export type CustomerAccountOrder = {
+  id: number
+  code: string
+  description: string
+  status: string
+  paymentType: string
+  orderDate: string
+  confirmedAt: string | null
+  totalUsd: string | null
+  amountPaidUsd: string
+  balanceUsd: string
+  creditDueDate: string | null
+}
+
+export type CustomerAccountStatement = {
+  customer: Customer
+  orders: CustomerAccountOrder[]
+  payments: CustomerPayment[]
+  saldoPendienteUsd: string
+}
+
+export type CustomerAccountStatementResponse = {
+  data: CustomerAccountStatement
+}
+
 export type CustomerListParams = {
   page?: number
   perPage?: number

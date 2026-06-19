@@ -61,6 +61,7 @@ export function DashboardPage() {
               description="Saldos pendientes por cobrar"
               rows={data.clientesCredito}
               linkBase="/customers"
+              linkSuffix="/cuenta"
               showOrders
             />
             <DashboardCreditTable

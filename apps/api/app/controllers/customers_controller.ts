@@ -127,6 +127,35 @@ export default class CustomersControleler {
     })
   }
 
+  async accountStatement({ params, serialize }: HttpContext) {
+    const data = await this.paymentService.estadoCuenta(Number(params.id))
+
+    return serialize({
+      customer: serializeCustomer(data.customer),
+      orders: data.orders.map((order) => ({
+        id: Number(order.id),
+        code: order.code,
+        description: order.description,
+        status: order.status,
+        paymentType: order.paymentType,
+        orderDate: order.orderDate.toISODate(),
+        confirmedAt: order.confirmedAt?.toISO() ?? null,
+        totalUsd: order.totalPrice,
+        amountPaidUsd: order.amountPaidUsd,
+        balanceUsd: order.balanceUsd,
+        creditDueDate: order.creditDueDate?.toISODate() ?? null,
+      })),
+      payments: data.payments.map((payment) => ({
+        id: Number(payment.id),
+        orderId: payment.orderId ? Number(payment.orderId) : null,
+        amountUsd: payment.amountUsd,
+        date: payment.date.toISODate(),
+        note: payment.note,
+      })),
+      saldoPendienteUsd: data.saldoPendienteUsd,
+    })
+  }
+
   async storePayment({ params, request, serialize }: HttpContext) {
     const payload = await request.validateUsing(createCustomerPaymentValidator)
     const payment = await this.paymentService.registrar({

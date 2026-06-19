@@ -1,5 +1,7 @@
 import type {
   Customer,
+  CustomerAccountStatement,
+  CustomerAccountStatementResponse,
   CustomerDeleteResponse,
   CustomerDetalle,
   CustomerInput,
@@ -41,6 +43,13 @@ export async function updateCustomer(id: number, payload: CustomerInput) {
 
 export async function deleteCustomer(id: number) {
   const { data } = await api.delete<CustomerDeleteResponse>(`/customers/${id}`)
+  return data.data
+}
+
+export async function getCustomerAccountStatement(id: number) {
+  const { data } = await api.get<CustomerAccountStatementResponse>(
+    `/customers/${id}/account-statement`
+  )
   return data.data
 }
 

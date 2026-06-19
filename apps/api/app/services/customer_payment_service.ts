@@ -16,6 +16,15 @@ export type CustomerPaymentInput = {
   note?: string
 }
 
+export type CustomerAccountStatement = {
+  customer: Customer
+  orders: Order[]
+  payments: CustomerPayment[]
+  saldoPendienteUsd: string
+}
+
+const BILLABLE_ORDER_STATUSES = ['CONFIRMED', 'IN_PRODUCTION', 'DELIVERED'] as const
+
 export default class CustomerPaymentService {
   private accountService = new AccountService()
 
@@ -91,5 +100,37 @@ export default class CustomerPaymentService {
       .preload('order')
       .orderBy('date', 'desc')
       .orderBy('id', 'desc')
+  }
+
+  async estadoCuenta(customerId: number): Promise<CustomerAccountStatement> {
+    const customer = await Customer.find(customerId)
+    if (!customer) {
+      throw new ClienteNoEncontradoException()
+    }
+
+    const orders = await Order.query()
+      .where('customerId', customerId)
+      .orderBy('confirmedAt', 'desc')
+      .orderBy('createdAt', 'desc')
+      .orderBy('id', 'desc')
+
+    const payments = await this.listarPorCliente(customerId)
+
+    const saldo = orders
+      .filter(
+        (order) =>
+          order.paymentType === 'CREDIT' &&
+          BILLABLE_ORDER_STATUSES.includes(
+            order.status as (typeof BILLABLE_ORDER_STATUSES)[number]
+          )
+      )
+      .reduce((sum, order) => sum + Number(order.balanceUsd), 0)
+
+    return {
+      customer,
+      orders,
+      payments,
+      saldoPendienteUsd: saldo.toFixed(4),
+    }
   }
 }

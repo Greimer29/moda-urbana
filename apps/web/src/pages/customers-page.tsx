@@ -1,4 +1,4 @@
-import { Eye, Loader2, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Eye, Loader2, Pencil, Plus, Search, Trash2, Wallet } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -192,6 +192,18 @@ export function CustomersPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
+                          {(customer.creditDays ?? 0) > 0 ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Estado de cuenta ${customer.name}`}
+                              asChild
+                            >
+                              <Link to={`/customers/${customer.id}/cuenta`}>
+                                <Wallet />
+                              </Link>
+                            </Button>
+                          ) : null}
                           <Button variant="ghost" size="icon" asChild>
                             <Link to={`/customers/${customer.id}`} aria-label={`Ver ${customer.name}`}>
                               <Eye />

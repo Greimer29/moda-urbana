@@ -16,6 +16,7 @@ type DashboardCreditTableProps = {
   description: string
   rows: CreditRow[]
   linkBase: string
+  linkSuffix?: string
   showOrders?: boolean
 }
 
@@ -24,6 +25,7 @@ export function DashboardCreditTable({
   description,
   rows,
   linkBase,
+  linkSuffix = '',
   showOrders = false,
 }: DashboardCreditTableProps) {
   return (
@@ -49,7 +51,10 @@ export function DashboardCreditTable({
               {rows.map((row) => (
                 <tr key={row.id} className="border-b last:border-b-0">
                   <td className="py-3 pr-3">
-                    <Link to={`${linkBase}/${row.id}`} className="font-medium hover:underline">
+                    <Link
+                      to={`${linkBase}/${row.id}${linkSuffix}`}
+                      className="font-medium hover:underline"
+                    >
                       {row.name}
                     </Link>
                   </td>

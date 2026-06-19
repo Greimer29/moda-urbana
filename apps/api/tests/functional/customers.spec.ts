@@ -326,4 +326,137 @@ test.group('Customers API', (group) => {
     downloadResponse.assertStatus(200)
     downloadResponse.assertHeader('content-type', 'image/png')
   })
+
+  test('GET /api/v1/customers/:id/account-statement lists orders and saldo pendiente', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente Cuenta',
+      type: 'CORPORATE',
+      creditDays: 30,
+      active: true,
+    })
+
+    await Order.create({
+      code: 'PED-DRAFT-001',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Borrador',
+      totalQuantity: 1,
+      orderDate: DateTime.now().minus({ days: 10 }),
+      status: 'DRAFT',
+      paymentType: 'CASH',
+      amountPaidUsd: '0.0000',
+      balanceUsd: '0.0000',
+      totalPrice: '100.0000',
+    })
+
+    await Order.create({
+      code: 'PED-CASH-001',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Contado',
+      totalQuantity: 1,
+      orderDate: DateTime.now().minus({ days: 5 }),
+      status: 'DELIVERED',
+      paymentType: 'CASH',
+      amountPaidUsd: '25.0000',
+      balanceUsd: '0.0000',
+      totalPrice: '25.0000',
+      confirmedAt: DateTime.now().minus({ days: 5 }),
+    })
+
+    await Order.create({
+      code: 'PED-CRED-001',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Crédito',
+      totalQuantity: 1,
+      orderDate: DateTime.now().minus({ days: 3 }),
+      status: 'CONFIRMED',
+      paymentType: 'CREDIT',
+      amountPaidUsd: '10.0000',
+      balanceUsd: '40.0000',
+      creditDueDate: DateTime.now().plus({ days: 15 }),
+      totalPrice: '50.0000',
+      confirmedAt: DateTime.now().minus({ days: 3 }),
+    })
+
+    await Order.create({
+      code: 'PED-CANC-001',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Cancelado',
+      totalQuantity: 1,
+      orderDate: DateTime.now().minus({ days: 1 }),
+      status: 'CANCELLED',
+      paymentType: 'CREDIT',
+      amountPaidUsd: '0.0000',
+      balanceUsd: '15.0000',
+      totalPrice: '15.0000',
+    })
+
+    const response = await client
+      .get(`/api/v1/customers/${customer.id}/account-statement`)
+      .loginAs(user)
+
+    response.assertStatus(200)
+
+    const body = response.body() as {
+      data: {
+        orders: Array<{ code: string; status: string; paymentType: string }>
+        saldoPendienteUsd: string
+      }
+    }
+
+    assert.lengthOf(body.data.orders, 4)
+    assert.exists(body.data.orders.find((order) => order.status === 'DRAFT'))
+    assert.exists(body.data.orders.find((order) => order.status === 'CANCELLED'))
+    assert.exists(
+      body.data.orders.find((order) => order.paymentType === 'CASH' && order.status === 'DELIVERED')
+    )
+    assert.exists(
+      body.data.orders.find((order) => order.paymentType === 'CREDIT' && order.status === 'CONFIRMED')
+    )
+    assert.equal(body.data.saldoPendienteUsd, '40.0000')
+  })
+
+  test('GET /api/v1/customers/:id/account-statement excludes cash orders from saldo', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente Solo Contado',
+      type: 'CORPORATE',
+      creditDays: 30,
+      active: true,
+    })
+
+    await Order.create({
+      code: 'PED-CASH-ONLY',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Solo contado',
+      totalQuantity: 1,
+      orderDate: DateTime.now(),
+      status: 'DELIVERED',
+      paymentType: 'CASH',
+      amountPaidUsd: '80.0000',
+      balanceUsd: '0.0000',
+      totalPrice: '80.0000',
+      confirmedAt: DateTime.now(),
+    })
+
+    const response = await client
+      .get(`/api/v1/customers/${customer.id}/account-statement`)
+      .loginAs(user)
+
+    response.assertStatus(200)
+
+    const body = response.body() as { data: { saldoPendienteUsd: string } }
+    assert.equal(body.data.saldoPendienteUsd, '0.0000')
+  })
 })

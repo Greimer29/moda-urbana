@@ -36,6 +36,7 @@ router
         router.get('auth/me', [controllers.Auth, 'me'])
 
         router.get('customers', [controllers.Customers, 'index'])
+        router.get('customers/:id/account-statement', [controllers.Customers, 'accountStatement'])
         router.get('customers/:id', [controllers.Customers, 'show'])
         router.post('customers', [controllers.Customers, 'store'])
         router.put('customers/:id', [controllers.Customers, 'update'])
