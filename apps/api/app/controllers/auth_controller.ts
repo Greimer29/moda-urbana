@@ -1,7 +1,7 @@
 import User from '#models/user'
 import UserInactiveException from '#exceptions/user_inactive_exception'
 import { loginValidator } from '#validators/user'
-import UserTransformer from '#transformers/user_transformer'
+import { serializeUser } from '#transformers/user_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
@@ -77,7 +77,7 @@ export default class AuthControleler {
     clearLoginRateLimit(ip)
 
     return serialize({
-      user: UserTransformer.transform(user),
+      user: serializeUser(user),
     })
   }
 
@@ -99,7 +99,7 @@ export default class AuthControleler {
     const user = auth.getUserOrFail()
 
     return serialize({
-      user: UserTransformer.transform(user),
+      user: serializeUser(user),
     })
   }
 }

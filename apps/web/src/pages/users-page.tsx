@@ -10,6 +10,7 @@ import {
   useUsersQuery,
 } from '@/features/users/hooks/use-users'
 import type { AppUser } from '@/features/users/types'
+import { isAppUserActionable, isAppUserListIncomplete } from '@/features/users/parse-app-user'
 import { getApiError } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
@@ -20,8 +21,13 @@ function roleLabel(role: AppUser['role']) {
 }
 
 function permissionsSummary(user: AppUser) {
-  if (user.role === 'ADMIN' || user.permissions[0] === '*') return 'Acceso total'
-  return `${user.permissions.length} permiso${user.permissions.length === 1 ? '' : 's'}`
+  if (user.role === 'ADMIN') return 'Acceso total'
+
+  const permissions = user.permissions ?? []
+  if (permissions[0] === '*') return 'Acceso total'
+  if (permissions.length === 0) return 'Sin permisos'
+
+  return `${permissions.length} permiso${permissions.length === 1 ? '' : 's'}`
 }
 
 export function UsersPage() {
@@ -51,6 +57,7 @@ export function UsersPage() {
 
   const users = data?.users ?? []
   const meta = data?.meta
+  const listIncomplete = isAppUserListIncomplete(users)
 
   function openCreateDialog() {
     setSelectedUser(null)
@@ -58,11 +65,23 @@ export function UsersPage() {
   }
 
   function openEditDialog(user: AppUser) {
+    if (!isAppUserActionable(user)) {
+      setActionError(
+        'No se puede editar este usuario: la API no devolvió un identificador válido. Redeploy de la API requerido.'
+      )
+      return
+    }
     setSelectedUser(user)
     setDialogOpen(true)
   }
 
   async function toggleActive(user: AppUser) {
+    if (!isAppUserActionable(user)) {
+      setActionError(
+        'No se puede cambiar el estado: la API no devolvió un identificador válido. Redeploy de la API requerido.'
+      )
+      return
+    }
     setActionError(null)
     try {
       await setActiveMutation.mutateAsync({ id: user.id, active: !user.active })
@@ -89,6 +108,14 @@ export function UsersPage() {
       </div>
 
       {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
+
+      {listIncomplete ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          El listado llegó incompleto desde la API (sin id, nombre o email). Editar o activar/desactivar
+          no funcionará hasta que Railway despliegue la última versión del backend con{' '}
+          <code className="text-xs">serializeUser</code>.
+        </p>
+      ) : null}
 
       <Card>
         <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -136,10 +163,13 @@ export function UsersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-b last:border-b-0">
-                      <td className="px-4 py-3 font-medium">{user.name}</td>
-                      <td className="text-muted-foreground px-4 py-3">{user.email}</td>
+                  {users.map((user, index) => (
+                    <tr
+                      key={user.id > 0 ? user.id : `user-${user.email || index}`}
+                      className="border-b last:border-b-0"
+                    >
+                      <td className="px-4 py-3 font-medium">{user.name.trim() || '—'}</td>
+                      <td className="text-muted-foreground px-4 py-3">{user.email.trim() || '—'}</td>
                       <td className="px-4 py-3">{roleLabel(user.role)}</td>
                       <td className="text-muted-foreground px-4 py-3">
                         {permissionsSummary(user)}
@@ -159,23 +189,26 @@ export function UsersPage() {
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
                           <PermissionGate permission="users.manage">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`Editar ${user.name}`}
-                              onClick={() => openEditDialog(user)}
-                            >
-                              <Pencil />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={user.active ? 'Desactivar' : 'Activar'}
-                              onClick={() => void toggleActive(user)}
-                              disabled={setActiveMutation.isPending}
-                            >
-                              <UserCog />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`Editar ${user.name || 'usuario'}`}
+                                onClick={() => openEditDialog(user)}
+                                disabled={!isAppUserActionable(user)}
+                              >
+                                <Pencil />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={user.active ? 'Desactivar' : 'Activar'}
+                                onClick={() => void toggleActive(user)}
+                                disabled={!isAppUserActionable(user) || setActiveMutation.isPending}
+                              >
+                                <UserCog />
+                              </Button>
+                            </>
                           </PermissionGate>
                         </div>
                       </td>

@@ -1,5 +1,5 @@
 import UserService from '#services/user_service'
-import UserTransformer from '#transformers/user_transformer'
+import { serializeUser } from '#transformers/user_transformer'
 import {
   createUserValidator,
   listUsersValidator,
@@ -21,21 +21,21 @@ export default class UsersController {
     })
 
     return serialize({
-      users: paginator.all().map((user) => UserTransformer.transform(user)),
+      users: paginator.all().map((user) => serializeUser(user)),
       meta: paginator.getMeta(),
     })
   }
 
   async show({ params, serialize }: HttpContext) {
     const user = await this.service.obtener(Number(params.id))
-    return serialize({ user: UserTransformer.transform(user) })
+    return serialize({ user: serializeUser(user) })
   }
 
   async store({ request, serialize }: HttpContext) {
     const payload = await request.validateUsing(createUserValidator)
     const user = await this.service.crear(payload)
 
-    return serialize({ user: UserTransformer.transform(user) })
+    return serialize({ user: serializeUser(user) })
   }
 
   async update({ params, request, auth, serialize }: HttpContext) {
@@ -43,7 +43,7 @@ export default class UsersController {
     const actor = auth.getUserOrFail()
     const user = await this.service.actualizar(Number(params.id), payload, Number(actor.id))
 
-    return serialize({ user: UserTransformer.transform(user) })
+    return serialize({ user: serializeUser(user) })
   }
 
   async updateActive({ params, request, auth, serialize }: HttpContext) {
@@ -55,6 +55,6 @@ export default class UsersController {
       Number(actor.id)
     )
 
-    return serialize({ user: UserTransformer.transform(user) })
+    return serialize({ user: serializeUser(user) })
   }
 }

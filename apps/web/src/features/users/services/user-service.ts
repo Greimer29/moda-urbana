@@ -1,3 +1,4 @@
+import { parseAppUser } from '@/features/users/parse-app-user'
 import type {
   AppUser,
   UserInput,
@@ -17,25 +18,32 @@ export async function listUsers(params: UserListParams = {}) {
     },
   })
 
-  return data.data
+  const payload = data.data
+
+  return {
+    ...payload,
+    users: (payload.users ?? []).map(parseAppUser),
+  }
 }
 
 export async function getUser(id: number) {
   const { data } = await api.get<UserResponse>(`/users/${id}`)
-  return data.data.user
+  return parseAppUser(data.data.user)
 }
 
 export async function createUser(payload: UserInput) {
   const { data } = await api.post<UserResponse>('/users', payload)
-  return data.data.user as AppUser
+  return parseAppUser(data.data.user)
 }
 
 export async function updateUser(id: number, payload: Partial<UserInput>) {
   const { data } = await api.put<UserResponse>(`/users/${id}`, payload)
-  return data.data.user as AppUser
+  return parseAppUser(data.data.user)
 }
 
 export async function setUserActive(id: number, active: boolean) {
   const { data } = await api.patch<UserResponse>(`/users/${id}/active`, { active })
-  return data.data.user as AppUser
+  return parseAppUser(data.data.user)
 }
+
+export type { AppUser }

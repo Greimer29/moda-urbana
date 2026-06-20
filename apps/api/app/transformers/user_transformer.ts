@@ -11,3 +11,7 @@ export default class UserTransformer extends BaseTransformer<User> {
     }
   }
 }
+
+export function serializeUser(user: User) {
+  return new UserTransformer(user).toObject()
+}

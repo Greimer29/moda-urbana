@@ -1,3 +1,4 @@
+import { parseAppUser } from '@/features/users/parse-app-user'
 import { api } from '@/lib/api'
 import type { AuthMessageResponse, AuthUserResponse } from '@/types/auth'
 
@@ -8,7 +9,7 @@ export type LoginPayload = {
 
 export async function login(payload: LoginPayload) {
   const { data } = await api.post<AuthUserResponse>('/auth/login', payload)
-  return data.data.user
+  return parseAppUser(data.data.user)
 }
 
 export async function logout() {
@@ -17,5 +18,5 @@ export async function logout() {
 
 export async function getCurrentUser() {
   const { data } = await api.get<AuthUserResponse>('/auth/me')
-  return data.data.user
+  return parseAppUser(data.data.user)
 }

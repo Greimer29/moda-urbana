@@ -26,7 +26,8 @@ function rewriteProxyCookies(proxy: {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
-  const apiUrl = env.VITE_API_URL || 'https://moda-urbana-production.up.railway.app'
+  const apiUrl =
+    env.VITE_API_URL || 'https://moda-urbana-production.up.railway.app'
 
   return {
     plugins: [react(), tailwindcss()],

@@ -127,7 +127,13 @@ test.group('Users API', (group) => {
 
     response.assertStatus(200)
 
-    const body = response.body() as { data: { users: unknown[]; meta: { total: number } } }
+    const body = response.body() as {
+      data: { users: Array<{ id: number; name: string; email: string }>; meta: { total: number } }
+    }
     assert.isAtLeast(body.data.meta.total, 2)
+    const listed = body.data.users.find((item) => item.email === 'lista@hebra.local')
+    assert.exists(listed)
+    assert.equal(listed!.name, 'Operador Lista')
+    assert.equal(listed!.email, 'lista@hebra.local')
   })
 })

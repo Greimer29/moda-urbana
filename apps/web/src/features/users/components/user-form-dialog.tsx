@@ -18,6 +18,7 @@ import {
 } from '@/features/permissions/catalog'
 import { UserPermissionsMatrix } from '@/features/users/components/user-permissions-matrix'
 import { useCreateUserMutation, useUpdateUserMutation } from '@/features/users/hooks/use-users'
+import { isAppUserActionable } from '@/features/users/parse-app-user'
 import type { AppUser, AppUserRole } from '@/features/users/types'
 import { getApiError } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
@@ -91,6 +92,10 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
       }
 
       if (isEdit && user) {
+        if (!isAppUserActionable(user)) {
+          setError('Este usuario no tiene id válido en la API. No se puede guardar.')
+          return
+        }
         await updateMutation.mutateAsync({ id: user.id, payload })
       } else {
         await createMutation.mutateAsync({ ...payload, password })
