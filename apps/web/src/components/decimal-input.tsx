@@ -1,7 +1,7 @@
 import * as React from 'react'
 
 import { Input } from '@/components/ui/input'
-import { formatDecimalOnBlur, sanitizeDecimalInput } from '@/lib/numeric-input'
+import { formatDecimalOnBlur, resolveNumericInputStep, sanitizeDecimalInput } from '@/lib/numeric-input'
 
 export type DecimalInputProps = Omit<
   React.ComponentProps<typeof Input>,
@@ -9,15 +9,16 @@ export type DecimalInputProps = Omit<
 > & {
   /** Máximo de decimales permitidos al escribir (por defecto 2). */
   decimals?: number
-  /** Incremento de las flechas del input (por defecto 1 = entero). */
-  step?: number
+  /** Incremento del input (por defecto `any` con decimales, `1` para enteros). */
+  step?: number | 'any'
 }
 
 /**
- * Input numérico con límite de decimales y flechas que suben/bajan de a 1 unidad entera.
+ * Input numérico con límite de decimales. El `step` por defecto respeta la precisión
+ * decimal para que el navegador no rechace valores como 12 cuando min="0.01".
  */
 export const DecimalInput = React.forwardRef<HTMLInputElement, DecimalInputProps>(
-  function DecimalInput({ decimals = 2, step = 1, onChange, onBlur, ...props }, ref) {
+  function DecimalInput({ decimals = 2, step, onChange, onBlur, ...props }, ref) {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const sanitized = sanitizeDecimalInput(e.target.value, decimals)
       if (sanitized !== e.target.value) {
@@ -39,7 +40,7 @@ export const DecimalInput = React.forwardRef<HTMLInputElement, DecimalInputProps
       <Input
         ref={ref}
         type="number"
-        step={step}
+        step={resolveNumericInputStep(decimals, step)}
         inputMode="decimal"
         onChange={handleChange}
         onBlur={handleBlur}
@@ -49,5 +50,5 @@ export const DecimalInput = React.forwardRef<HTMLInputElement, DecimalInputProps
   }
 )
 
-/** Alias para montos en USD/Bs (2 decimales, flechas de a 1). */
+/** Alias para montos en USD/Bs (2 decimales, step 0.01 por defecto). */
 export const MoneyInput = DecimalInput

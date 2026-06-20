@@ -3,7 +3,6 @@ import vine from '@vinejs/vine'
 const isoDate = vine.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
 export const createCustomerPaymentValidator = vine.create({
-  customer_id: vine.number().min(1),
   order_id: vine.number().min(1).nullable().optional(),
   account_id: vine.number().min(1).nullable().optional(),
   amount_usd: vine.number().positive(),
@@ -12,7 +11,6 @@ export const createCustomerPaymentValidator = vine.create({
 })
 
 export const createSupplierPaymentValidator = vine.create({
-  supplier_id: vine.number().min(1),
   purchase_id: vine.number().min(1).nullable().optional(),
   account_id: vine.number().min(1).nullable().optional(),
   amount_usd: vine.number().positive(),

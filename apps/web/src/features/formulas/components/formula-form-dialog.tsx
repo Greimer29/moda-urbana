@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { DecimalInput } from '@/components/decimal-input'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -227,10 +228,9 @@ export function FormulaFormDialog({
                     </select>
                   </div>
                   <div className="w-24 space-y-1">
-                    <Input
-                      type="number"
+                    <DecimalInput
+                      decimals={3}
                       min={0.001}
-                      step="0.001"
                       value={row.quantity}
                       onChange={(e) =>
                         setMaterialRows((rows) =>

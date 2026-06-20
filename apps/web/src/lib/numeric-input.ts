@@ -56,3 +56,20 @@ export function parseDecimalInput(raw: string, maxDecimals: number): number | nu
   const num = Number(formatted)
   return Number.isFinite(num) ? num : null
 }
+
+/** Incremento HTML `step` coherente con decimales (evita validación rota del navegador). */
+export function resolveNumericInputStep(
+  decimals: number,
+  step?: number | 'any'
+): number | 'any' {
+  if (step !== undefined) {
+    return step
+  }
+
+  if (decimals <= 0) {
+    return 1
+  }
+
+  // Cualquier monto/decimal tipeado debe ser válido; min solo limita el piso, no el step.
+  return 'any'
+}

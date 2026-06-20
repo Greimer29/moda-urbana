@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { DecimalInput } from '@/components/decimal-input'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -127,10 +128,9 @@ export function CurrencyFormDialog({ open, onOpenChange, currency }: CurrencyFor
 
           <div className="space-y-2">
             <Label htmlFor="rate">Tasa (unidades por 1 USD) *</Label>
-            <Input
+            <DecimalInput
               id="rate"
-              type="number"
-              step="0.0001"
+              decimals={4}
               min="0"
               placeholder="Ej. 36.5000"
               value={rate}

@@ -1,8 +1,8 @@
 import { Loader2, TrendingUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { DecimalInput } from '@/components/decimal-input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatUsd } from '@/features/purchases/constants'
 import { useExchangeRateQuery, useUpdateExchangeRateMutation } from '@/features/purchases/hooks/use-settings'
@@ -60,10 +60,9 @@ export function ExchangeRateConfigCard() {
         <div className="flex max-w-sm flex-col gap-4 sm:flex-row sm:items-end">
           <div className="space-y-2 sm:flex-1">
             <Label htmlFor="exchange-rate">Nueva tasa Bs/USD</Label>
-            <Input
+            <DecimalInput
               id="exchange-rate"
-              type="number"
-              step="0.0001"
+              decimals={4}
               min="0"
               placeholder="Ej. 36.50"
               value={rateInput}

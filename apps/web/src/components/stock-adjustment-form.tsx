@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
+import { DecimalInput } from '@/components/decimal-input'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -142,10 +143,9 @@ export function StockAdjustmentForm({
         <Label htmlFor="adjustment-quantity">
           {inventoryAdjustmentQuantityLabel(mode)} ({unitLabel}) *
         </Label>
-        <Input
+        <DecimalInput
           id="adjustment-quantity"
-          type="number"
-          step="0.001"
+          decimals={3}
           min={mode === 'AJUSTE' ? 0 : undefined}
           {...register('quantity')}
         />

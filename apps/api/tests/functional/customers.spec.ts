@@ -459,4 +459,57 @@ test.group('Customers API', (group) => {
     const body = response.body() as { data: { saldoPendienteUsd: string } }
     assert.equal(body.data.saldoPendienteUsd, '0.0000')
   })
+
+  test('POST /api/v1/customers/:id/payments registers payment without account', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente Abono',
+      type: 'CORPORATE',
+      creditDays: 30,
+      active: true,
+    })
+
+    const order = await Order.create({
+      code: 'PED-ABONO-001',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Pedido a crédito',
+      totalQuantity: 1,
+      orderDate: DateTime.now().minus({ days: 2 }),
+      status: 'CONFIRMED',
+      paymentType: 'CREDIT',
+      amountPaidUsd: '0.0000',
+      balanceUsd: '12.0000',
+      creditDueDate: DateTime.fromISO('2026-06-20'),
+      totalPrice: '12.0000',
+      confirmedAt: DateTime.now().minus({ days: 2 }),
+    })
+
+    const response = await client
+      .post(`/api/v1/customers/${customer.id}/payments`)
+      .loginAs(user)
+      .json({
+        order_id: order.id,
+        account_id: null,
+        amount_usd: 12,
+        date: '2026-06-20',
+      })
+
+    response.assertStatus(200)
+
+    const body = response.body() as {
+      data: { payment: { customerId: number; orderId: number; amountUsd: string } }
+    }
+
+    assert.equal(body.data.payment.customerId, customer.id)
+    assert.equal(body.data.payment.orderId, order.id)
+    assert.equal(body.data.payment.amountUsd, '12.0000')
+
+    await order.refresh()
+    assert.equal(order.balanceUsd, '0.0000')
+    assert.equal(order.amountPaidUsd, '12.0000')
+  })
 })
