@@ -38,7 +38,7 @@ import type { BillingMethod } from '@/features/ventas/constants'
 import { useCatalogProductsQuery } from '@/features/ventas/hooks/use-catalog'
 import type { CatalogProduct } from '@/features/ventas/types'
 import { cartHasStockIssues } from '@/features/ventas/utils/product-stock'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { normalizeInventoryQuantity } from '@/lib/inventory-units'
 import { cn } from '@/lib/utils'
 import { formatDraftMaterialNotice } from '@/lib/material-availability'
@@ -286,7 +286,7 @@ function VentasCreateView() {
       const order = await getOrder(orderId)
       setSuccessMessage(`Presupuesto guardado (${order.code}). No se descontó stock.`)
     } catch (error) {
-      setActionError(getApiError(error).message)
+      setActionError(getApiErrorMessage(error))
     } finally {
       setIsSubmitting(false)
     }
@@ -343,7 +343,7 @@ function VentasCreateView() {
 
       void navigate(`/ventas/${orderId}`)
     } catch (submitError) {
-      setActionError(getApiError(submitError).message)
+      setActionError(getApiErrorMessage(submitError))
     } finally {
       setIsSubmitting(false)
     }
@@ -482,7 +482,7 @@ function VentasCreateView() {
               {successMessage ? (
                 <p className="text-emerald-700 text-sm">{successMessage}</p>
               ) : null}
-              {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
+              {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
 
               {canConfirmSale ? (
                 <Button

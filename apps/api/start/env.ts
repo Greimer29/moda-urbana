@@ -10,6 +10,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   APP_URL: Env.schema.string({ format: 'url', tld: false }),
 
   SESSION_DRIVER: Env.schema.enum(['cookie', 'memory', 'database'] as const),
+  SESSION_MAX_AGE: Env.schema.string.optional(),
 
   DB_HOST: Env.schema.string({ format: 'host' }),
   DB_PORT: Env.schema.number(),

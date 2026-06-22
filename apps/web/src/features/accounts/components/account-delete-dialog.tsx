@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { useDeleteAccountMutation } from '@/features/accounts/hooks/use-accounts'
 import type { Account } from '@/features/accounts/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 type AccountDeleteDialogProps = {
   open: boolean
@@ -35,7 +35,7 @@ export function AccountDeleteDialog({
       onOpenChange(false)
       onDeleted?.(result.modo)
     } catch (err) {
-      console.error(getApiError(err).message)
+      console.error(getApiErrorMessage(err))
     }
   }
 

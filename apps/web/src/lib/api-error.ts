@@ -1,5 +1,10 @@
 import axios from 'axios'
-import type { ApiErrorBody } from '@/types/auth'
+import type {
+  ApiErrorBody,
+  StockInsuficienteDetail,
+  StockInsuficienteDevolucionDetail,
+  VineValidationDetail,
+} from '@/types/auth'
 
 export function getApiError(error: unknown): ApiErrorBody {
   if (axios.isAxiosError(error) && error.response?.data?.error) {
@@ -72,14 +77,42 @@ export function getApiError(error: unknown): ApiErrorBody {
   }
 }
 
-export function formatValidationDetails(details: unknown): string | null {
-  if (!details || typeof details !== 'object') {
-    return null
-  }
+function isVineValidationDetail(value: unknown): value is VineValidationDetail {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'message' in value &&
+    typeof (value as VineValidationDetail).message === 'string'
+  )
+}
 
+function isStockInsuficienteDetail(value: unknown): value is StockInsuficienteDetail {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'material_id' in value &&
+    'name' in value &&
+    'faltante' in value
+  )
+}
+
+function isStockInsuficienteDevolucionDetail(
+  value: unknown
+): value is StockInsuficienteDevolucionDetail {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'material_id' in value &&
+    'material_name' in value &&
+    'required' in value &&
+    'available' in value
+  )
+}
+
+function formatRecordDetails(details: Record<string, unknown>): string[] {
   const messages: string[] = []
 
-  for (const [field, value] of Object.entries(details as Record<string, unknown>)) {
+  for (const [field, value] of Object.entries(details)) {
     if (typeof value === 'string') {
       messages.push(`${field}: ${value}`)
       continue
@@ -93,5 +126,62 @@ export function formatValidationDetails(details: unknown): string | null {
     }
   }
 
-  return messages.length > 0 ? messages.join(' · ') : null
+  return messages
+}
+
+/** Convierte `error.details` de la API en mensajes legibles para el usuario. */
+export function formatApiErrorDetails(details: unknown): string[] {
+  if (!details) {
+    return []
+  }
+
+  if (Array.isArray(details)) {
+    if (details.length === 0) {
+      return []
+    }
+
+    if (details.every(isVineValidationDetail)) {
+      return details.map((item) => item.message).filter(Boolean)
+    }
+
+    if (details.every(isStockInsuficienteDetail)) {
+      return details.map(
+        (item) =>
+          `${item.name}: faltan ${item.faltante} unidades (stock ${item.stock_actual}, consumo ${item.consumo_proyectado})`
+      )
+    }
+
+    if (details.every(isStockInsuficienteDevolucionDetail)) {
+      return details.map(
+        (item) =>
+          `${item.material_name}: se requieren ${item.required} y hay ${item.available} disponibles`
+      )
+    }
+
+    return []
+  }
+
+  if (typeof details === 'object') {
+    return formatRecordDetails(details as Record<string, unknown>)
+  }
+
+  return []
+}
+
+/** Mensaje listo para mostrar en UI: prioriza `details` sobre el mensaje genérico. */
+export function getApiErrorMessage(error: unknown): string {
+  const apiError = getApiError(error)
+  const lines = formatApiErrorDetails(apiError.details)
+
+  if (lines.length > 0) {
+    return lines.join('\n')
+  }
+
+  return apiError.message
+}
+
+/** @deprecated Usar `formatApiErrorDetails` o `getApiErrorMessage`. */
+export function formatValidationDetails(details: unknown): string | null {
+  const lines = formatApiErrorDetails(details)
+  return lines.length > 0 ? lines.join(' · ') : null
 }

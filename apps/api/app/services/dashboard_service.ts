@@ -139,7 +139,7 @@ export default class DashboardService {
     return sumMachineExpenseRowsUsd(rows, rates, this.currencyService)
   }
 
-  async overview(chart: 'weekly' | 'monthly' = 'weekly'): Promise<DashboardOverview> {
+  async overview(chart: 'daily' | 'weekly' | 'monthly' = 'weekly'): Promise<DashboardOverview> {
     const [
       bajoStock,
       bajoStockProductos,
@@ -555,11 +555,24 @@ export default class DashboardService {
     }
   }
 
-  private async ventasSeries(chart: 'weekly' | 'monthly'): Promise<VentasSeriePoint[]> {
+  private async ventasSeries(chart: 'daily' | 'weekly' | 'monthly'): Promise<VentasSeriePoint[]> {
     const hoy = DateTime.now()
     const buckets: { desde: string; hasta: string; label: string }[] = []
 
-    if (chart === 'weekly') {
+    if (chart === 'daily') {
+      const sundayOffset = hoy.weekday === 7 ? 0 : hoy.weekday
+      const weekStart = hoy.minus({ days: sundayOffset }).startOf('day')
+      const dayLabels = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
+
+      for (let i = 0; i < 7; i++) {
+        const day = weekStart.plus({ days: i })
+        buckets.push({
+          desde: day.toISODate()!,
+          hasta: day.toISODate()!,
+          label: dayLabels[i]!,
+        })
+      }
+    } else if (chart === 'weekly') {
       for (let i = 7; i >= 0; i--) {
         const start = hoy.minus({ weeks: i }).startOf('week')
         const end = start.endOf('week')

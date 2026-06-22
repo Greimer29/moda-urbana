@@ -68,7 +68,7 @@ export type DashboardOverviewResponse = {
   data: DashboardOverview
 }
 
-export type DashboardChartMode = 'weekly' | 'monthly'
+export type DashboardChartMode = 'daily' | 'weekly' | 'monthly'
 
 export type DailySoldProduct = {
   id: number

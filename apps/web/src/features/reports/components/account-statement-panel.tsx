@@ -11,7 +11,7 @@ import { defaultReportPeriodState } from '@/features/reports/report-period'
 import { buildReportSearchParams } from '@/features/reports/report-search-params'
 import { reportUi } from '@/features/reports/report-ui'
 import { useAccountStatementQuery } from '@/features/reports/hooks/use-reports'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 export function AccountStatementPanel() {
   const { displayCurrency } = useDisplayCurrency()
@@ -90,7 +90,7 @@ export function AccountStatementPanel() {
           Generando reporte…
         </div>
       ) : isError ? (
-        <div className={reportUi.error}>{getApiError(error).message}</div>
+        <div className={reportUi.error}>{getApiErrorMessage(error)}</div>
       ) : data ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">

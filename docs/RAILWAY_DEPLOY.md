@@ -55,6 +55,7 @@ node ace generate:key
 | `APP_KEY` | *(output de generate:key)* |
 | `APP_URL` | URL pública de la API, ej. `https://hebra-api-production.up.railway.app` |
 | `SESSION_DRIVER` | `cookie` |
+| `SESSION_MAX_AGE` | `365d` *(sesión larga; expira solo tras inactividad prolongada o logout explícito)* |
 | `FRONTEND_URL` | `http://localhost:5174` *(web en local; si usás otro puerto de Vite, ajustalo)* |
 | `DESKTOP_APP_ORIGIN` | `http://127.0.0.1:51740` *(app desktop Electron)* |
 | `DB_HOST` | `${{hebra-mysql.MYSQLHOST}}` |

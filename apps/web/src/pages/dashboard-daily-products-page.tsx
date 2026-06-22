@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DailySoldProductCard } from '@/features/dashboard/components/daily-sold-product-card'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { useDailyProductSalesQuery } from '@/features/dashboard/hooks/use-dashboard'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 function todayLabel() {
   return new Date().toLocaleDateString('es-VE', {
@@ -38,7 +38,7 @@ export function DashboardDailyProductsPage() {
           Cargando ventas del día…
         </div>
       ) : isError || !data ? (
-        <p className="text-destructive text-sm">{getApiError(error).message}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
       ) : (
         <Card>
           <CardHeader>

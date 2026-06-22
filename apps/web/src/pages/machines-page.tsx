@@ -17,7 +17,7 @@ import {
   useMachinesQuery,
 } from '@/features/machines/hooks/use-machines'
 import type { Machine } from '@/features/machines/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
 const PER_PAGE = 20
@@ -89,7 +89,7 @@ export function MachinesPage() {
         )
       }
     } catch (deleteError) {
-      setActionError(getApiError(deleteError).message)
+      setActionError(getApiErrorMessage(deleteError))
     }
   }
 
@@ -156,7 +156,7 @@ export function MachinesPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
+          {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
 
           {isLoading ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">
@@ -164,7 +164,7 @@ export function MachinesPage() {
               Cargando máquinas…
             </div>
           ) : isError ? (
-            <p className="text-destructive py-8 text-center text-sm">{getApiError(error).message}</p>
+            <p className="text-destructive py-8 text-center text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
           ) : machines.length === 0 ? (
             <div className="py-12 text-center">
               <p className="text-muted-foreground text-sm">

@@ -1,5 +1,5 @@
 import { CalendarRange } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { Input } from '@/components/ui/input'
 import { currentMonthIso, previousMonthIso, todayIso } from '@/features/reports/constants'
 import type { ReportPeriodMode, ReportPeriodState } from '@/features/reports/report-period'
@@ -13,6 +13,23 @@ type ReportPeriodFiltersProps = {
 }
 
 export function ReportPeriodFilters({ value, onChange, className }: ReportPeriodFiltersProps) {
+  const dayInputRef = useRef<HTMLInputElement>(null)
+  const monthInputRef = useRef<HTMLInputElement>(null)
+
+  function openDatePicker(input: HTMLInputElement | null) {
+    if (!input) return
+    input.focus()
+    if (typeof input.showPicker === 'function') {
+      try {
+        input.showPicker()
+      } catch {
+        input.click()
+      }
+    } else {
+      input.click()
+    }
+  }
+
   function setMode(mode: ReportPeriodMode) {
     if (mode === 'month') {
       onChange({ ...value, mode, month: value.month || currentMonthIso() })
@@ -72,13 +89,21 @@ export function ReportPeriodFilters({ value, onChange, className }: ReportPeriod
       </div>
 
       {value.mode === 'day' ? (
-        <div className="flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5">
-          <CalendarRange className="size-4 text-neutral-500" />
+        <div className="flex min-w-[240px] items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5">
+          <button
+            type="button"
+            aria-label="Elegir fecha"
+            className="text-neutral-500 hover:text-neutral-800"
+            onClick={() => openDatePicker(dayInputRef.current)}
+          >
+            <CalendarRange className="size-4 shrink-0" />
+          </button>
           <Input
+            ref={dayInputRef}
             type="date"
             value={value.date}
             onChange={(e) => onChange({ ...value, mode: 'day', date: e.target.value })}
-            className="h-7 w-[140px] border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+            className="h-8 min-w-[170px] flex-1 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0 [&::-webkit-calendar-picker-indicator]:ml-1 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
           />
         </div>
       ) : null}
@@ -102,13 +127,21 @@ export function ReportPeriodFilters({ value, onChange, className }: ReportPeriod
       ) : null}
 
       {value.mode === 'month' ? (
-        <div className="flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5">
-          <CalendarRange className="size-4 text-neutral-500" />
+        <div className="flex min-w-[230px] items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5">
+          <button
+            type="button"
+            aria-label="Elegir mes"
+            className="text-neutral-500 hover:text-neutral-800"
+            onClick={() => openDatePicker(monthInputRef.current)}
+          >
+            <CalendarRange className="size-4 shrink-0" />
+          </button>
           <Input
+            ref={monthInputRef}
             type="month"
             value={value.month}
             onChange={(e) => onChange({ ...value, mode: 'month', month: e.target.value })}
-            className="h-7 w-[130px] border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+            className="h-8 min-w-[160px] flex-1 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0 [&::-webkit-calendar-picker-indicator]:ml-1 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
           />
         </div>
       ) : null}

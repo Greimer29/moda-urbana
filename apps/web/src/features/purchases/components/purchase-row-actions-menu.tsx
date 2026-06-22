@@ -12,7 +12,7 @@ import {
 import { useDeletePurchaseMutation, useReturnPurchaseMutation } from '@/features/purchases/hooks/use-purchases'
 import { PermissionGate } from '@/features/permissions/components/permission-gate'
 import type { Purchase } from '@/features/purchases/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 type PurchaseRowActionsMenuProps = {
   purchase: Purchase
@@ -41,7 +41,7 @@ export function PurchaseRowActionsMenu({ purchase, onActionComplete }: PurchaseR
       await deleteMutation.mutateAsync(purchase.id)
       onActionComplete?.()
     } catch (err) {
-      window.alert(getApiError(err).message)
+      window.alert(getApiErrorMessage(err))
     }
   }
 
@@ -52,7 +52,7 @@ export function PurchaseRowActionsMenu({ purchase, onActionComplete }: PurchaseR
       setReturnDialogOpen(false)
       onActionComplete?.()
     } catch (err) {
-      setError(getApiError(err).message)
+      setError(getApiErrorMessage(err))
     }
   }
 
@@ -105,7 +105,7 @@ export function PurchaseRowActionsMenu({ purchase, onActionComplete }: PurchaseR
             </DialogDescription>
           </DialogHeader>
 
-          {error ? <p className="text-destructive text-sm">{error}</p> : null}
+          {error ? <p className="text-destructive text-sm whitespace-pre-line">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setReturnDialogOpen(false)}>

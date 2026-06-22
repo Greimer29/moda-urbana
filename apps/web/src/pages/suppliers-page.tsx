@@ -11,7 +11,7 @@ import {
   useSuppliersQuery,
 } from '@/features/suppliers/hooks/use-suppliers'
 import type { Supplier } from '@/features/suppliers/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
 const PER_PAGE = 20
@@ -87,7 +87,7 @@ export function SuppliersPage() {
         )
       }
     } catch (deleteError) {
-      setActionError(getApiError(deleteError).message)
+      setActionError(getApiErrorMessage(deleteError))
     }
   }
 
@@ -123,7 +123,7 @@ export function SuppliersPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
+          {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
 
           {isLoading ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">
@@ -131,8 +131,8 @@ export function SuppliersPage() {
               Cargando proveedores…
             </div>
           ) : isError ? (
-            <p className="text-destructive py-8 text-center text-sm">
-              {getApiError(error).message}
+            <p className="text-destructive py-8 text-center text-sm whitespace-pre-line">
+              {getApiErrorMessage(error)}
             </p>
           ) : suppliers.length === 0 ? (
             <div className="py-12 text-center">

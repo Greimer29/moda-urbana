@@ -17,7 +17,7 @@ import {
   useUpdateCurrencyMutation,
 } from '@/features/currencies/hooks/use-currencies'
 import type { Currency } from '@/features/currencies/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 type CurrencyFormDialogProps = {
   open: boolean
@@ -86,7 +86,7 @@ export function CurrencyFormDialog({ open, onOpenChange, currency }: CurrencyFor
       }
       onOpenChange(false)
     } catch (err) {
-      setError(getApiError(err).message)
+      setError(getApiErrorMessage(err))
     } finally {
       setIsSubmitting(false)
     }
@@ -138,7 +138,7 @@ export function CurrencyFormDialog({ open, onOpenChange, currency }: CurrencyFor
             />
           </div>
 
-          {error ? <p className="text-destructive text-sm">{error}</p> : null}
+          {error ? <p className="text-destructive text-sm whitespace-pre-line">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

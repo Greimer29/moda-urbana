@@ -9,10 +9,38 @@ export type User = {
   updatedAt: string
 }
 
+export type VineValidationDetail = {
+  message: string
+  field?: string
+  rule?: string
+  meta?: Record<string, unknown>
+}
+
+export type StockInsuficienteDetail = {
+  material_id: number
+  name: string
+  stock_actual: number
+  consumo_proyectado: number
+  faltante: number
+}
+
+export type StockInsuficienteDevolucionDetail = {
+  material_id: number
+  material_name: string
+  required: string
+  available: string
+}
+
+export type ApiErrorDetails =
+  | VineValidationDetail[]
+  | StockInsuficienteDetail[]
+  | StockInsuficienteDevolucionDetail[]
+  | Record<string, string | string[]>
+
 export type ApiErrorBody = {
   code: string
   message: string
-  details?: unknown
+  details?: ApiErrorDetails
 }
 
 export type ApiErrorResponse = {

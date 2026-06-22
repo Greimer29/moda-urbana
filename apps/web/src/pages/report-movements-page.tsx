@@ -13,7 +13,7 @@ import {
 import { parseReportSearchParams } from '@/features/reports/report-search-params'
 import { reportUi } from '@/features/reports/report-ui'
 import { useAccountStatementQuery } from '@/features/reports/hooks/use-reports'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
 export function ReportMovementsPage() {
@@ -23,6 +23,15 @@ export function ReportMovementsPage() {
   const category = getReportCategory(categorySlug)
 
   const period = useMemo(() => parsePeriodFromSearchParams(searchParams), [searchParams])
+
+  const queryParams = useMemo(
+    () => (category ? parseReportSearchParams(searchParams, category.slug) : {}),
+    [searchParams, category]
+  )
+
+  const { data, isLoading, isError, error } = useAccountStatementQuery(queryParams, {
+    enabled: category !== null,
+  })
 
   const handlePeriodChange = useCallback(
     (nextPeriod: typeof period) => {
@@ -39,10 +48,9 @@ export function ReportMovementsPage() {
     return <Navigate to="/reportes" replace />
   }
 
-  const queryParams = parseReportSearchParams(searchParams, category.slug)
-  const { data, isLoading, isError, error } = useAccountStatementQuery(queryParams)
   const periodLabel = periodLabelFromState(period)
   const backHref = searchParams.toString() ? `/reportes?${searchParams.toString()}` : '/reportes'
+  const movements = data?.movements ?? []
 
   return (
     <div
@@ -82,13 +90,14 @@ export function ReportMovementsPage() {
           Cargando movimientos…
         </div>
       ) : isError ? (
-        <div className={reportUi.error}>{getApiError(error).message}</div>
+        <div className={reportUi.error}>{getApiErrorMessage(error)}</div>
       ) : data ? (
         <div className="report-content-enter">
           <ReportMovementsTable
-            movements={data.movements}
+            movements={movements}
             title={category.title}
-            subtitle={`${data.movements.length} registro${data.movements.length === 1 ? '' : 's'}`}
+            subtitle={`${movements.length} registro${movements.length === 1 ? '' : 's'}`}
+            categorySlug={category.slug}
           />
         </div>
       ) : null}

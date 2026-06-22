@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import axios from 'axios'
 import {
   getDailyExpenses,
   getDailyProductSales,
@@ -15,6 +16,14 @@ export function useDashboardOverviewQuery(chart: DashboardChartMode = 'weekly') 
   return useQuery({
     queryKey: [...dashboardOverviewQueryKey, chart],
     queryFn: () => getDashboardOverview(chart),
+    placeholderData: keepPreviousData,
+    retry: (failureCount, error) => {
+      if (axios.isAxiosError(error) && error.response?.status === 422) {
+        return false
+      }
+
+      return failureCount < 2
+    },
   })
 }
 

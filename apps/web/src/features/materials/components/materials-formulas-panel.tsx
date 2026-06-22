@@ -9,7 +9,7 @@ import {
   useFormulasQuery,
 } from '@/features/formulas/hooks/use-formulas'
 import type { Formula } from '@/features/formulas/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 const PER_PAGE = 30
 
@@ -56,7 +56,7 @@ export function MaterialsFormulasPanel() {
     try {
       await deleteMutation.mutateAsync(formula.id)
     } catch (deleteError) {
-      setActionError(getApiError(deleteError).message)
+      setActionError(getApiErrorMessage(deleteError))
     }
   }
 
@@ -85,7 +85,7 @@ export function MaterialsFormulasPanel() {
             Creá fórmulas con materiales y asignalas a los productos que necesites.
           </CardDescription>
 
-          {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
+          {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
 
           {isLoading ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">
@@ -93,7 +93,7 @@ export function MaterialsFormulasPanel() {
               Cargando fórmulas…
             </div>
           ) : isError ? (
-            <p className="text-destructive py-8 text-center text-sm">{getApiError(error).message}</p>
+            <p className="text-destructive py-8 text-center text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
           ) : formulas.length === 0 ? (
             <p className="text-muted-foreground py-8 text-center text-sm">
               No hay fórmulas registradas.

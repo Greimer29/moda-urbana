@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { useOrderQuery } from '@/features/orders/hooks/use-orders'
 import { catalogProductCode } from '@/features/ventas/components/ventas-order-cart'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 type VentasHistoryOrderLinesProps = {
   orderId: number
@@ -21,7 +21,7 @@ export function VentasHistoryOrderLines({ orderId }: VentasHistoryOrderLinesProp
             Cargando productos…
           </div>
         ) : isError ? (
-          <p className="text-destructive py-2 text-sm">{getApiError(error).message}</p>
+          <p className="text-destructive py-2 text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
         ) : lines.length === 0 ? (
           <p className="text-muted-foreground py-2 text-sm">Este pedido no tiene líneas de catálogo.</p>
         ) : (

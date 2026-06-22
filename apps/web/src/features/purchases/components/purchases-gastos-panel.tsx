@@ -8,7 +8,7 @@ import { DisplayMoney } from '@/features/currencies/components/display-money'
 import { formatFecha } from '@/features/purchases/constants'
 import { useExpensesQuery } from '@/features/purchases/hooks/use-expenses'
 import type { Expense } from '@/features/purchases/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 const PER_PAGE = 20
 
@@ -87,7 +87,7 @@ export function PurchasesGastosPanel() {
             Cargando gastos…
           </div>
         ) : isError ? (
-          <p className="text-destructive text-sm">{getApiError(error).message}</p>
+          <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
         ) : expenses.length === 0 ? (
           <p className="text-muted-foreground py-8 text-center text-sm">No hay gastos registrados.</p>
         ) : (

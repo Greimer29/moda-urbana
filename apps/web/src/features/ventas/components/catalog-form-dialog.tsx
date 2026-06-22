@@ -28,7 +28,7 @@ import { useFormulaMaterialsQuery, useFormulasQuery } from '@/features/formulas/
 import type { Formula } from '@/features/formulas/types'
 import type { CatalogProduct } from '@/features/ventas/types'
 import type { ProductSaleUnit } from '@/features/ventas/constants'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { formatCostWarningsMessage, isBelowCost } from '@/lib/cost-warnings'
 import {
   calcProfitMarginPercent,
@@ -124,7 +124,7 @@ export function CatalogFormDialog({
         await uploadImageMutation.mutateAsync({ id: displayProduct.id, file })
         clearPendingImage()
       } catch (err) {
-        setImageError(getApiError(err).message)
+        setImageError(getApiErrorMessage(err))
       }
     }
   }
@@ -140,7 +140,7 @@ export function CatalogFormDialog({
       try {
         await deleteImageMutation.mutateAsync(displayProduct.id)
       } catch (err) {
-        setImageError(getApiError(err).message)
+        setImageError(getApiErrorMessage(err))
       }
     }
   }
@@ -318,7 +318,7 @@ export function CatalogFormDialog({
       onSaved?.()
       onOpenChange(false)
     } catch (saveError) {
-      setError(getApiError(saveError).message)
+      setError(getApiErrorMessage(saveError))
     }
   }
 
@@ -544,7 +544,7 @@ export function CatalogFormDialog({
             {costWarning}
           </p>
         ) : null}
-        {error ? <p className="text-destructive text-sm">{error}</p> : null}
+        {error ? <p className="text-destructive text-sm whitespace-pre-line">{error}</p> : null}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

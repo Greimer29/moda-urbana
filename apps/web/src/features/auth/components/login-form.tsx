@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ModaUrbanaIdentity } from '@/features/auth/components/moda-urbana-identity'
 import { useAuth } from '@/features/auth/hooks/use-auth'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
 const loginSchema = z.object({
@@ -61,7 +61,7 @@ export function LoginForm() {
       )
       navigate(redirectTo, { replace: true })
     } catch (error) {
-      setSubmitError(getApiError(error).message)
+      setSubmitError(getApiErrorMessage(error))
     } finally {
       setIsLoggingIn(false)
     }
@@ -125,7 +125,7 @@ export function LoginForm() {
 
           {submitError ? (
             <div
-              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300 whitespace-pre-line"
               role="alert"
               aria-live="polite"
             >

@@ -91,6 +91,8 @@ export type AccountStatementMovement = {
 
   isCreditSale?: boolean
 
+  creditBalanceUsd?: string
+
   saleDate?: string
 
   customerId?: number
@@ -265,6 +267,8 @@ export default class ReportService {
               creditDueDate,
 
               saleDate: orderDate,
+
+              creditBalanceUsd: balanceUsd,
 
               creditReportStatus: creditStatus ?? undefined,
 
@@ -545,6 +549,8 @@ export default class ReportService {
             creditDueDate,
 
             purchaseDate,
+
+            creditBalanceUsd: balanceUsd,
 
             creditOverdue: creditStatus === 'overdue',
 
@@ -881,7 +887,11 @@ export default class ReportService {
 
     isCreditSale?: boolean
 
+    creditBalanceUsd?: number
+
     creditDueDate?: string | null
+
+    creditBalanceUsd?: number
 
     purchaseDate?: string
 
@@ -946,6 +956,11 @@ export default class ReportService {
 
                   purchaseDate: options.purchaseDate,
 
+                  creditBalanceUsd:
+                    options.creditBalanceUsd !== undefined
+                      ? options.creditBalanceUsd.toFixed(4)
+                      : options.usd.toFixed(4),
+
                   creditOverdue: options.creditOverdue ?? false,
 
                   ...(options.creditReportStatus
@@ -971,6 +986,11 @@ export default class ReportService {
             creditDueDate: options.creditDueDate ?? null,
 
             saleDate: options.saleDate,
+
+            creditBalanceUsd:
+              options.creditBalanceUsd !== undefined
+                ? options.creditBalanceUsd.toFixed(4)
+                : options.usd.toFixed(4),
 
             creditOverdue: options.creditReportStatus === 'overdue',
 

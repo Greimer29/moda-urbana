@@ -23,7 +23,7 @@ import {
   useUploadSupplierImageMutation,
 } from '@/features/suppliers/hooks/use-suppliers'
 import type { Supplier } from '@/features/suppliers/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { normalizeRif } from '@/lib/rif'
 
 const supplierSchema = z.object({
@@ -154,7 +154,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onCreated }: 
           return null
         })
       } catch (err) {
-        setImageError(getApiError(err).message)
+        setImageError(getApiErrorMessage(err))
       }
     }
   }
@@ -172,7 +172,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onCreated }: 
       try {
         await deleteImageMutation.mutateAsync(supplier.id)
       } catch (err) {
-        setImageError(getApiError(err).message)
+        setImageError(getApiErrorMessage(err))
       }
     }
   }
@@ -193,8 +193,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onCreated }: 
 
       onOpenChange(false)
     } catch (error) {
-      const apiError = getApiError(error)
-      setError('root', { message: apiError.message })
+      setError('root', { message: getApiErrorMessage(error) })
     }
   })
 
@@ -296,7 +295,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onCreated }: 
             ) : null}
           </section>
 
-          {errors.root ? <p className="text-destructive text-sm">{errors.root.message}</p> : null}
+          {errors.root ? <p className="text-destructive text-sm whitespace-pre-line">{errors.root.message}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

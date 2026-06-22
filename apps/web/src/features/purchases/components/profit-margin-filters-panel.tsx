@@ -85,7 +85,7 @@ export const ProfitMarginFiltersPanel = forwardRef<HTMLElement, ProfitMarginFilt
               actualizarán.
             </p>
           ) : null}
-          {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
+          {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
           {actionSuccess ? <p className="text-sm text-emerald-700">{actionSuccess}</p> : null}
         </div>
 

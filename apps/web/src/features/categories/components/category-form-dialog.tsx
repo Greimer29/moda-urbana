@@ -16,7 +16,7 @@ import {
   useUpdateCategoryMutation,
 } from '@/features/categories/hooks/use-categories'
 import type { Category } from '@/features/categories/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 type CategoryFormDialogProps = {
   open: boolean
@@ -75,7 +75,7 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
       }
       onOpenChange(false)
     } catch (err) {
-      setError(getApiError(err).message)
+      setError(getApiErrorMessage(err))
     }
   }
 
@@ -91,7 +91,7 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {error ? <p className="text-destructive text-sm">{error}</p> : null}
+            {error ? <p className="text-destructive text-sm whitespace-pre-line">{error}</p> : null}
 
             <div className="space-y-2">
               <Label htmlFor="category-name">Nombre</Label>

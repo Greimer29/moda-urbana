@@ -9,7 +9,7 @@ import {
   useUpdateCurrencyMutation,
 } from '@/features/currencies/hooks/use-currencies'
 import type { Currency } from '@/features/currencies/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
 export function CurrenciesConfigCard() {
@@ -40,7 +40,7 @@ export function CurrenciesConfigCard() {
         payload: { is_active: !currency.isActive },
       })
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -51,7 +51,7 @@ export function CurrenciesConfigCard() {
     try {
       await deleteMutation.mutateAsync(currency.code)
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -74,12 +74,12 @@ export function CurrenciesConfigCard() {
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
+        {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
 
         {isLoading ? (
           <Loader2 className="text-muted-foreground size-5 animate-spin" />
         ) : isError ? (
-          <p className="text-destructive text-sm">{getApiError(error).message}</p>
+          <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
         ) : currencies.length === 0 ? (
           <p className="text-muted-foreground text-sm">No hay monedas configuradas.</p>
         ) : (

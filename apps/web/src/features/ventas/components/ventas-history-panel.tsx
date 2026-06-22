@@ -1,5 +1,6 @@
 import { ChevronDown, Loader2, RotateCcw, Search } from 'lucide-react'
 import { Fragment, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -10,7 +11,7 @@ import { formatFecha } from '@/features/orders/constants'
 import { OrderEstadoBadge } from '@/features/orders/components/order-status-badge'
 import { useOrdersQuery } from '@/features/orders/hooks/use-orders'
 import type { OrderEstado } from '@/features/orders/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
 const PER_PAGE = 20
@@ -74,7 +75,7 @@ export function VentasHistoryPanel() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
       <p className="text-muted-foreground shrink-0 text-sm">
-        Consultá ventas confirmadas y registrá devoluciones.
+        Consultá ventas confirmadas, abrí el detalle del pedido y registrá devoluciones.
       </p>
 
       <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -143,7 +144,7 @@ export function VentasHistoryPanel() {
               Cargando ventas…
             </div>
           ) : isError ? (
-            <p className="text-destructive py-8 text-center text-sm">{getApiError(error).message}</p>
+            <p className="text-destructive py-8 text-center text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
           ) : orders.length === 0 ? (
             <p className="text-muted-foreground py-12 text-center text-sm">
               No hay ventas que coincidan con los filtros.
@@ -187,7 +188,13 @@ export function VentasHistoryPanel() {
                                   isExpanded && 'rotate-180'
                                 )}
                               />
-                              {order.code}
+                              <Link
+                                to={`/ventas/${order.id}`}
+                                className="hover:underline"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {order.code}
+                              </Link>
                             </span>
                           </td>
                           <td className="text-muted-foreground px-4 py-3">

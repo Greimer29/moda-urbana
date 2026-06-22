@@ -15,7 +15,7 @@ import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-mo
 import { useReturnOrderMutation } from '@/features/orders/hooks/use-orders'
 import { getOrder } from '@/features/orders/services/order-service'
 import type { OrderLine } from '@/features/orders/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { parseDecimalInput } from '@/lib/numeric-input'
 import { cn } from '@/lib/utils'
 
@@ -76,7 +76,7 @@ export function VentasOrderReturnDialog({
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(getApiError(err).message)
+          setError(getApiErrorMessage(err))
         }
       })
       .finally(() => {
@@ -138,7 +138,7 @@ export function VentasOrderReturnDialog({
       onOpenChange(false)
       onSuccess?.()
     } catch (err) {
-      setError(getApiError(err).message)
+      setError(getApiErrorMessage(err))
     }
   }
 
@@ -238,7 +238,7 @@ export function VentasOrderReturnDialog({
           <DisplayMoneyFromUsd amountUsd={selectedTotal} />
         </div>
 
-        {error ? <p className="text-destructive text-sm">{error}</p> : null}
+        {error ? <p className="text-destructive text-sm whitespace-pre-line">{error}</p> : null}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

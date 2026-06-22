@@ -23,7 +23,7 @@ const sessionConfig = defineConfig({
    * Define how long to keep the session data alive without
    * any activity.
    */
-  age: '2h',
+  age: env.get('SESSION_MAX_AGE', '365d'),
 
   /**
    * Configuration for session cookie and the

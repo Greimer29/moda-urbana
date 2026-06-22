@@ -10,7 +10,7 @@ import { StockAdjustmentForm } from '@/components/stock-adjustment-form'
 import { UNIT_ABREV } from '@/features/materials/constants'
 import { useAjusteStockMutation } from '@/features/materials/hooks/use-materials'
 import type { Material } from '@/features/materials/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 type AjusteStockDialogProps = {
   open: boolean
@@ -57,7 +57,7 @@ export function AjusteStockDialog({ open, onOpenChange, material, onSuccess }: A
               onOpenChange(false)
               onSuccess?.()
             } catch (error) {
-              setErrorMessage(getApiError(error).message)
+              setErrorMessage(getApiErrorMessage(error))
             }
           }}
         />

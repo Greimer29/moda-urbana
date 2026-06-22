@@ -9,7 +9,7 @@ import {
   useUpdateCategoryMutation,
 } from '@/features/categories/hooks/use-categories'
 import type { Category } from '@/features/categories/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { INVENTORY_UNIT_OPTIONS } from '@/lib/inventory-units'
 import { cn } from '@/lib/utils'
 
@@ -40,7 +40,7 @@ export function CategoriesConfigCard() {
         payload: { active: !category.active },
       })
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -50,7 +50,7 @@ export function CategoriesConfigCard() {
     try {
       await deleteMutation.mutateAsync(category.id)
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -72,12 +72,12 @@ export function CategoriesConfigCard() {
         </Button>
       </CardHeader>
       <CardContent className="space-y-6">
-        {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
+        {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
 
         {isLoading ? (
           <Loader2 className="text-muted-foreground size-5 animate-spin" />
         ) : isError ? (
-          <p className="text-destructive text-sm">{getApiError(error).message}</p>
+          <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
         ) : categories.length === 0 ? (
           <p className="text-muted-foreground text-sm">No hay categorías configuradas.</p>
         ) : (

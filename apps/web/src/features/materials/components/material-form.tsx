@@ -28,7 +28,7 @@ import {
 } from '@/features/materials/hooks/use-materials'
 import type { Material } from '@/features/materials/types'
 import { useSuppliersQuery } from '@/features/suppliers/hooks/use-suppliers'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { formatCostWarningsMessage } from '@/lib/cost-warnings'
 
 const materialSchema = z.object({
@@ -193,7 +193,7 @@ export function MaterialForm({
         await uploadImageMutation.mutateAsync({ id: materialId, file })
         clearPendingImage()
       } catch (err) {
-        setImageError(getApiError(err).message)
+        setImageError(getApiErrorMessage(err))
       }
     }
   }
@@ -212,7 +212,7 @@ export function MaterialForm({
       try {
         await deleteImageMutation.mutateAsync(materialId)
       } catch (err) {
-        setImageError(getApiError(err).message)
+        setImageError(getApiErrorMessage(err))
       }
     }
   }
@@ -241,7 +241,7 @@ export function MaterialForm({
         onSuccess?.(result)
       }
     } catch (error) {
-      setError('root', { message: getApiError(error).message })
+      setError('root', { message: getApiErrorMessage(error) })
     }
   })
 
@@ -422,7 +422,7 @@ export function MaterialForm({
         </p>
       ) : null}
 
-      {errors.root ? <p className="text-destructive text-sm">{errors.root.message}</p> : null}
+      {errors.root ? <p className="text-destructive text-sm whitespace-pre-line">{errors.root.message}</p> : null}
 
       {footer}
     </form>

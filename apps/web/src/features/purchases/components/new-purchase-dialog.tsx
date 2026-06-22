@@ -20,7 +20,7 @@ import { AccountSelect } from '@/features/accounts/components/account-select'
 import { SupplierFormDialog } from '@/features/suppliers/components/supplier-form-dialog'
 import { useSuppliersQuery } from '@/features/suppliers/hooks/use-suppliers'
 import type { Supplier } from '@/features/suppliers/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 const schema = z.object({
   supplier_id: z.union([z.literal(''), z.coerce.number().min(1)]).optional(),
@@ -73,7 +73,7 @@ export function NuevaPurchaseDialog({ open, onOpenChange }: NuevaPurchaseDialogP
       setAccountId(null)
       void navigate(`/purchases/${purchase.id}`)
     } catch (error) {
-      setError('root', { message: getApiError(error).message })
+      setError('root', { message: getApiErrorMessage(error) })
     }
   })
 
@@ -150,7 +150,7 @@ export function NuevaPurchaseDialog({ open, onOpenChange }: NuevaPurchaseDialogP
 
             <AccountSelect value={accountId} onChange={setAccountId} />
 
-            {errors.root ? <p className="text-destructive text-sm">{errors.root.message}</p> : null}
+            {errors.root ? <p className="text-destructive text-sm whitespace-pre-line">{errors.root.message}</p> : null}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handlePurchaseDialogChange(false)}>

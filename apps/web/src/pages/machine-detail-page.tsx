@@ -14,7 +14,7 @@ import {
 import { useMachineQuery } from '@/features/machines/hooks/use-machines'
 import { AccountSelect } from '@/features/accounts/components/account-select'
 import { DisplayMoney } from '@/features/currencies/components/display-money'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) {
@@ -49,7 +49,7 @@ export function MachineDetailPage() {
   if (isError || !machine) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm">{getApiError(error).message}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
         <Button variant="outline" asChild>
           <Link to="/machines">Volver al listado</Link>
         </Button>

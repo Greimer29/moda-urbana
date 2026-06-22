@@ -46,7 +46,7 @@ import { CurrencySelect } from '@/features/currencies/components/currency-select
 
 import type { Expense } from '@/features/purchases/types'
 
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 
 
@@ -184,7 +184,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
 
     } catch (err) {
 
-      setError('root', { message: getApiError(err).message })
+      setError('root', { message: getApiErrorMessage(err) })
 
     }
 
@@ -280,7 +280,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
 
 
 
-          {errors.root ? <p className="text-destructive text-sm">{errors.root.message}</p> : null}
+          {errors.root ? <p className="text-destructive text-sm whitespace-pre-line">{errors.root.message}</p> : null}
 
 
 

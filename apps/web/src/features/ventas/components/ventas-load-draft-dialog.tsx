@@ -17,7 +17,7 @@ import type { Order } from '@/features/orders/types'
 import { getOrder } from '@/features/orders/services/order-service'
 import { getCatalogProduct } from '@/features/ventas/services/catalog-service'
 import type { CatalogProduct } from '@/features/ventas/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 export type LoadedDraft = {
   orderId: number
@@ -92,7 +92,7 @@ export function VentasLoadDraftDialog({ open, onOpenChange, onLoaded }: VentasLo
       })
       onOpenChange(false)
     } catch (error) {
-      setLoadError(getApiError(error).message)
+      setLoadError(getApiErrorMessage(error))
     } finally {
       setLoadingId(null)
     }
@@ -156,7 +156,7 @@ export function VentasLoadDraftDialog({ open, onOpenChange, onLoaded }: VentasLo
           )}
         </div>
 
-        {loadError ? <p className="text-destructive text-sm">{loadError}</p> : null}
+        {loadError ? <p className="text-destructive text-sm whitespace-pre-line">{loadError}</p> : null}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { useConfirmarPurchaseMutation } from '@/features/purchases/hooks/use-purchases'
 import type { ConfirmPurchaseInput } from '@/features/purchases/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { formatCostWarningsMessage } from '@/lib/cost-warnings'
 import { formatFulfilledOrdersMessage } from '@/lib/material-availability'
 
@@ -68,7 +68,7 @@ export function ConfirmarPurchaseDialog({
       onOpenChange(false)
       onSuccess?.()
     } catch (err) {
-      setError(getApiError(err).message)
+      setError(getApiErrorMessage(err))
     }
   }
 
@@ -96,7 +96,7 @@ export function ConfirmarPurchaseDialog({
               tasa.
             </p>
           ) : null}
-          {error ? <p className="text-destructive">{error}</p> : null}
+          {error ? <p className="text-destructive whitespace-pre-line">{error}</p> : null}
           {fulfilledNotice ? (
             <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
               {fulfilledNotice}

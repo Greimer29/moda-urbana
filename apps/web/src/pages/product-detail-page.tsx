@@ -14,7 +14,7 @@ import { PublicImage } from '@/components/public-image'
 import { PRODUCT_MOVIMIENTO_LABELS } from '@/features/ventas/product-inventory-constants'
 import { productSaleUnitAbrev } from '@/features/ventas/constants'
 import { useCatalogProductQuery, useDeleteCatalogProductMutation } from '@/features/ventas/hooks/use-catalog'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { isBelowCost } from '@/lib/cost-warnings'
 import {
   calcProfitMarginPercent,
@@ -65,7 +65,7 @@ export function ProductDetailPage() {
   if (isError || !product) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm">{getApiError(error).message}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
         <Button variant="outline" asChild>
           <Link to="/productos">Volver al catálogo</Link>
         </Button>
@@ -94,7 +94,7 @@ export function ProductDetailPage() {
         void navigate('/productos')
       }
     } catch (err) {
-      setDeleteError(getApiError(err).message)
+      setDeleteError(getApiErrorMessage(err))
       setDeleteOpen(false)
     }
   }
@@ -299,7 +299,7 @@ export function ProductDetailPage() {
         onConfirm={() => void confirmDelete()}
       />
 
-      {deleteError ? <p className="text-destructive text-sm">{deleteError}</p> : null}
+      {deleteError ? <p className="text-destructive text-sm whitespace-pre-line">{deleteError}</p> : null}
     </div>
   )
 }

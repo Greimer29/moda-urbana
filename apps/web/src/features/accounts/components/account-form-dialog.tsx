@@ -20,7 +20,7 @@ import {
   useUpdateAccountMutation,
 } from '@/features/accounts/hooks/use-accounts'
 import type { Account } from '@/features/accounts/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 const schema = z.object({
   name: z.string().trim().min(1, 'El nombre es obligatorio').max(150),
@@ -92,7 +92,7 @@ export function AccountFormDialog({ open, onOpenChange, account, onCreated }: Ac
 
       onOpenChange(false)
     } catch (err) {
-      setError('root', { message: getApiError(err).message })
+      setError('root', { message: getApiErrorMessage(err) })
     }
   })
 
@@ -125,7 +125,7 @@ export function AccountFormDialog({ open, onOpenChange, account, onCreated }: Ac
             </label>
           ) : null}
 
-          {errors.root ? <p className="text-destructive text-sm">{errors.root.message}</p> : null}
+          {errors.root ? <p className="text-destructive text-sm whitespace-pre-line">{errors.root.message}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

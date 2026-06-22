@@ -25,7 +25,7 @@ import {
   useUpdateMachineMutation,
 } from '@/features/machines/hooks/use-machines'
 import type { Machine } from '@/features/machines/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 const schema = z.object({
   name: z.string().trim().min(1, 'El nombre es obligatorio').max(100),
@@ -133,7 +133,7 @@ export function MachineFormDialog({ open, onOpenChange, machine }: MachineFormDi
 
       onOpenChange(false)
     } catch (error) {
-      setError('root', { message: getApiError(error).message })
+      setError('root', { message: getApiErrorMessage(error) })
     }
   })
 
@@ -225,7 +225,7 @@ export function MachineFormDialog({ open, onOpenChange, machine }: MachineFormDi
             </label>
           ) : null}
 
-          {errors.root ? <p className="text-destructive text-sm">{errors.root.message}</p> : null}
+          {errors.root ? <p className="text-destructive text-sm whitespace-pre-line">{errors.root.message}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

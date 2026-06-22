@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { AccountSelect } from '@/features/accounts/components/account-select'
 import { useCreateCustomerPaymentMutation } from '@/features/customers/hooks/use-customers'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 type CustomerPaymentFormDialogProps = {
   open: boolean
@@ -74,7 +74,7 @@ export function CustomerPaymentFormDialog({
       onOpenChange(false)
       onSuccess?.()
     } catch (err) {
-      setError(getApiError(err).message)
+      setError(getApiErrorMessage(err))
     }
   }
 
@@ -126,7 +126,7 @@ export function CustomerPaymentFormDialog({
             />
           </div>
 
-          {error ? <p className="text-destructive text-sm">{error}</p> : null}
+          {error ? <p className="text-destructive text-sm whitespace-pre-line">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

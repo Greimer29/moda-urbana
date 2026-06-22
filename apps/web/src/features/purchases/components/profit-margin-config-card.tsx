@@ -6,7 +6,7 @@ import { useApplyProfitMarginMutation, useUpdateProfitMarginMutation } from '@/f
 import { PROFIT_MARGIN_PANEL_ID } from '@/features/purchases/constants'
 import { useCatalogProductQuery, useCatalogProductsQuery } from '@/features/ventas/hooks/use-catalog'
 import type { CatalogProduct } from '@/features/ventas/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 type ProfitMarginConfigCardProps = {
   defaultMarginPercent?: string | null
@@ -183,7 +183,7 @@ export function ProfitMarginConfigCard({
         `Precio venta actualizado en ${result.updatedCount} producto${result.updatedCount === 1 ? '' : 's'}.${skippedNoCost > 0 ? ` ${skippedNoCost} sin precio costo.` : ''}${skippedNotFound > 0 ? ` ${skippedNotFound} no encontrado(s).` : ''}`
       )
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -219,7 +219,7 @@ export function ProfitMarginConfigCard({
             products={products}
             isLoading={isLoading}
             isError={isError}
-            errorMessage={isError ? getApiError(error).message : undefined}
+            errorMessage={isError ? getApiErrorMessage(error) : undefined}
             selectedIds={selectedIds}
             onToggleProduct={toggleProduct}
             allVisibleSelected={allVisibleSelected}

@@ -12,6 +12,24 @@ import { canAccess, type PermissionKey } from '@/features/permissions/catalog'
 import { refreshCsrfToken } from '@/lib/api'
 import type { User } from '@/types/auth'
 
+const SESSION_KEEPALIVE_MS = 25 * 60 * 1000
+
+function isUnauthorizedError(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 401
+}
+
+function isApiUnreachableError(error: unknown): boolean {
+  return (
+    axios.isAxiosError(error) &&
+    (error.code === 'ERR_NETWORK' ||
+      error.message === 'Network Error' ||
+      error.response?.status === 500 ||
+      error.response?.status === 502 ||
+      error.response?.status === 503 ||
+      error.response?.status === 504)
+  )
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -28,34 +46,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [can]
   )
 
+  const handleSessionError = useCallback((error: unknown) => {
+    if (!isUnauthorizedError(error) && !isApiUnreachableError(error) && import.meta.env.DEV) {
+      console.error('No se pudo cargar la sesión', error)
+    }
+
+    if (isUnauthorizedError(error)) {
+      setUser(null)
+    }
+  }, [])
+
   const loadUser = useCallback(async () => {
     try {
       const currentUser = await authService.getCurrentUser()
       setUser(currentUser)
     } catch (error) {
-      const isUnauthorized =
-        axios.isAxiosError(error) && error.response?.status === 401
-      const isApiUnreachable =
-        axios.isAxiosError(error) &&
-        (error.code === 'ERR_NETWORK' ||
-          error.message === 'Network Error' ||
-          error.response?.status === 500 ||
-          error.response?.status === 502 ||
-          error.response?.status === 503 ||
-          error.response?.status === 504)
-
-      if (!isUnauthorized && !isApiUnreachable && import.meta.env.DEV) {
-        console.error('No se pudo cargar la sesión', error)
-      }
+      handleSessionError(error)
       setUser(null)
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [handleSessionError])
+
+  const revalidateSession = useCallback(async () => {
+    try {
+      const currentUser = await authService.getCurrentUser()
+      setUser(currentUser)
+    } catch (error) {
+      handleSessionError(error)
+    }
+  }, [handleSessionError])
 
   useEffect(() => {
     void loadUser()
   }, [loadUser])
+
+  useEffect(() => {
+    if (!user) {
+      return
+    }
+
+    const intervalId = window.setInterval(() => {
+      void revalidateSession()
+    }, SESSION_KEEPALIVE_MS)
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void revalidateSession()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [user, revalidateSession])
 
   const login = useCallback(async (email: string, password: string) => {
     const authenticatedUser = await authService.login({ email, password })

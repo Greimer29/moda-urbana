@@ -40,6 +40,8 @@ export type AccountStatementMovement = {
 
   isCreditSale?: boolean
 
+  creditBalanceUsd?: string
+
   saleDate?: string
 
   customerId?: number

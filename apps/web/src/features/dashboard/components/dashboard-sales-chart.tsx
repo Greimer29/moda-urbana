@@ -10,11 +10,25 @@ import { cn } from '@/lib/utils'
 
 type DashboardSalesChartProps = {
   series: VentasSeriePoint[]
-  mode: 'weekly' | 'monthly'
-  onModeChange: (mode: 'weekly' | 'monthly') => void
+  mode: 'daily' | 'weekly' | 'monthly'
+  onModeChange: (mode: 'daily' | 'weekly' | 'monthly') => void
+  chartError?: string | null
+  isUpdating?: boolean
 }
 
-export function DashboardSalesChart({ series, mode, onModeChange }: DashboardSalesChartProps) {
+const MODE_SUBTITLE: Record<DashboardSalesChartProps['mode'], string> = {
+  daily: 'diario',
+  weekly: 'semanal',
+  monthly: 'mensual',
+}
+
+export function DashboardSalesChart({
+  series,
+  mode,
+  onModeChange,
+  chartError,
+  isUpdating = false,
+}: DashboardSalesChartProps) {
   const { formatFromUsd } = useFormatMoney()
 
   const dataMax =
@@ -27,9 +41,23 @@ export function DashboardSalesChart({ series, mode, onModeChange }: DashboardSal
       <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
         <div>
           <h3 className={dashboardUi.sectionTitle}>Ventas</h3>
-          <p className={dashboardUi.muted}>Comparativo {mode === 'weekly' ? 'semanal' : 'mensual'}</p>
+          <p className={dashboardUi.muted}>Comparativo {MODE_SUBTITLE[mode]}</p>
         </div>
-        <div className="inline-flex rounded-full bg-neutral-100 p-1">
+        <div className="inline-flex items-center gap-2">
+          {isUpdating ? (
+            <span className="text-muted-foreground text-xs">Actualizando…</span>
+          ) : null}
+          <div className="inline-flex rounded-full bg-neutral-100 p-1">
+          <button
+            type="button"
+            className={cn(
+              'rounded-full px-3 py-1 text-xs font-medium',
+              mode === 'daily' ? 'bg-neutral-900 text-white' : 'text-neutral-600'
+            )}
+            onClick={() => onModeChange('daily')}
+          >
+            Diario
+          </button>
           <button
             type="button"
             className={cn(
@@ -50,8 +78,13 @@ export function DashboardSalesChart({ series, mode, onModeChange }: DashboardSal
           >
             Mensual
           </button>
+          </div>
         </div>
       </div>
+
+      {chartError ? (
+        <p className="text-destructive mb-3 text-xs whitespace-pre-line">{chartError}</p>
+      ) : null}
 
       <div className={dashboardUi.chartBody}>
         <div className={dashboardUi.chartPlotRow}>

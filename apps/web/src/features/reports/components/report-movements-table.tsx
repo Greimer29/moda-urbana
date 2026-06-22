@@ -1,4 +1,5 @@
 import { ArrowUpRight } from 'lucide-react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { CreditPurchaseBadge } from '@/features/purchases/components/credit-purchase-badge'
 import { useDisplayCurrency } from '@/features/currencies/context/display-currency-context'
@@ -10,6 +11,9 @@ import {
   formatReportDisplayAmount,
   formatReportOriginalAmount,
 } from '@/features/reports/utils/format-report-amount'
+import { ReportMovementsTotals } from '@/features/reports/components/report-movements-totals'
+import type { ReportMovementCategorySlug } from '@/features/reports/report-categories'
+import { computeMovementPeriodTotals } from '@/features/reports/utils/movement-period-totals'
 import { movementTheme, reportUi } from '@/features/reports/report-ui'
 import type { AccountStatementMovement } from '@/features/reports/types'
 import { cn } from '@/lib/utils'
@@ -79,14 +83,21 @@ type ReportMovementsTableProps = {
   movements: AccountStatementMovement[]
   title?: string
   subtitle?: string
+  categorySlug?: ReportMovementCategorySlug
 }
 
 export function ReportMovementsTable({
   movements,
   title = 'Historial de movimientos',
   subtitle,
+  categorySlug,
 }: ReportMovementsTableProps) {
   const { displayCurrency, formatFromUsd, formatNative } = useDisplayCurrency()
+
+  const periodTotals = useMemo(
+    () => (categorySlug ? computeMovementPeriodTotals(movements, categorySlug) : null),
+    [movements, categorySlug]
+  )
 
   const meta =
     subtitle ??
@@ -94,11 +105,18 @@ export function ReportMovementsTable({
 
   return (
     <div className={cn(reportUi.panel, 'overflow-hidden p-0')}>
-      <div className={cn('flex items-center justify-between gap-3 border-b px-5 py-4', reportUi.divider)}>
+      <div className={cn('flex flex-wrap items-start justify-between gap-4 border-b px-5 py-4', reportUi.divider)}>
         <div>
           <h3 className={reportUi.sectionTitle}>{title}</h3>
           <p className={reportUi.muted}>{meta}</p>
         </div>
+        {periodTotals && categorySlug ? (
+          <ReportMovementsTotals
+            totals={periodTotals}
+            categorySlug={categorySlug}
+            formatFromUsd={formatFromUsd}
+          />
+        ) : null}
       </div>
 
       {movements.length === 0 ? (
@@ -121,7 +139,9 @@ export function ReportMovementsTable({
             <tbody>
               {movements.map((movement) => {
                 const href = movementLink(movement)
-                const theme = movementTheme[movement.type]
+                const theme = movementTheme[movement.type] ?? movementTheme.sale
+                const typeLabel = MOVEMENT_TYPE_LABELS[movement.type] ?? movement.type
+
                 const isInformationalCreditSale = movement.type === 'sale' && movement.isCreditSale
 
                 return (
@@ -137,7 +157,7 @@ export function ReportMovementsTable({
                             theme.badge
                           )}
                         >
-                          {MOVEMENT_TYPE_LABELS[movement.type].slice(0, 2).toUpperCase()}
+                          {typeLabel.slice(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
                           <p className="truncate font-medium text-neutral-900">
@@ -153,7 +173,7 @@ export function ReportMovementsTable({
                               movement.label
                             )}
                           </p>
-                          <p className={reportUi.muted}>{MOVEMENT_TYPE_LABELS[movement.type]}</p>
+                          <p className={reportUi.muted}>{typeLabel}</p>
                         </div>
                       </div>
                     </td>

@@ -19,7 +19,7 @@ import {
   useUpdateCustomerMutation,
 } from '@/features/customers/hooks/use-customers'
 import type { Customer } from '@/features/customers/types'
-import { getApiError, formatValidationDetails } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { normalizeRif } from '@/lib/rif'
 
 const customerSchema = z.object({
@@ -131,11 +131,7 @@ export function CustomerFormDialog({
 
       onOpenChange(false)
     } catch (error) {
-      const apiError = getApiError(error)
-      const detailsMessage = formatValidationDetails(apiError.details)
-      setError('root', {
-        message: detailsMessage ? `${apiError.message}: ${detailsMessage}` : apiError.message,
-      })
+      setError('root', { message: getApiErrorMessage(error) })
     }
   })
 
@@ -219,7 +215,7 @@ export function CustomerFormDialog({
             </label>
           ) : null}
 
-          {errors.root ? <p className="text-destructive text-sm">{errors.root.message}</p> : null}
+          {errors.root ? <p className="text-destructive text-sm whitespace-pre-line">{errors.root.message}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -30,7 +30,7 @@ import {
 
 } from '@/features/materials/hooks/use-materials'
 
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 import { cn } from '@/lib/utils'
 
@@ -114,7 +114,7 @@ export function MaterialDetallePage() {
 
       <div className="flex flex-col items-center gap-4 py-24">
 
-        <p className="text-destructive text-sm">{getApiError(error).message}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
 
         <Button variant="outline" asChild>
 
@@ -149,7 +149,7 @@ export function MaterialDetallePage() {
         void navigate('/productos/materiales')
       }
     } catch (err) {
-      setDeleteError(getApiError(err).message)
+      setDeleteError(getApiErrorMessage(err))
       setDeleteOpen(false)
     }
   }
@@ -366,7 +366,7 @@ export function MaterialDetallePage() {
 
           ) : historialError ? (
 
-            <p className="text-destructive text-sm">{getApiError(historialErr).message}</p>
+            <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(historialErr)}</p>
 
           ) : !historial?.length ? (
 
@@ -493,7 +493,7 @@ export function MaterialDetallePage() {
         onConfirm={() => void confirmDelete()}
       />
 
-      {deleteError ? <p className="text-destructive text-sm">{deleteError}</p> : null}
+      {deleteError ? <p className="text-destructive text-sm whitespace-pre-line">{deleteError}</p> : null}
 
     </div>
 

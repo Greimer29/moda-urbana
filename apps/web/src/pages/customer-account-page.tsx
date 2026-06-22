@@ -12,7 +12,7 @@ import { OrderEstadoBadge } from '@/features/orders/components/order-status-badg
 import { formatFecha } from '@/features/orders/constants'
 import type { OrderEstado } from '@/features/orders/types'
 import { CreditPurchaseBadge } from '@/features/purchases/components/credit-purchase-badge'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 const BILLABLE_STATUSES = new Set<OrderEstado>(['CONFIRMED', 'IN_PRODUCTION', 'DELIVERED'])
 
@@ -50,7 +50,7 @@ export function CustomerAccountPage() {
   if (isError || !data) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm">{getApiError(error).message}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
         <Button variant="outline" asChild>
           <Link to="/customers">Volver a clientes</Link>
         </Button>

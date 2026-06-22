@@ -21,7 +21,7 @@ import {
 } from '@/features/formulas/hooks/use-formulas'
 import type { Formula } from '@/features/formulas/types'
 import { useMaterialsQuery } from '@/features/materials/hooks/use-materials'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { formatCostWarningsMessage } from '@/lib/cost-warnings'
 
 type FormulaFormDialogProps = {
@@ -161,7 +161,7 @@ export function FormulaFormDialog({
       onSaved?.(savedFormula)
       onOpenChange(false)
     } catch (saveError) {
-      setError(getApiError(saveError).message)
+      setError(getApiErrorMessage(saveError))
     }
   }
 
@@ -264,7 +264,7 @@ export function FormulaFormDialog({
             {costWarning}
           </p>
         ) : null}
-        {error ? <p className="text-destructive text-sm">{error}</p> : null}
+        {error ? <p className="text-destructive text-sm whitespace-pre-line">{error}</p> : null}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

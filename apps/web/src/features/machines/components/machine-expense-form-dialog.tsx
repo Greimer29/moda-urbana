@@ -24,7 +24,7 @@ import { useCreateMachineExpenseMutation } from '@/features/machines/hooks/use-m
 import { AccountSelect } from '@/features/accounts/components/account-select'
 import { CurrencySelect } from '@/features/currencies/components/currency-select'
 import { useSuppliersQuery } from '@/features/suppliers/hooks/use-suppliers'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 const schema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida'),
@@ -93,7 +93,7 @@ export function MachineExpenseFormDialog({
       setAccountId(null)
       setCurrencyCode('USD')
     } catch (error) {
-      setError('root', { message: getApiError(error).message })
+      setError('root', { message: getApiErrorMessage(error) })
     }
   })
 
@@ -169,7 +169,7 @@ export function MachineExpenseFormDialog({
 
           <AccountSelect value={accountId} onChange={setAccountId} />
 
-          {errors.root ? <p className="text-destructive text-sm">{errors.root.message}</p> : null}
+          {errors.root ? <p className="text-destructive text-sm whitespace-pre-line">{errors.root.message}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

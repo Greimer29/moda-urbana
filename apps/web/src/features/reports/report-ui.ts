@@ -71,7 +71,7 @@ export const reportUi = {
   badge: 'rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-medium text-neutral-600',
   badgeOk: 'rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700',
   badgeWarn: 'rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700',
-  error: 'rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700',
+  error: 'rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700 whitespace-pre-line',
   barTrack: 'h-3 overflow-hidden rounded-full bg-neutral-100',
   iconBoxIncome: 'flex size-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700',
   iconBoxExpense: 'flex size-10 items-center justify-center rounded-2xl bg-red-50 text-red-600',

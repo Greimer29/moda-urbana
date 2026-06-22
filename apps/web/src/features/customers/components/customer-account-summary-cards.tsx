@@ -76,7 +76,7 @@ function CustomerAccountMetricLayout({
   chart: ReactNode
 }) {
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-start justify-start gap-4">
       <div className="min-w-0 flex-[3]">{metrics}</div>
       <div className="flex flex-[1] items-center justify-end">{chart}</div>
     </div>

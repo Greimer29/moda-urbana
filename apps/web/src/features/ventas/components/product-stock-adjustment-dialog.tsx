@@ -11,7 +11,7 @@ import { catalogProductCode } from '@/features/ventas/components/ventas-order-ca
 import { productSaleUnitAbrev } from '@/features/ventas/constants'
 import { useAjusteStockProductoMutation } from '@/features/ventas/hooks/use-catalog'
 import type { CatalogProduct } from '@/features/ventas/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 type ProductStockAdjustmentDialogProps = {
   open: boolean
@@ -61,7 +61,7 @@ export function ProductStockAdjustmentDialog({
               onOpenChange(false)
               onSuccess?.()
             } catch (error) {
-              setErrorMessage(getApiError(error).message)
+              setErrorMessage(getApiErrorMessage(error))
             }
           }}
         />

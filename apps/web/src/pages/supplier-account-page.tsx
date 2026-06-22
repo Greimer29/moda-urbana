@@ -10,7 +10,7 @@ import { ESTADO_LABELS, formatFecha, type PurchaseEstado } from '@/features/purc
 import { SupplierAccountSummaryCards } from '@/features/suppliers/components/supplier-account-summary-cards'
 import { useSupplierAccountStatementQuery } from '@/features/suppliers/hooks/use-suppliers'
 import { computeSupplierAccountSummary } from '@/features/suppliers/utils/supplier-account-summary'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
 function purchaseStatusBadge(status: string) {
@@ -70,7 +70,7 @@ export function SupplierAccountPage() {
   if (isError || !data) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm">{getApiError(error).message}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
         <Button variant="outline" asChild>
           <Link to="/suppliers">Volver a proveedores</Link>
         </Button>

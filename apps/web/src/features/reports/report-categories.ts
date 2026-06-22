@@ -4,6 +4,8 @@ import type { MetricTone } from '@/features/reports/report-ui'
 
 export type ReportMovementCategorySlug = 'ventas' | 'compras' | 'gastos' | 'maquina'
 
+export type ReportTotalsKind = 'credit_split' | 'single'
+
 type ReportCategoryConfig = {
   slug: ReportMovementCategorySlug
   title: string
@@ -11,6 +13,7 @@ type ReportCategoryConfig = {
   movementType: AccountStatementMovementType
   apiType: NonNullable<AccountStatementParams['types']>[number]
   tone: MetricTone
+  totalsKind: ReportTotalsKind
 }
 
 export const REPORT_CATEGORIES: Record<ReportMovementCategorySlug, ReportCategoryConfig> = {
@@ -21,6 +24,7 @@ export const REPORT_CATEGORIES: Record<ReportMovementCategorySlug, ReportCategor
     movementType: 'sale',
     apiType: 'sales',
     tone: 'income',
+    totalsKind: 'credit_split',
   },
   compras: {
     slug: 'compras',
@@ -29,6 +33,7 @@ export const REPORT_CATEGORIES: Record<ReportMovementCategorySlug, ReportCategor
     movementType: 'purchase',
     apiType: 'purchases',
     tone: 'purchase',
+    totalsKind: 'credit_split',
   },
   gastos: {
     slug: 'gastos',
@@ -37,6 +42,7 @@ export const REPORT_CATEGORIES: Record<ReportMovementCategorySlug, ReportCategor
     movementType: 'expense',
     apiType: 'expenses',
     tone: 'expense',
+    totalsKind: 'single',
   },
   maquina: {
     slug: 'maquina',
@@ -45,6 +51,7 @@ export const REPORT_CATEGORIES: Record<ReportMovementCategorySlug, ReportCategor
     movementType: 'machine_expense',
     apiType: 'machine_expenses',
     tone: 'machine',
+    totalsKind: 'single',
   },
 }
 

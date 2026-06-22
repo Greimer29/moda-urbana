@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DashboardCreditTable } from '@/features/dashboard/components/dashboard-credit-table'
 import { DashboardDailySalesCard } from '@/features/dashboard/components/dashboard-daily-sales-card'
 import { DashboardLowStockList } from '@/features/dashboard/components/dashboard-low-stock-list'
@@ -7,7 +7,18 @@ import { DashboardSalesChart } from '@/features/dashboard/components/dashboard-s
 import { dashboardUi } from '@/features/dashboard/dashboard-ui'
 import { useDashboardOverviewQuery } from '@/features/dashboard/hooks/use-dashboard'
 import type { DashboardChartMode } from '@/features/dashboard/types'
-import { getApiError } from '@/lib/api-error'
+import { formatApiErrorDetails, getApiError, getApiErrorMessage } from '@/lib/api-error'
+
+function isDashboardChartValidationError(error: unknown): boolean {
+  const apiError = getApiError(error)
+
+  if (apiError.code !== 'VALIDATION_ERROR') {
+    return false
+  }
+
+  const lines = formatApiErrorDetails(apiError.details)
+  return lines.some((line) => line.toLowerCase().includes('chart'))
+}
 
 function todayLabel() {
   return new Date().toLocaleDateString('es-VE', {
@@ -20,7 +31,37 @@ function todayLabel() {
 
 export function DashboardPage() {
   const [chartMode, setChartMode] = useState<DashboardChartMode>('weekly')
-  const { data, isLoading, isError, error } = useDashboardOverviewQuery(chartMode)
+  const [chartError, setChartError] = useState<string | null>(null)
+  const lastSuccessfulChartModeRef = useRef<DashboardChartMode>('weekly')
+  const { data, isLoading, isError, error, isFetching, isPlaceholderData } =
+    useDashboardOverviewQuery(chartMode)
+
+  const isInitialLoad = isLoading && !data
+  const isPageError = isError && !data
+
+  useEffect(() => {
+    if (data && !isError && !isFetching) {
+      lastSuccessfulChartModeRef.current = chartMode
+    }
+  }, [chartMode, data, isError, isFetching])
+
+  useEffect(() => {
+    if (!isError || !error || !data) {
+      return
+    }
+
+    if (isDashboardChartValidationError(error)) {
+      setChartError(
+        'La vista diaria aún no está disponible en el servidor. Usá semanal o mensual.'
+      )
+    } else {
+      setChartError(getApiErrorMessage(error))
+    }
+
+    if (chartMode !== lastSuccessfulChartModeRef.current) {
+      setChartMode(lastSuccessfulChartModeRef.current)
+    }
+  }, [chartMode, data, error, isError])
 
   return (
     <div className={dashboardUi.page}>
@@ -31,9 +72,11 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {isError ? <p className="text-destructive text-sm">{getApiError(error).message}</p> : null}
+      {isPageError ? (
+        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
+      ) : null}
 
-      {isLoading || !data ? (
+      {isInitialLoad ? (
         <div className="flex justify-center py-24">
           <Loader2 className="text-muted-foreground size-6 animate-spin" />
         </div>
@@ -47,7 +90,12 @@ export function DashboardPage() {
               <DashboardSalesChart
                 series={data.ventasSeries}
                 mode={chartMode}
-                onModeChange={setChartMode}
+                onModeChange={(mode) => {
+                  setChartError(null)
+                  setChartMode(mode)
+                }}
+                chartError={chartError}
+                isUpdating={isFetching && isPlaceholderData}
               />
             </div>
             <div className={dashboardUi.topGridCell}>

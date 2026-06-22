@@ -79,7 +79,7 @@ export function InventoryImageField({
           ) : null}
         </div>
       </div>
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
+      {error ? <p className="text-destructive text-sm whitespace-pre-line">{error}</p> : null}
     </div>
   )
 }

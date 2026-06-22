@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { formatUsd } from '@/features/purchases/constants'
 import { useExchangeRateQuery, useUpdateExchangeRateMutation } from '@/features/purchases/hooks/use-settings'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 export function ExchangeRateConfigCard() {
   const { data: currentRate, isLoading: loadingRate } = useExchangeRateQuery()
@@ -30,7 +30,7 @@ export function ExchangeRateConfigCard() {
     try {
       await updateRateMutation.mutateAsync(value)
     } catch (err) {
-      setRateError(getApiError(err).message)
+      setRateError(getApiErrorMessage(err))
     }
   }
 
@@ -78,7 +78,7 @@ export function ExchangeRateConfigCard() {
             Guardar
           </Button>
         </div>
-        {rateError ? <p className="text-destructive text-sm">{rateError}</p> : null}
+        {rateError ? <p className="text-destructive text-sm whitespace-pre-line">{rateError}</p> : null}
       </CardContent>
     </Card>
   )

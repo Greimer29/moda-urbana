@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { useDailyExpensesQuery } from '@/features/dashboard/hooks/use-dashboard'
 import type { DailyExpenseItem } from '@/features/dashboard/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
 function todayLabel() {
@@ -50,7 +50,7 @@ export function DashboardDailyExpensesPage() {
           Cargando gastos del día…
         </div>
       ) : isError || !data ? (
-        <p className="text-destructive text-sm">{getApiError(error).message}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
       ) : (
         <Card>
           <CardHeader>

@@ -50,7 +50,7 @@ import { productSaleUnitAbrev } from '@/features/ventas/constants'
 import { useSuppliersQuery } from '@/features/suppliers/hooks/use-suppliers'
 import { supplierImageUrl } from '@/features/suppliers/constants'
 import { PublicImage } from '@/components/public-image'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { parseDecimalInput } from '@/lib/numeric-input'
 import { cn } from '@/lib/utils'
 
@@ -335,7 +335,7 @@ export function PurchaseDetallePage() {
 
       void updateItemMutation
         .mutateAsync({ purchaseId, itemId, payload })
-        .catch((err) => setActionError(getApiError(err).message))
+        .catch((err) => setActionError(getApiErrorMessage(err)))
     }, 500)
 
     itemSaveTimers.current.set(localId, timer)
@@ -380,7 +380,7 @@ export function PurchaseDetallePage() {
       setSearch('')
       setSearchOpen(false)
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -423,7 +423,7 @@ export function PurchaseDetallePage() {
       setSearch('')
       setSearchOpen(false)
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -453,7 +453,7 @@ export function PurchaseDetallePage() {
       try {
         await deleteItemMutation.mutateAsync({ purchaseId, itemId })
       } catch (err) {
-        setActionError(getApiError(err).message)
+        setActionError(getApiErrorMessage(err))
         return
       }
     }
@@ -539,7 +539,7 @@ export function PurchaseDetallePage() {
         },
       })
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -555,7 +555,7 @@ export function PurchaseDetallePage() {
   if (isError || !purchase) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm">{getApiError(error).message}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
         <Button variant="outline" asChild>
           <Link to="/purchases">Volver al listado</Link>
         </Button>
@@ -570,7 +570,7 @@ export function PurchaseDetallePage() {
       await deleteMutation.mutateAsync(purchaseId)
       void navigate('/purchases')
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -579,7 +579,7 @@ export function PurchaseDetallePage() {
     try {
       await uploadMutation.mutateAsync({ purchaseId, file })
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -591,7 +591,7 @@ export function PurchaseDetallePage() {
       window.open(url, '_blank')
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -651,7 +651,7 @@ export function PurchaseDetallePage() {
         ) : null}
       </div>
 
-      {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
+      {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
 
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">

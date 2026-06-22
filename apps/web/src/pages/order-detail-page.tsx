@@ -42,7 +42,7 @@ import {
 } from '@/features/orders/utils/order-line-totals'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { useFormatMoney } from '@/features/currencies/context/display-currency-context'
-import { getApiError } from '@/lib/api-error'
+import { getApiError, getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 import { formatDraftMaterialNotice } from '@/lib/material-availability'
 import { VentasOrderReturnDialog } from '@/features/ventas/components/ventas-order-return-dialog'
@@ -161,7 +161,7 @@ export function OrderDetallePage() {
   if (isError || !order) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm">{getApiError(error).message}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
         <Button variant="outline" asChild>
           <Link to="/ventas">Volver al listado</Link>
         </Button>
@@ -181,7 +181,7 @@ export function OrderDetallePage() {
       await updateMutation.mutateAsync({ id: orderId, payload: toHeaderPayload(values) })
       reset(values)
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   })
 
@@ -194,7 +194,7 @@ export function OrderDetallePage() {
       await deleteMutation.mutateAsync(orderId)
       void navigate('/ventas')
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     }
   }
 
@@ -227,7 +227,7 @@ export function OrderDetallePage() {
         setForceConfirmOpen(false)
         setStockModalOpen(true)
       } else {
-        setActionError(apiError.message)
+        setActionError(getApiErrorMessage(err))
       }
     } finally {
       setTransicionPending(null)
@@ -246,7 +246,7 @@ export function OrderDetallePage() {
       setForceConfirmOpen(false)
       setStockInsuficiente([])
     } catch (err) {
-      setActionError(getApiError(err).message)
+      setActionError(getApiErrorMessage(err))
     } finally {
       setTransitionForcePending(false)
     }
@@ -312,7 +312,7 @@ export function OrderDetallePage() {
         </div>
       </div>
 
-      {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
+      {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
       {pendingMaterialNotice ? (
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />

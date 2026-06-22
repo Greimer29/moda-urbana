@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useCustomersQuery } from '@/features/customers/hooks/use-customers'
 import { MODALIDAD_LABELS } from '@/features/orders/constants'
 import { useCreateOrderMutation } from '@/features/orders/hooks/use-orders'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 const schema = z.object({
   customer_id: z.coerce.number().min(1, 'Seleccioná un cliente'),
@@ -83,7 +83,7 @@ export function NuevoOrderDialog({ open, onOpenChange }: NuevoOrderDialogProps) 
       reset()
       void navigate(`/orders/${order.id}`)
     } catch (error) {
-      setError('root', { message: getApiError(error).message })
+      setError('root', { message: getApiErrorMessage(error) })
     }
   })
 
@@ -172,7 +172,7 @@ export function NuevoOrderDialog({ open, onOpenChange }: NuevoOrderDialogProps) 
             <Textarea id="notes" rows={2} {...register('notes')} />
           </div>
 
-          {errors.root ? <p className="text-destructive text-sm">{errors.root.message}</p> : null}
+          {errors.root ? <p className="text-destructive text-sm whitespace-pre-line">{errors.root.message}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

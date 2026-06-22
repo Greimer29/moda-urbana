@@ -20,7 +20,7 @@ import { UserPermissionsMatrix } from '@/features/users/components/user-permissi
 import { useCreateUserMutation, useUpdateUserMutation } from '@/features/users/hooks/use-users'
 import { isAppUserActionable } from '@/features/users/parse-app-user'
 import type { AppUser, AppUserRole } from '@/features/users/types'
-import { getApiError } from '@/lib/api-error'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
 type UserFormDialogProps = {
@@ -103,7 +103,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
 
       onOpenChange(false)
     } catch (err) {
-      setError(getApiError(err).message)
+      setError(getApiErrorMessage(err))
     }
   }
 
@@ -193,7 +193,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
             </p>
           )}
 
-          {error ? <p className="text-destructive text-sm">{error}</p> : null}
+          {error ? <p className="text-destructive text-sm whitespace-pre-line">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
