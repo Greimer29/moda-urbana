@@ -504,8 +504,8 @@ test.group('Reports API', (group) => {
       returnedQuantity: '0',
     })
     await CustomerPayment.create({
-      customerId: customer.id,
-      orderId: order.id,
+      customerId: Number(customer.id),
+      orderId: Number(order.id),
       accountId: null,
       amountUsd: '40.0000',
       date: DateTime.fromISO('2026-06-15'),
@@ -541,7 +541,7 @@ test.group('Reports API', (group) => {
       active: true,
     })
     await CustomerPayment.create({
-      customerId: customer.id,
+      customerId: Number(customer.id),
       orderId: null,
       accountId: null,
       amountUsd: '25.0000',
@@ -577,16 +577,16 @@ test.group('Reports API', (group) => {
     const accountB = await Account.create({ name: 'Caja B', description: null, isActive: true })
 
     await CustomerPayment.create({
-      customerId: customer.id,
+      customerId: Number(customer.id),
       orderId: null,
-      accountId: accountA.id,
+      accountId: Number(accountA.id),
       amountUsd: '30.0000',
       date: DateTime.fromISO('2026-06-10'),
     })
     await CustomerPayment.create({
-      customerId: customer.id,
+      customerId: Number(customer.id),
       orderId: null,
-      accountId: accountB.id,
+      accountId: Number(accountB.id),
       amountUsd: '20.0000',
       date: DateTime.fromISO('2026-06-12'),
     })

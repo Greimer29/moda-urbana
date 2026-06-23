@@ -680,7 +680,6 @@ test.group('Dashboard API', (group) => {
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const hoy = DateTime.now().toISODate()!
-    const mes = DateTime.now().toFormat('yyyy-MM')
     const customer = await Customer.create({
       name: 'Cliente mixto coherencia',
       creditDays: 30,
