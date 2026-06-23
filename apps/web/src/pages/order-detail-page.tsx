@@ -88,25 +88,50 @@ function validateCreditPayment(paymentType: OrderPaymentType, order: Order): str
   return null
 }
 
-const headerSchema = z.object({
-  customer_id: z.coerce.number().min(1),
-  modalidad: z.enum(['WHITE_LABEL', 'CORPORATE']),
-  description: z.string().trim().min(1),
-  quantity_total: z.coerce.number().min(1),
-  date_order: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  date_entrega_estimada: z
-    .union([z.literal(''), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)])
-    .optional(),
-  total_price: z.union([z.literal(''), z.coerce.number().min(0)]).optional(),
-  notes: z.string().trim().optional(),
-})
+const headerSchema = z
+  .object({
+    client_mode: z.enum(['registered', 'guest']),
+    customer_id: z.union([z.literal(''), z.coerce.number().min(1)]).optional(),
+    guest_name: z.string().trim().max(150).optional(),
+    modalidad: z.enum(['WHITE_LABEL', 'CORPORATE']),
+    description: z.string().trim().min(1),
+    quantity_total: z.coerce.number().min(1),
+    date_order: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    date_entrega_estimada: z
+      .union([z.literal(''), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)])
+      .optional(),
+    total_price: z.union([z.literal(''), z.coerce.number().min(0)]).optional(),
+    notes: z.string().trim().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.client_mode === 'registered') {
+      const customerId =
+        typeof data.customer_id === 'number' ? data.customer_id : Number(data.customer_id)
+      if (!customerId || customerId < 1) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Seleccioná un cliente registrado',
+          path: ['customer_id'],
+        })
+      }
+    } else if (!data.guest_name?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Ingresá el nombre del invitado',
+        path: ['guest_name'],
+      })
+    }
+  })
 
 type HeaderFormInput = z.input<typeof headerSchema>
 type HeaderFormValues = z.infer<typeof headerSchema>
 
 function toHeaderValues(order: Order): HeaderFormInput {
+  const isGuest = !order.customerId
   return {
-    customer_id: order.customerId,
+    client_mode: isGuest ? 'guest' : 'registered',
+    customer_id: order.customerId ?? '',
+    guest_name: order.guestName ?? '',
     modalidad: order.modalidad,
     description: order.description,
     quantity_total: order.totalQuantity,
@@ -118,8 +143,7 @@ function toHeaderValues(order: Order): HeaderFormInput {
 }
 
 function toHeaderPayload(values: HeaderFormValues) {
-  return {
-    customer_id: values.customer_id,
+  const base = {
     modalidad: values.modalidad,
     description: values.description.trim(),
     quantity_total: values.quantity_total,
@@ -127,6 +151,18 @@ function toHeaderPayload(values: HeaderFormValues) {
     date_entrega_estimada: values.date_entrega_estimada?.trim() || undefined,
     total_price: values.total_price === '' ? undefined : Number(values.total_price),
     notes: values.notes?.trim() || undefined,
+  }
+
+  if (values.client_mode === 'registered') {
+    return {
+      ...base,
+      customer_id: Number(values.customer_id),
+    }
+  }
+
+  return {
+    ...base,
+    guest_name: values.guest_name!.trim(),
   }
 }
 
@@ -167,6 +203,20 @@ export function OrderDetallePage() {
     Boolean(order?.customer?.creditDays && order.customer.creditDays > 0) &&
     canCreditSale
 
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting, isDirty },
+  } = useForm<HeaderFormInput, unknown, HeaderFormValues>({
+    resolver: zodResolver(headerSchema),
+    values: order ? toHeaderValues(order) : undefined,
+  })
+
+  const clientMode = watch('client_mode')
+
   useEffect(() => {
     if (!order) {
       return
@@ -181,6 +231,12 @@ export function OrderDetallePage() {
       setPaymentType('CASH')
     }
   }, [canUseCredit, paymentType])
+
+  useEffect(() => {
+    if (clientMode === 'guest' && paymentType === 'CREDIT') {
+      setPaymentType('CASH')
+    }
+  }, [clientMode, paymentType])
 
   const canReturn =
     order?.status === 'CONFIRMED' ||
@@ -201,16 +257,6 @@ export function OrderDetallePage() {
     order?.guestName ??
     customers.find((c) => c.id === order?.customerId)?.name ??
     'Sin cliente'
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting, isDirty },
-  } = useForm<HeaderFormInput, unknown, HeaderFormValues>({
-    resolver: zodResolver(headerSchema),
-    values: order ? toHeaderValues(order) : undefined,
-  })
 
   if (isLoading) {
     return (
@@ -453,18 +499,67 @@ export function OrderDetallePage() {
             <form onSubmit={onSaveHeader} className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="customer_id">Cliente</Label>
-                  <select
-                    id="customer_id"
-                    className="border-input bg-background flex h-9 w-full rounded-md border px-3 text-sm"
-                    {...register('customer_id')}
-                  >
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Label>Cliente</Label>
+                  <div className="bg-muted inline-flex rounded-lg p-1">
+                    <button
+                      type="button"
+                      className={cn(
+                        'rounded-md px-3 py-1.5 text-xs font-medium',
+                        clientMode === 'guest' ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                      )}
+                      onClick={() => {
+                        setValue('client_mode', 'guest', { shouldDirty: true })
+                        setValue('customer_id', '', { shouldDirty: true })
+                      }}
+                    >
+                      Invitado
+                    </button>
+                    <button
+                      type="button"
+                      className={cn(
+                        'rounded-md px-3 py-1.5 text-xs font-medium',
+                        clientMode === 'registered'
+                          ? 'bg-background shadow-sm'
+                          : 'text-muted-foreground'
+                      )}
+                      onClick={() => {
+                        setValue('client_mode', 'registered', { shouldDirty: true })
+                        setValue('guest_name', '', { shouldDirty: true })
+                      }}
+                    >
+                      Registrado
+                    </button>
+                  </div>
+                  {clientMode === 'guest' ? (
+                    <>
+                      <Input
+                        id="guest_name"
+                        placeholder="Nombre del invitado"
+                        {...register('guest_name')}
+                      />
+                      {errors.guest_name ? (
+                        <p className="text-destructive text-sm">{errors.guest_name.message}</p>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      <select
+                        id="customer_id"
+                        className="border-input bg-background flex h-9 w-full rounded-md border px-3 text-sm"
+                        {...register('customer_id')}
+                      >
+                        <option value="">Seleccionar cliente…</option>
+                        {customers.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.customer_id ? (
+                        <p className="text-destructive text-sm">{errors.customer_id.message}</p>
+                      ) : null}
+                    </>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="modalidad">Modalidad</Label>

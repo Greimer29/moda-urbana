@@ -100,6 +100,44 @@ test.group('Orders API', (group) => {
     })
   })
 
+  test('PUT /api/v1/orders/:id updates guest draft order', async ({ client, assert }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const order = await Order.create({
+      code: 'PED-202605-0103',
+      customerId: null,
+      guestName: 'Walk-in Original',
+      modality: 'CORPORATE',
+      description: 'Venta rápida',
+      totalQuantity: 5,
+      orderDate: DateTime.fromISO('2026-05-01'),
+      status: 'DRAFT',
+    })
+
+    const response = await client.put(`/api/v1/orders/${order.id}`).loginAs(user).json({
+      guest_name: 'Walk-in Actualizado',
+      modality: 'CORPORATE',
+      description: 'Venta actualizada',
+      total_quantity: 8,
+      order_date: '2026-05-01',
+    })
+
+    response.assertStatus(200)
+    response.assertBodyContains({
+      data: {
+        order: {
+          guestName: 'Walk-in Actualizado',
+          customerId: null,
+          description: 'Venta actualizada',
+          totalQuantity: 8,
+        },
+      },
+    })
+
+    await order.refresh()
+    assert.equal(order.guestName, 'Walk-in Actualizado')
+    assert.isNull(order.customerId)
+  })
+
   test('PUT /api/v1/orders/:id only allows DRAFT', async ({ client }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const customer = await seedCustomer()
