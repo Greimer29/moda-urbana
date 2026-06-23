@@ -2,7 +2,13 @@ import OrderNoCancelableException from '#exceptions/pedido_no_cancelable_excepti
 import TransicionInvalidaException from '#exceptions/transicion_invalida_exception'
 import type Order from '#models/order'
 
-export type OrderEstado = 'DRAFT' | 'CONFIRMED' | 'IN_PRODUCTION' | 'DELIVERED' | 'CANCELLED' | 'RETURNED'
+export type OrderEstado =
+  | 'DRAFT'
+  | 'CONFIRMED'
+  | 'IN_PRODUCTION'
+  | 'DELIVERED'
+  | 'CANCELLED'
+  | 'RETURNED'
 
 export type TransicionWarning = {
   code: string

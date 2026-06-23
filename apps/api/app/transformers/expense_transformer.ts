@@ -4,14 +4,9 @@ import { serializeAccountResumen } from '#transformers/account_transformer'
 
 import CurrencyService from '#services/currency_service'
 
-
-
 const currencyService = new CurrencyService()
 
-
-
 export async function serializeExpense(expense: Expense) {
-
   const rates = await currencyService.getActiveRates()
 
   const currencyCode = expense.currencyCode ?? 'USD'
@@ -20,10 +15,7 @@ export async function serializeExpense(expense: Expense) {
 
   const amountUsd = currencyService.toUsd(Number(amount ?? 0), currencyCode, rates).toFixed(4)
 
-
-
   return {
-
     id: Number(expense.id),
 
     date: expense.date.toISODate(),
@@ -43,9 +35,5 @@ export async function serializeExpense(expense: Expense) {
     updatedAt: expense.updatedAt,
 
     ...(expense.account ? { account: serializeAccountResumen(expense.account) } : {}),
-
   }
-
 }
-
-

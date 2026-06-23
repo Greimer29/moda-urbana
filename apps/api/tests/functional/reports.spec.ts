@@ -67,7 +67,10 @@ test.group('Reports API', (group) => {
     await seedAdminUser()
   })
 
-  test('GET /api/v1/reports/account-statement returns summary for month', async ({ client, assert }) => {
+  test('GET /api/v1/reports/account-statement returns summary for month', async ({
+    client,
+    assert,
+  }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
 
     const response = await client
@@ -236,8 +239,7 @@ test.group('Reports API', (group) => {
 
     const duePast = DateTime.max(monthStart, today.minus({ days: 2 }))
     const dueFutureCandidate = today.plus({ days: 5 })
-    const dueFuture =
-      dueFutureCandidate <= monthEnd ? dueFutureCandidate : today.plus({ days: 1 })
+    const dueFuture = dueFutureCandidate <= monthEnd ? dueFutureCandidate : today.plus({ days: 1 })
     const dueNextMonth = nextMonth.startOf('month').plus({ days: 14 })
 
     await Purchase.create({
@@ -504,8 +506,8 @@ test.group('Reports API', (group) => {
       returnedQuantity: '0',
     })
     await CustomerPayment.create({
-      customerId: customer.id,
-      orderId: order.id,
+      customerId: Number(customer.id),
+      orderId: Number(order.id),
       accountId: null,
       amountUsd: '40.0000',
       date: DateTime.fromISO('2026-06-15'),
@@ -533,7 +535,10 @@ test.group('Reports API', (group) => {
     assert.equal(paymentMovement!.amountUsd, '40.0000')
   })
 
-  test('GET account-statement omits customer payments outside period', async ({ client, assert }) => {
+  test('GET account-statement omits customer payments outside period', async ({
+    client,
+    assert,
+  }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const customer = await Customer.create({
       name: 'Cliente abono fuera',
@@ -541,7 +546,7 @@ test.group('Reports API', (group) => {
       active: true,
     })
     await CustomerPayment.create({
-      customerId: customer.id,
+      customerId: Number(customer.id),
       orderId: null,
       accountId: null,
       amountUsd: '25.0000',
@@ -577,16 +582,16 @@ test.group('Reports API', (group) => {
     const accountB = await Account.create({ name: 'Caja B', description: null, isActive: true })
 
     await CustomerPayment.create({
-      customerId: customer.id,
+      customerId: Number(customer.id),
       orderId: null,
-      accountId: accountA.id,
+      accountId: Number(accountA.id),
       amountUsd: '30.0000',
       date: DateTime.fromISO('2026-06-10'),
     })
     await CustomerPayment.create({
-      customerId: customer.id,
+      customerId: Number(customer.id),
       orderId: null,
-      accountId: accountB.id,
+      accountId: Number(accountB.id),
       amountUsd: '20.0000',
       date: DateTime.fromISO('2026-06-12'),
     })

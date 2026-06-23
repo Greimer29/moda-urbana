@@ -1,4 +1,4 @@
-import CatalogProduct from '#models/catalog_product'
+import type CatalogProduct from '#models/catalog_product'
 import FormulaMaterial from '#models/formula_material'
 import InventoryMovement from '#models/inventory_movement'
 import Order from '#models/order'
@@ -172,14 +172,14 @@ export default class CatalogProductStockService {
     return stockByMaterialId
   }
 
-  private async calcularMaterialComprometido(excludeOrderId?: number): Promise<Map<number, number>> {
+  private async calcularMaterialComprometido(
+    excludeOrderId?: number
+  ): Promise<Map<number, number>> {
     const query = Order.query()
       .whereIn('status', ['DRAFT', 'CONFIRMED'])
       .preload('orderLines', (q) =>
         q.preload('catalogProduct', (cp) =>
-          cp.preload('formula', (f) =>
-            f.preload('materials', (fm) => fm.preload('material'))
-          )
+          cp.preload('formula', (f) => f.preload('materials', (fm) => fm.preload('material')))
         )
       )
       .preload('orderMaterials', (q) => q.preload('material'))

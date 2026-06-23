@@ -80,7 +80,7 @@ export function DashboardPage() {
         <div className="flex justify-center py-24">
           <Loader2 className="text-muted-foreground size-6 animate-spin" />
         </div>
-      ) : (
+      ) : data ? (
         <>
           <div className={dashboardUi.topGridRow}>
             <div className={dashboardUi.topGridCell}>
@@ -120,7 +120,7 @@ export function DashboardPage() {
             />
           </div>
         </>
-      )}
+      ) : null}
     </div>
   )
 }

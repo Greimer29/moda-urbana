@@ -8,9 +8,7 @@ export default class HealthControleler {
   show(_ctx: HttpContext) {
     const storagePath = resolveStoragePath()
     const hasVolumeMount = Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH)
-    const persistent = app.inProduction
-      ? isAbsolute(storagePath) || hasVolumeMount
-      : true
+    const persistent = app.inProduction ? isAbsolute(storagePath) || hasVolumeMount : true
 
     return {
       status: 'ok',

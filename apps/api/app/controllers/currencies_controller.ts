@@ -1,5 +1,9 @@
 import CurrencyService from '#services/currency_service'
-import { createCurrencyValidator, listCurrenciesValidator, updateCurrencyValidator } from '#validators/currency'
+import {
+  createCurrencyValidator,
+  listCurrenciesValidator,
+  updateCurrencyValidator,
+} from '#validators/currency'
 import { serializeCurrency } from '#transformers/currency_transformer'
 import type { HttpContext } from '@adonisjs/core/http'
 

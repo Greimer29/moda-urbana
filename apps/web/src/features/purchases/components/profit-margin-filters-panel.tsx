@@ -2,7 +2,6 @@ import { Loader2 } from 'lucide-react'
 import { forwardRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { DecimalInput } from '@/components/decimal-input'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ProfitMarginCatalogFilters } from '@/features/purchases/components/profit-margin-catalog-filters'
 

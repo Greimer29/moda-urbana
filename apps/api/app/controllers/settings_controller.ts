@@ -1,8 +1,5 @@
 import AppSettingsService from '#services/app_settings_service'
-import {
-  updateExchangeRateValidator,
-  updateProfitMarginValidator,
-} from '#validators/settings'
+import { updateExchangeRateValidator, updateProfitMarginValidator } from '#validators/settings'
 import type { HttpContext } from '@adonisjs/core/http'
 
 export default class SettingsController {
@@ -17,8 +14,8 @@ export default class SettingsController {
   }
 
   async updateExchangeRate({ request, serialize }: HttpContext) {
-    const { usd_rate } = await request.validateUsing(updateExchangeRateValidator)
-    const saved = await this.service.setExchangeRate(usd_rate)
+    const payload = await request.validateUsing(updateExchangeRateValidator)
+    const saved = await this.service.setExchangeRate(payload.usd_rate)
 
     return serialize({
       usdRate: saved.toFixed(4),
@@ -29,14 +26,13 @@ export default class SettingsController {
     const profitMarginPercent = await this.service.getProfitMarginPercent()
 
     return serialize({
-      profitMarginPercent:
-        profitMarginPercent !== null ? profitMarginPercent.toFixed(2) : null,
+      profitMarginPercent: profitMarginPercent !== null ? profitMarginPercent.toFixed(2) : null,
     })
   }
 
   async updateProfitMargin({ request, serialize }: HttpContext) {
-    const { profit_margin_percent } = await request.validateUsing(updateProfitMarginValidator)
-    const saved = await this.service.setProfitMarginPercent(profit_margin_percent)
+    const payload = await request.validateUsing(updateProfitMarginValidator)
+    const saved = await this.service.setProfitMarginPercent(payload.profit_margin_percent)
 
     return serialize({
       profitMarginPercent: saved.toFixed(2),

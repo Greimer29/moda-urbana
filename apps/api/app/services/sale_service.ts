@@ -53,10 +53,7 @@ export default class SaleService {
     const page = filters.page ?? 1
     const perPage = filters.perPage ?? 20
 
-    const query = Sale.query()
-      .preload('customer')
-      .orderBy('soldAt', 'desc')
-      .orderBy('id', 'desc')
+    const query = Sale.query().preload('customer').orderBy('soldAt', 'desc').orderBy('id', 'desc')
 
     if (filters.customer_id) {
       query.where('customerId', filters.customer_id)
@@ -131,9 +128,7 @@ export default class SaleService {
         if (hasCatalog) {
           const product = await CatalogProduct.query({ client: trx })
             .where('id', line.catalog_product_id!)
-            .preload('formula', (f) =>
-              f.preload('materials', (fm) => fm.preload('material'))
-            )
+            .preload('formula', (f) => f.preload('materials', (fm) => fm.preload('material')))
             .forUpdate()
             .first()
 
@@ -167,9 +162,7 @@ export default class SaleService {
       }
 
       const totalBs =
-        input.usd_rate && input.usd_rate > 0
-          ? (totalUsd * input.usd_rate).toFixed(2)
-          : null
+        input.usd_rate && input.usd_rate > 0 ? (totalUsd * input.usd_rate).toFixed(2) : null
 
       const sale = await Sale.create(
         {
@@ -221,9 +214,7 @@ export default class SaleService {
       if (line.catalog_product_id) {
         const product = await CatalogProduct.query({ client: trx })
           .where('id', line.catalog_product_id)
-          .preload('formula', (f) =>
-            f.preload('materials', (fm) => fm.preload('material'))
-          )
+          .preload('formula', (f) => f.preload('materials', (fm) => fm.preload('material')))
           .forUpdate()
           .first()
 
@@ -231,10 +222,8 @@ export default class SaleService {
           throw new ProductoCatalogoNoEncontradoException()
         }
 
-        const { quantity: disponible } = await this.catalogProductStockService.calcularStockDisponible(
-          product,
-          { trx }
-        )
+        const { quantity: disponible } =
+          await this.catalogProductStockService.calcularStockDisponible(product, { trx })
 
         if (line.quantity > disponible) {
           throw new StockInsuficienteException([

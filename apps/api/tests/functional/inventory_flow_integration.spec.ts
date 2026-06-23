@@ -97,9 +97,7 @@ async function crearCompraConfirmada(
       unit_price_usd: 5,
     })
 
-  const confirmResponse = await client
-    .post(`/api/v1/purchases/${purchaseId}/confirm`)
-    .loginAs(user)
+  const confirmResponse = await client.post(`/api/v1/purchases/${purchaseId}/confirm`).loginAs(user)
 
   confirmResponse.assertStatus(200)
   return purchaseId
@@ -174,22 +172,25 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     const productBefore = await client.get(`/api/v1/catalog-products/${product.id}`).loginAs(user)
     assert.equal(productBefore.body().data.catalog_product.stock_quantity, '12.000')
 
-    const saleResponse = await client.post('/api/v1/sales').loginAs(user).json({
-      guest_name: 'Cliente walk-in',
-      payment_method: 'CASH_USD',
-      lines: [
-        {
-          catalog_product_id: Number(product.id),
-          quantity: 4,
-          unit_price_usd: 20,
-        },
-        {
-          material_id: Number(material.id),
-          quantity: 8,
-          unit_price_usd: 8,
-        },
-      ],
-    })
+    const saleResponse = await client
+      .post('/api/v1/sales')
+      .loginAs(user)
+      .json({
+        guest_name: 'Cliente walk-in',
+        payment_method: 'CASH_USD',
+        lines: [
+          {
+            catalog_product_id: Number(product.id),
+            quantity: 4,
+            unit_price_usd: 20,
+          },
+          {
+            material_id: Number(material.id),
+            quantity: 8,
+            unit_price_usd: 8,
+          },
+        ],
+      })
 
     saleResponse.assertStatus(200)
 
@@ -212,17 +213,20 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
       active: true,
     })
 
-    const response = await client.post('/api/v1/sales').loginAs(user).json({
-      guest_name: 'Cliente sin stock',
-      payment_method: 'CASH_USD',
-      lines: [
-        {
-          catalog_product_id: Number(product.id),
-          quantity: 5,
-          unit_price_usd: 15,
-        },
-      ],
-    })
+    const response = await client
+      .post('/api/v1/sales')
+      .loginAs(user)
+      .json({
+        guest_name: 'Cliente sin stock',
+        payment_method: 'CASH_USD',
+        lines: [
+          {
+            catalog_product_id: Number(product.id),
+            quantity: 5,
+            unit_price_usd: 15,
+          },
+        ],
+      })
 
     response.assertStatus(409)
     response.assertBodyContains({
@@ -234,17 +238,20 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const material = await seedMaterial({ code: 'STK-LOW' })
 
-    const response = await client.post('/api/v1/sales').loginAs(user).json({
-      guest_name: 'Cliente material bajo',
-      payment_method: 'CASH_USD',
-      lines: [
-        {
-          material_id: Number(material.id),
-          quantity: 3,
-          unit_price_usd: 8,
-        },
-      ],
-    })
+    const response = await client
+      .post('/api/v1/sales')
+      .loginAs(user)
+      .json({
+        guest_name: 'Cliente material bajo',
+        payment_method: 'CASH_USD',
+        lines: [
+          {
+            material_id: Number(material.id),
+            quantity: 3,
+            unit_price_usd: 8,
+          },
+        ],
+      })
 
     response.assertStatus(409)
     response.assertBodyContains({
@@ -272,21 +279,27 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
       active: true,
     })
 
-    const orderResponse = await client.post('/api/v1/orders').loginAs(user).json({
-      customer_id: Number(customer.id),
-      modality: 'CORPORATE',
-      description: 'Pedido stock producto',
-      total_quantity: 6,
-      order_date: '2026-06-02',
-    })
+    const orderResponse = await client
+      .post('/api/v1/orders')
+      .loginAs(user)
+      .json({
+        customer_id: Number(customer.id),
+        modality: 'CORPORATE',
+        description: 'Pedido stock producto',
+        total_quantity: 6,
+        order_date: '2026-06-02',
+      })
 
     orderResponse.assertStatus(200)
     const orderId = orderResponse.body().data.order.id
 
-    await client.post(`/api/v1/orders/${orderId}/lines`).loginAs(user).json({
-      catalog_product_id: Number(product.id),
-      quantity: 6,
-    })
+    await client
+      .post(`/api/v1/orders/${orderId}/lines`)
+      .loginAs(user)
+      .json({
+        catalog_product_id: Number(product.id),
+        quantity: 6,
+      })
 
     const confirmResponse = await client
       .post(`/api/v1/orders/${orderId}/transition`)
@@ -320,9 +333,12 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     formulaResponse.assertStatus(200)
     const formulaId = formulaResponse.body().data.formula.id
 
-    await client.put(`/api/v1/formulas/${formulaId}/materials`).loginAs(user).json({
-      items: [{ material_id: Number(material.id), quantity: 2.5 }],
-    })
+    await client
+      .put(`/api/v1/formulas/${formulaId}/materials`)
+      .loginAs(user)
+      .json({
+        items: [{ material_id: Number(material.id), quantity: 2.5 }],
+      })
 
     const productResponse = await client.post('/api/v1/catalog-products').loginAs(user).json({
       name: 'Uniforme fórmula',
@@ -334,13 +350,16 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     productResponse.assertStatus(200)
     const productId = productResponse.body().data.catalog_product.id
 
-    const orderResponse = await client.post('/api/v1/orders').loginAs(user).json({
-      customer_id: Number(customer.id),
-      modality: 'CORPORATE',
-      description: 'Pedido con fórmula',
-      total_quantity: 8,
-      order_date: '2026-06-02',
-    })
+    const orderResponse = await client
+      .post('/api/v1/orders')
+      .loginAs(user)
+      .json({
+        customer_id: Number(customer.id),
+        modality: 'CORPORATE',
+        description: 'Pedido con fórmula',
+        total_quantity: 8,
+        order_date: '2026-06-02',
+      })
     const orderId = orderResponse.body().data.order.id
 
     await client.post(`/api/v1/orders/${orderId}/lines`).loginAs(user).json({
@@ -348,9 +367,7 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
       quantity: 8,
     })
 
-    const stockBeforeProduction = await client
-      .get(`/api/v1/materials/${material.id}`)
-      .loginAs(user)
+    const stockBeforeProduction = await client.get(`/api/v1/materials/${material.id}`).loginAs(user)
     assert.equal(stockBeforeProduction.body().data.material.stockActual, 100)
 
     const confirmResponse = await client
@@ -367,9 +384,7 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
 
     productionResponse.assertStatus(200)
 
-    const stockAfterProduction = await client
-      .get(`/api/v1/materials/${material.id}`)
-      .loginAs(user)
+    const stockAfterProduction = await client.get(`/api/v1/materials/${material.id}`).loginAs(user)
     assert.equal(stockAfterProduction.body().data.material.stockActual, 80)
 
     const availability = await client
@@ -394,39 +409,44 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
 
     // 1. Compra confirma stock de material
     await crearCompraConfirmada(client, user, supplier, material, 200)
-    let matStock = (
-      await client.get(`/api/v1/materials/${material.id}`).loginAs(user)
-    ).body().data.material.stockActual
+    const materialStockResponse = await client.get(`/api/v1/materials/${material.id}`).loginAs(user)
+    let matStock = materialStockResponse.body().data.material.stockActual
     assert.equal(matStock, 200)
 
     // 2. Fórmula y producto con stock derivado de materiales (200 / 3 ≈ 66 unidades)
-    const formulaId = (
-      await client.post('/api/v1/formulas').loginAs(user).json({ name: 'E2E Formula' })
-    ).body().data.formula.id
+    const formulaResponse = await client
+      .post('/api/v1/formulas')
+      .loginAs(user)
+      .json({ name: 'E2E Formula' })
+    const formulaId = formulaResponse.body().data.formula.id
 
-    await client.put(`/api/v1/formulas/${formulaId}/materials`).loginAs(user).json({
-      items: [{ material_id: Number(material.id), quantity: 3 }],
-    })
-
-    const productId = (
-      await client.post('/api/v1/catalog-products').loginAs(user).json({
-        name: 'Producto E2E',
-        category: 'Uniforme',
-        sale_price_usd: 40,
-        formula_id: formulaId,
+    await client
+      .put(`/api/v1/formulas/${formulaId}/materials`)
+      .loginAs(user)
+      .json({
+        items: [{ material_id: Number(material.id), quantity: 3 }],
       })
-    ).body().data.catalog_product.id
+
+    const productResponse = await client.post('/api/v1/catalog-products').loginAs(user).json({
+      name: 'Producto E2E',
+      category: 'Uniforme',
+      sale_price_usd: 40,
+      formula_id: formulaId,
+    })
+    const productId = productResponse.body().data.catalog_product.id
 
     // 3. Pedido: confirmar valida capacidad; producción descuenta material (no stock manual del producto)
-    const orderId = (
-      await client.post('/api/v1/orders').loginAs(user).json({
+    const orderResponse = await client
+      .post('/api/v1/orders')
+      .loginAs(user)
+      .json({
         customer_id: Number(customer.id),
         modality: 'CORPORATE',
         description: 'E2E pedido',
         total_quantity: 10,
         order_date: '2026-06-02',
       })
-    ).body().data.order.id
+    const orderId = orderResponse.body().data.order.id
 
     await client.post(`/api/v1/orders/${orderId}/lines`).loginAs(user).json({
       catalog_product_id: productId,
@@ -449,24 +469,29 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
       .loginAs(user)
       .json({ new_status: 'IN_PRODUCTION' })
 
-    matStock = (
-      await client.get(`/api/v1/materials/${material.id}`).loginAs(user)
-    ).body().data.material.stockActual
+    const materialAfterProductionResponse = await client
+      .get(`/api/v1/materials/${material.id}`)
+      .loginAs(user)
+    matStock = materialAfterProductionResponse.body().data.material.stockActual
     assert.equal(matStock, 170) // 200 - (10 líneas × 3 material/unidad)
 
     // 4. Venta walk-in adicional sobre el mismo material y producto
-    await client.post('/api/v1/sales').loginAs(user).json({
-      guest_name: 'Venta E2E extra',
-      payment_method: 'CASH_USD',
-      lines: [
-        { catalog_product_id: productId, quantity: 5, unit_price_usd: 40 },
-        { material_id: Number(material.id), quantity: 10, unit_price_usd: 8 },
-      ],
-    })
+    await client
+      .post('/api/v1/sales')
+      .loginAs(user)
+      .json({
+        guest_name: 'Venta E2E extra',
+        payment_method: 'CASH_USD',
+        lines: [
+          { catalog_product_id: productId, quantity: 5, unit_price_usd: 40 },
+          { material_id: Number(material.id), quantity: 10, unit_price_usd: 8 },
+        ],
+      })
 
-    matStock = (
-      await client.get(`/api/v1/materials/${material.id}`).loginAs(user)
-    ).body().data.material.stockActual
+    const materialAfterSaleResponse = await client
+      .get(`/api/v1/materials/${material.id}`)
+      .loginAs(user)
+    matStock = materialAfterSaleResponse.body().data.material.stockActual
     assert.equal(matStock, 145)
 
     const productFinal = await client.get(`/api/v1/catalog-products/${productId}`).loginAs(user)
@@ -508,7 +533,10 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     assert.equal(detail.body().data.material.stockActual, 20)
   })
 
-  test('1 — compra de 2 MTS de material refleja stock físico en API', async ({ client, assert }) => {
+  test('1 — compra de 2 MTS de material refleja stock físico en API', async ({
+    client,
+    assert,
+  }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const supplier = await seedSupplier()
     const material = await seedMaterial({ code: 'ATL-NEGRA', name: 'Atletica negra', unit: 'MTS' })
@@ -541,9 +569,12 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     formulaResponse.assertStatus(200)
     const formulaId = formulaResponse.body().data.formula.id
 
-    await client.put(`/api/v1/formulas/${formulaId}/materials`).loginAs(user).json({
-      items: [{ material_id: Number(material.id), quantity: 1.5 }],
-    })
+    await client
+      .put(`/api/v1/formulas/${formulaId}/materials`)
+      .loginAs(user)
+      .json({
+        items: [{ material_id: Number(material.id), quantity: 1.5 }],
+      })
 
     const productResponse = await client.post('/api/v1/catalog-products').loginAs(user).json({
       name: 'Camisa con logo',
@@ -580,9 +611,12 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     })
     const formulaId = formulaResponse.body().data.formula.id
 
-    await client.put(`/api/v1/formulas/${formulaId}/materials`).loginAs(user).json({
-      items: [{ material_id: Number(material.id), quantity: 1.5 }],
-    })
+    await client
+      .put(`/api/v1/formulas/${formulaId}/materials`)
+      .loginAs(user)
+      .json({
+        items: [{ material_id: Number(material.id), quantity: 1.5 }],
+      })
 
     const productResponse = await client.post('/api/v1/catalog-products').loginAs(user).json({
       name: 'Camisa con logo',
@@ -593,14 +627,17 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     })
     const productId = productResponse.body().data.catalog_product.id
 
-    const orderResponse = await client.post('/api/v1/orders').loginAs(user).json({
-      customer_id: Number(customer.id),
-      modality: 'CORPORATE',
-      description: 'Camisa con logo',
-      total_quantity: 1,
-      order_date: '2026-06-17',
-      guest_name: null,
-    })
+    const orderResponse = await client
+      .post('/api/v1/orders')
+      .loginAs(user)
+      .json({
+        customer_id: Number(customer.id),
+        modality: 'CORPORATE',
+        description: 'Camisa con logo',
+        total_quantity: 1,
+        order_date: '2026-06-17',
+        guest_name: null,
+      })
     const orderId = orderResponse.body().data.order.id
 
     await client.post(`/api/v1/orders/${orderId}/lines`).loginAs(user).json({
@@ -654,9 +691,12 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     })
     const formulaId = formulaResponse.body().data.formula.id
 
-    await client.put(`/api/v1/formulas/${formulaId}/materials`).loginAs(user).json({
-      items: [{ material_id: Number(material.id), quantity: 1.5 }],
-    })
+    await client
+      .put(`/api/v1/formulas/${formulaId}/materials`)
+      .loginAs(user)
+      .json({
+        items: [{ material_id: Number(material.id), quantity: 1.5 }],
+      })
 
     const productResponse = await client.post('/api/v1/catalog-products').loginAs(user).json({
       name: 'Camisa con logo',
@@ -667,13 +707,16 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     })
     const productId = productResponse.body().data.catalog_product.id
 
-    const orderResponse = await client.post('/api/v1/orders').loginAs(user).json({
-      customer_id: Number(customer.id),
-      modality: 'CORPORATE',
-      description: 'Pedido exceso',
-      total_quantity: 2,
-      order_date: '2026-06-17',
-    })
+    const orderResponse = await client
+      .post('/api/v1/orders')
+      .loginAs(user)
+      .json({
+        customer_id: Number(customer.id),
+        modality: 'CORPORATE',
+        description: 'Pedido exceso',
+        total_quantity: 2,
+        order_date: '2026-06-17',
+      })
     const orderId = orderResponse.body().data.order.id
 
     await client.post(`/api/v1/orders/${orderId}/lines`).loginAs(user).json({
@@ -713,9 +756,12 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     })
     const formulaId = formulaResponse.body().data.formula.id
 
-    await client.put(`/api/v1/formulas/${formulaId}/materials`).loginAs(user).json({
-      items: [{ material_id: Number(material.id), quantity: 1.5 }],
-    })
+    await client
+      .put(`/api/v1/formulas/${formulaId}/materials`)
+      .loginAs(user)
+      .json({
+        items: [{ material_id: Number(material.id), quantity: 1.5 }],
+      })
 
     const productResponse = await client.post('/api/v1/catalog-products').loginAs(user).json({
       name: 'Camisa walk-in',
@@ -729,11 +775,14 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     const before = await client.get(`/api/v1/catalog-products/${productId}`).loginAs(user)
     assert.equal(before.body().data.catalog_product.stock_quantity, '1.000')
 
-    const sale = await client.post('/api/v1/sales').loginAs(user).json({
-      guest_name: 'Cliente walk-in',
-      payment_method: 'CASH_USD',
-      lines: [{ catalog_product_id: productId, quantity: 1, unit_price_usd: 25 }],
-    })
+    const sale = await client
+      .post('/api/v1/sales')
+      .loginAs(user)
+      .json({
+        guest_name: 'Cliente walk-in',
+        payment_method: 'CASH_USD',
+        lines: [{ catalog_product_id: productId, quantity: 1, unit_price_usd: 25 }],
+      })
     sale.assertStatus(200)
 
     const materialAfter = await client.get(`/api/v1/materials/${material.id}`).loginAs(user)
@@ -742,16 +791,16 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
     const productAfter = await client.get(`/api/v1/catalog-products/${productId}`).loginAs(user)
     assert.equal(productAfter.body().data.catalog_product.stock_quantity, '0.000')
 
-    const rejected = await client.post('/api/v1/sales').loginAs(user).json({
-      guest_name: 'Cliente sin stock',
-      payment_method: 'CASH_USD',
-      lines: [{ catalog_product_id: productId, quantity: 1, unit_price_usd: 25 }],
-    })
+    const rejected = await client
+      .post('/api/v1/sales')
+      .loginAs(user)
+      .json({
+        guest_name: 'Cliente sin stock',
+        payment_method: 'CASH_USD',
+        lines: [{ catalog_product_id: productId, quantity: 1, unit_price_usd: 25 }],
+      })
     rejected.assertStatus(409)
-    assert.equal(
-      (await client.get(`/api/v1/materials/${material.id}`).loginAs(user)).body().data.material
-        .stockActual,
-      0.5
-    )
+    const materialFinalResponse = await client.get(`/api/v1/materials/${material.id}`).loginAs(user)
+    assert.equal(materialFinalResponse.body().data.material.stockActual, 0.5)
   })
 })

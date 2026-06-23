@@ -1,6 +1,9 @@
 import MaterialNoEncontradoException from '#exceptions/material_no_encontrado_exception'
 import StockInsuficienteException from '#exceptions/stock_insuficiente_exception'
-import { resolveInventoryAdjustment, type InventoryAdjustmentMode } from '#constants/inventory_adjustment'
+import {
+  resolveInventoryAdjustment,
+  type InventoryAdjustmentMode,
+} from '#constants/inventory_adjustment'
 import PurchaseItem from '#models/purchase_item'
 import Material from '#models/material'
 import InventoryMovement from '#models/inventory_movement'
@@ -288,8 +291,12 @@ export default class MaterialService {
     const paginator = await query.paginate(page, perPage)
     const stockById = new Map<number, number>()
     const stockComprometidoById = await this.orderService.calcularMaterialComprometido()
-    const metricRows: Array<{ id: number; purchasedQty: number; usedQty: number; flowQty: number }> =
-      []
+    const metricRows: Array<{
+      id: number
+      purchasedQty: number
+      usedQty: number
+      flowQty: number
+    }> = []
 
     for (const material of paginator.all()) {
       const id = Number(material.id)
@@ -330,9 +337,8 @@ export default class MaterialService {
   ): Promise<MaterialConStock & { movimientos: InventoryMovement[] }> {
     const material = await this.obtener(id)
     const stockActual = await this.calcularStock(Number(material.id))
-    const stockComprometido = (await this.orderService.calcularMaterialComprometido()).get(
-      Number(material.id)
-    ) ?? 0
+    const committedByMaterial = await this.orderService.calcularMaterialComprometido()
+    const stockComprometido = committedByMaterial.get(Number(material.id)) ?? 0
     const movimientos = await InventoryMovement.query()
       .where('materialId', Number(material.id))
       .orderBy('created_at', 'desc')
@@ -376,11 +382,7 @@ export default class MaterialService {
       ...(input.active !== undefined ? { active: input.active } : {}),
     })
 
-    if (
-      nextCost !== undefined &&
-      previousCost !== null &&
-      previousCost !== nextCost
-    ) {
+    if (nextCost !== undefined && previousCost !== null && previousCost !== nextCost) {
       material.previousPurchasePriceUsd = previousCost
     }
 
@@ -436,7 +438,11 @@ export default class MaterialService {
       }
 
       const stockActual = await this.calcularStock(Number(material.id), trx)
-      const { delta, movementType } = resolveInventoryAdjustment(input.mode, input.quantity, stockActual)
+      const { delta, movementType } = resolveInventoryAdjustment(
+        input.mode,
+        input.quantity,
+        stockActual
+      )
 
       if (stockActual + delta < 0) {
         throw new StockInsuficienteException([

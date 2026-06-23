@@ -7,8 +7,14 @@ export default class extends BaseSchema {
     this.schema.alterTable(this.tableName, (table) => {
       table.string('image_path', 255).nullable().after('sale_price_usd')
       table.decimal('previous_sale_price_usd', 15, 4).nullable().after('image_path')
-      table.decimal('previous_purchase_price_usd', 15, 4).nullable().after('previous_sale_price_usd')
-      table.decimal('reference_sale_price_usd', 15, 4).nullable().after('previous_purchase_price_usd')
+      table
+        .decimal('previous_purchase_price_usd', 15, 4)
+        .nullable()
+        .after('previous_sale_price_usd')
+      table
+        .decimal('reference_sale_price_usd', 15, 4)
+        .nullable()
+        .after('previous_purchase_price_usd')
       table.decimal('reference_cost_usd', 15, 4).nullable().after('reference_sale_price_usd')
     })
 

@@ -1,6 +1,5 @@
 import type {
   Customer,
-  CustomerAccountStatement,
   CustomerAccountStatementResponse,
   CustomerDeleteResponse,
   CustomerDetalle,

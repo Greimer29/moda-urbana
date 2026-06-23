@@ -1,4 +1,4 @@
-import CurrencyService from '#services/currency_service'
+import type CurrencyService from '#services/currency_service'
 
 export type MachineExpenseSumRow = {
   amount: string | number

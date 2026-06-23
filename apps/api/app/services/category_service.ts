@@ -95,7 +95,9 @@ export default class CategoryService {
   async eliminar(id: number): Promise<{ id: number; eliminado: true }> {
     const category = await this.obtener(id)
 
-    const productsCount = await CatalogProduct.query().where('category', category.name).count('* as total')
+    const productsCount = await CatalogProduct.query()
+      .where('category', category.name)
+      .count('* as total')
     const total = Number(productsCount[0]?.$extras.total ?? 0)
 
     if (total > 0) {

@@ -84,14 +84,11 @@ test.group('Ventas API — catálogo y ventas', (group) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const material = await seedMaterial()
 
-    const createResponse = await client
-      .post('/api/v1/catalog-products')
-      .loginAs(user)
-      .json({
-        name: 'Uniforme escolar',
-        category: 'Uniforme',
-        sale_price_usd: 20,
-      })
+    const createResponse = await client.post('/api/v1/catalog-products').loginAs(user).json({
+      name: 'Uniforme escolar',
+      category: 'Uniforme',
+      sale_price_usd: 20,
+    })
 
     createResponse.assertStatus(200)
     const productId = createResponse.body().data.catalog_product.id
@@ -103,9 +100,12 @@ test.group('Ventas API — catálogo y ventas', (group) => {
     formulaResponse.assertStatus(200)
     const formulaId = formulaResponse.body().data.formula.id
 
-    await client.put(`/api/v1/formulas/${formulaId}/materials`).loginAs(user).json({
-      items: [{ material_id: Number(material.id), quantity: 2 }],
-    })
+    await client
+      .put(`/api/v1/formulas/${formulaId}/materials`)
+      .loginAs(user)
+      .json({
+        items: [{ material_id: Number(material.id), quantity: 2 }],
+      })
 
     await client.put(`/api/v1/catalog-products/${productId}`).loginAs(user).json({
       name: 'Uniforme escolar',
@@ -130,15 +130,12 @@ test.group('Ventas API — catálogo y ventas', (group) => {
   test('PUT catalog product allows manual cost override', async ({ client, assert }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
 
-    const createResponse = await client
-      .post('/api/v1/catalog-products')
-      .loginAs(user)
-      .json({
-        name: 'Camisa básica',
-        category: 'Camisa',
-        sale_price_usd: 25,
-        cost_usd: 10,
-      })
+    const createResponse = await client.post('/api/v1/catalog-products').loginAs(user).json({
+      name: 'Camisa básica',
+      category: 'Camisa',
+      sale_price_usd: 25,
+      cost_usd: 10,
+    })
 
     createResponse.assertStatus(200)
     assert.equal(createResponse.body().data.catalog_product.cost_usd, '10.0000')
@@ -236,22 +233,25 @@ test.group('Ventas API — catálogo y ventas', (group) => {
       active: true,
     })
 
-    const response = await client.post('/api/v1/sales').loginAs(user).json({
-      guest_name: 'Walk-in Test',
-      payment_method: 'CASH_USD',
-      lines: [
-        {
-          catalog_product_id: Number(catalog.id),
-          quantity: 2,
-          unit_price_usd: 15,
-        },
-        {
-          material_id: Number(material.id),
-          quantity: 3,
-          unit_price_usd: 8,
-        },
-      ],
-    })
+    const response = await client
+      .post('/api/v1/sales')
+      .loginAs(user)
+      .json({
+        guest_name: 'Walk-in Test',
+        payment_method: 'CASH_USD',
+        lines: [
+          {
+            catalog_product_id: Number(catalog.id),
+            quantity: 2,
+            unit_price_usd: 15,
+          },
+          {
+            material_id: Number(material.id),
+            quantity: 3,
+            unit_price_usd: 8,
+          },
+        ],
+      })
 
     response.assertStatus(200)
     assert.match(response.body().data.sale.code, /^VTA-\d{6}-\d{4}$/)
@@ -301,9 +301,12 @@ test.group('Ventas API — catálogo y ventas', (group) => {
     formulaResponse.assertStatus(200)
     const formulaId = formulaResponse.body().data.formula.id
 
-    await client.put(`/api/v1/formulas/${formulaId}/materials`).loginAs(user).json({
-      items: [{ material_id: Number(material.id), quantity: 1.5 }],
-    })
+    await client
+      .put(`/api/v1/formulas/${formulaId}/materials`)
+      .loginAs(user)
+      .json({
+        items: [{ material_id: Number(material.id), quantity: 1.5 }],
+      })
 
     await client.put(`/api/v1/catalog-products/${catalog.id}`).loginAs(user).json({
       name: 'Camisa corporativa',
@@ -313,21 +316,27 @@ test.group('Ventas API — catálogo y ventas', (group) => {
       stock_quantity: 15,
     })
 
-    const orderResponse = await client.post('/api/v1/orders').loginAs(user).json({
-      customer_id: Number(customer.id),
-      modality: 'CORPORATE',
-      description: 'Pedido catálogo',
-      total_quantity: 10,
-      order_date: '2026-06-01',
-    })
+    const orderResponse = await client
+      .post('/api/v1/orders')
+      .loginAs(user)
+      .json({
+        customer_id: Number(customer.id),
+        modality: 'CORPORATE',
+        description: 'Pedido catálogo',
+        total_quantity: 10,
+        order_date: '2026-06-01',
+      })
 
     orderResponse.assertStatus(200)
     const orderId = orderResponse.body().data.order.id
 
-    await client.post(`/api/v1/orders/${orderId}/lines`).loginAs(user).json({
-      catalog_product_id: Number(catalog.id),
-      quantity: 10,
-    })
+    await client
+      .post(`/api/v1/orders/${orderId}/lines`)
+      .loginAs(user)
+      .json({
+        catalog_product_id: Number(catalog.id),
+        quantity: 10,
+      })
 
     const budgetResponse = await client.get(`/api/v1/orders/${orderId}/budget`).loginAs(user)
     budgetResponse.assertStatus(200)
@@ -348,9 +357,7 @@ test.group('Ventas API — catálogo y ventas', (group) => {
 
     productionResponse.assertStatus(200)
 
-    const stockAfterProduction = await client
-      .get(`/api/v1/materials/${material.id}`)
-      .loginAs(user)
+    const stockAfterProduction = await client.get(`/api/v1/materials/${material.id}`).loginAs(user)
     assert.equal(stockAfterProduction.body().data.material.stockActual, 85)
 
     const orderOut = await InventoryMovement.query()
@@ -386,10 +393,13 @@ test.group('Ventas API — catálogo y ventas', (group) => {
       status: 'DRAFT',
     })
 
-    await client.post(`/api/v1/orders/${order.id}/lines`).loginAs(user).json({
-      catalog_product_id: Number(catalog.id),
-      quantity: 5,
-    })
+    await client
+      .post(`/api/v1/orders/${order.id}/lines`)
+      .loginAs(user)
+      .json({
+        catalog_product_id: Number(catalog.id),
+        quantity: 5,
+      })
 
     const deleteResponse = await client
       .delete(`/api/v1/catalog-products/${catalog.id}`)
@@ -438,7 +448,10 @@ test.group('Ventas API — catálogo y ventas', (group) => {
     assert.equal(response.body().data.catalog_product.stock_source, 'formula')
   })
 
-  test('PUT catalog product with formula syncs cost_usd from materials', async ({ client, assert }) => {
+  test('PUT catalog product with formula syncs cost_usd from materials', async ({
+    client,
+    assert,
+  }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const material = await seedMaterial({ code: 'MAT-FORM-COST', lastPurchasePriceUsd: '0.4000' })
 
@@ -529,17 +542,20 @@ test.group('Ventas API — catálogo y ventas', (group) => {
       active: true,
     })
 
-    const response = await client.post('/api/v1/sales').loginAs(user).json({
-      guest_name: 'Cliente sin stock',
-      payment_method: 'CASH_USD',
-      lines: [
-        {
-          catalog_product_id: Number(catalog.id),
-          quantity: 1,
-          unit_price_usd: 10,
-        },
-      ],
-    })
+    const response = await client
+      .post('/api/v1/sales')
+      .loginAs(user)
+      .json({
+        guest_name: 'Cliente sin stock',
+        payment_method: 'CASH_USD',
+        lines: [
+          {
+            catalog_product_id: Number(catalog.id),
+            quantity: 1,
+            unit_price_usd: 10,
+          },
+        ],
+      })
 
     response.assertStatus(409)
     response.assertBodyContains({
@@ -577,17 +593,20 @@ test.group('Ventas API — catálogo y ventas', (group) => {
       active: true,
     })
 
-    const response = await client.post('/api/v1/sales').loginAs(user).json({
-      guest_name: 'Cliente fórmula',
-      payment_method: 'CASH_USD',
-      lines: [
-        {
-          catalog_product_id: Number(catalog.id),
-          quantity: 2,
-          unit_price_usd: 20,
-        },
-      ],
-    })
+    const response = await client
+      .post('/api/v1/sales')
+      .loginAs(user)
+      .json({
+        guest_name: 'Cliente fórmula',
+        payment_method: 'CASH_USD',
+        lines: [
+          {
+            catalog_product_id: Number(catalog.id),
+            quantity: 2,
+            unit_price_usd: 20,
+          },
+        ],
+      })
 
     response.assertStatus(200)
 
@@ -653,9 +672,7 @@ test.group('Ventas API — catálogo y ventas', (group) => {
     await catalog.refresh()
     assert.isNull(catalog.imagePath)
 
-    const detailResponse = await client
-      .get(`/api/v1/catalog-products/${catalog.id}`)
-      .loginAs(user)
+    const detailResponse = await client.get(`/api/v1/catalog-products/${catalog.id}`).loginAs(user)
 
     detailResponse.assertStatus(200)
     assert.isNull(detailResponse.body().data.catalog_product.image_path)

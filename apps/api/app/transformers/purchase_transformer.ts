@@ -44,7 +44,9 @@ function serializePurchaseItem(item: PurchaseItem) {
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
     ...(item.material ? { material: serializeMaterialResumen(item.material) } : {}),
-    ...(item.catalogProduct ? { catalogProduct: serializeCatalogProductResumen(item.catalogProduct) } : {}),
+    ...(item.catalogProduct
+      ? { catalogProduct: serializeCatalogProductResumen(item.catalogProduct) }
+      : {}),
   }
 }
 

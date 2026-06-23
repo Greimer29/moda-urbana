@@ -4,7 +4,6 @@ import {
   createOrderMaterial,
   createOrderLine,
   deleteOrderMaterial,
-  deleteOrderLine,
   deleteOrder,
   getOrder,
   getOrderBudget,

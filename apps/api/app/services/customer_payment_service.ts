@@ -120,9 +120,7 @@ export default class CustomerPaymentService {
       .filter(
         (order) =>
           order.paymentType === 'CREDIT' &&
-          BILLABLE_ORDER_STATUSES.includes(
-            order.status as (typeof BILLABLE_ORDER_STATUSES)[number]
-          )
+          BILLABLE_ORDER_STATUSES.includes(order.status as (typeof BILLABLE_ORDER_STATUSES)[number])
       )
       .reduce((sum, order) => sum + Number(order.balanceUsd), 0)
 

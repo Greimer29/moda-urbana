@@ -1,10 +1,7 @@
 import CodigoDuplicadoException from '#exceptions/codigo_duplicado_exception'
 import CatalogProduct from '#models/catalog_product'
 import Material from '#models/material'
-import {
-  catalogProductIdFromCode,
-  formatCatalogProductCode,
-} from '#utils/catalog_product_code'
+import { catalogProductIdFromCode, formatCatalogProductCode } from '#utils/catalog_product_code'
 
 export type ProductCodeOwner =
   | { type: 'material'; id: number }

@@ -37,7 +37,7 @@ import {
 } from '@/features/purchases/hooks/use-purchases'
 import { useExchangeRateQuery } from '@/features/purchases/hooks/use-settings'
 import { downloadFactura } from '@/features/purchases/services/purchase-service'
-import type { LocalPurchaseItem, PurchaseItem, PurchaseItemMaterial, PurchaseItemProduct } from '@/features/purchases/types'
+import type { LocalPurchaseItem, PurchaseItem, PurchaseItemMaterial } from '@/features/purchases/types'
 import { MaterialFormDialog } from '@/features/materials/components/material-form-dialog'
 import { UNIT_ABREV } from '@/features/materials/constants'
 import { useMaterialsQuery } from '@/features/materials/hooks/use-materials'

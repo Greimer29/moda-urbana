@@ -22,10 +22,7 @@ import { Link } from 'react-router-dom'
 
 import { useDisplayCurrency } from '@/features/currencies/context/display-currency-context'
 import { currencySymbol } from '@/features/reports/constants'
-import {
-  reportCategoryHref,
-  type ReportMovementCategorySlug,
-} from '@/features/reports/report-categories'
+import { reportCategoryHref } from '@/features/reports/report-categories'
 import { metricToneStyles, reportUi, type MetricTone } from '@/features/reports/report-ui'
 import type { AccountStatementSummary } from '@/features/reports/types'
 import { formatReportDisplayAmount } from '@/features/reports/utils/format-report-amount'

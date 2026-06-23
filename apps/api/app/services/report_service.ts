@@ -18,24 +18,14 @@ import Purchase from '#models/purchase'
 
 import { DateTime } from 'luxon'
 
-
-
 export type AccountStatementMovementType =
-
   | 'sale'
-
   | 'customer_payment'
-
   | 'purchase'
-
   | 'expense'
-
   | 'machine_expense'
 
-
-
 export type AccountStatementFilters = {
-
   from?: string
 
   to?: string
@@ -49,13 +39,9 @@ export type AccountStatementFilters = {
   types?: Array<'purchases' | 'expenses' | 'machine_expenses' | 'sales'>
 
   display_currency?: string
-
 }
 
-
-
 export type AccountStatementMovement = {
-
   id: number
 
   type: AccountStatementMovementType
@@ -97,12 +83,9 @@ export type AccountStatementMovement = {
   saleDate?: string
 
   customerId?: number
-
 }
 
-
 export type AccountStatementSummary = {
-
   displayCurrency: string
 
   salesUsd: string
@@ -126,58 +109,37 @@ export type AccountStatementSummary = {
   net: string
 
   rates: Record<string, string>
-
 }
 
-
-
 export type AccountStatementResult = {
-
   summary: AccountStatementSummary
 
   movements: AccountStatementMovement[]
 
   period: { from: string; to: string }
-
 }
-
-
 
 const SALE_STATUSES = ['CONFIRMED', 'IN_PRODUCTION', 'DELIVERED'] as const
 
-
-
 export default class ReportService {
-
   private currencyService = new CurrencyService()
 
-
-
   async estadoCuenta(filters: AccountStatementFilters): Promise<AccountStatementResult> {
-
     const period = this.resolvePeriod(filters)
 
-    const types = new Set(
-
-      filters.types ?? ['purchases', 'expenses', 'machine_expenses', 'sales']
-
-    )
+    const types = new Set(filters.types ?? ['purchases', 'expenses', 'machine_expenses', 'sales'])
 
     const rates = await this.currencyService.getActiveRates()
 
     const displayCurrency = (filters.display_currency ?? 'USD').toUpperCase()
 
-
-
     if (!rates[displayCurrency]) {
-      throw new MonedaNoEncontradaException('La moneda de visualización no está configurada o activa')
+      throw new MonedaNoEncontradaException(
+        'La moneda de visualización no está configurada o activa'
+      )
     }
 
-
-
     const movements: AccountStatementMovement[] = []
-
-
 
     let salesUsd = 0
 
@@ -187,10 +149,7 @@ export default class ReportService {
 
     let machineExpensesUsd = 0
 
-
-
     if (types.has('sales')) {
-
       const orders = await Order.query()
 
         .whereIn('status', [...SALE_STATUSES])
@@ -205,38 +164,26 @@ export default class ReportService {
 
         .orderBy('id', 'desc')
 
-
-
       for (const order of orders) {
-
         const { usd, native, currencyCode } = this.resolveOrderSaleAmount(order, rates)
 
         if (usd <= 0) {
-
           continue
-
         }
 
         const orderDate = order.orderDate.toISODate()!
 
         const isCredit = order.paymentType === 'CREDIT'
 
-
-
         if (isCredit) {
-
           const creditDueDate = order.creditDueDate?.toISODate() ?? null
 
           const balanceUsd = Number(order.balanceUsd ?? 0)
 
           const creditStatus = creditSaleReportStatus(balanceUsd, creditDueDate)
 
-
-
           movements.push(
-
             this.buildMovement({
-
               id: Number(order.id),
 
               type: 'sale',
@@ -272,19 +219,13 @@ export default class ReportService {
               creditBalanceUsd: balanceUsd,
 
               creditReportStatus: creditStatus ?? undefined,
-
             })
-
           )
-
         } else {
-
           salesUsd += usd
 
           movements.push(
-
             this.buildMovement({
-
               id: Number(order.id),
 
               type: 'sale',
@@ -310,16 +251,10 @@ export default class ReportService {
               status: order.status,
 
               isIncome: true,
-
             })
-
           )
-
         }
-
       }
-
-
 
       const paymentQuery = CustomerPayment.query()
 
@@ -337,27 +272,16 @@ export default class ReportService {
 
         .orderBy('id', 'desc')
 
-
-
       this.applyAccountFilter(paymentQuery, filters)
-
-
 
       const payments = await paymentQuery
 
-
-
       for (const payment of payments) {
-
         const usd = Number(payment.amountUsd)
 
         if (usd <= 0) {
-
           continue
-
         }
-
-
 
         salesUsd += usd
 
@@ -365,12 +289,8 @@ export default class ReportService {
 
         const orderRef = payment.order ? ` (${payment.order.code})` : ''
 
-
-
         movements.push(
-
           this.buildMovement({
-
             id: Number(payment.id),
 
             type: 'customer_payment',
@@ -380,9 +300,7 @@ export default class ReportService {
             label: `Abono — ${customerName}${orderRef}`,
 
             account: payment.account
-
               ? { id: Number(payment.account.id), name: payment.account.name }
-
               : null,
 
             native: usd,
@@ -400,29 +318,20 @@ export default class ReportService {
             customerId: Number(payment.customerId),
 
             isIncome: true,
-
           })
-
         )
-
       }
-
     }
 
-
-
     if (types.has('purchases')) {
-
       const query = Purchase.query()
 
         .where('status', 'CONFIRMED')
 
         .where((builder) => {
-
           builder
 
             .where((cashBuilder) => {
-
               cashBuilder
 
                 .where('isCredit', false)
@@ -430,11 +339,9 @@ export default class ReportService {
                 .where('date', '>=', period.from)
 
                 .where('date', '<=', period.to)
-
             })
 
             .orWhere((creditBuilder) => {
-
               creditBuilder
 
                 .where('isCredit', true)
@@ -442,9 +349,7 @@ export default class ReportService {
                 .whereNotNull('creditDueDate')
 
                 .where('creditDueDate', '<=', period.to)
-
             })
-
         })
 
         .preload('account')
@@ -453,18 +358,11 @@ export default class ReportService {
 
         .orderBy('id', 'desc')
 
-
-
       this.applyAccountFilter(query, filters)
-
-
 
       const purchases = await query
 
-
-
       for (const purchase of purchases) {
-
         const purchaseDate = purchase.date.toISODate()!
 
         const creditDueDate = purchase.creditDueDate?.toISODate() ?? null
@@ -472,7 +370,6 @@ export default class ReportService {
         const balanceUsd = Number(purchase.balanceUsd ?? 0)
 
         const reportContext = {
-
           isCredit: purchase.isCredit,
 
           purchaseDate,
@@ -480,13 +377,10 @@ export default class ReportService {
           creditDueDate,
 
           balanceUsd,
-
         }
 
         if (!creditPurchaseVisibleInReport(reportContext, period)) {
-
           continue
-
         }
 
         const reportDate = creditPurchaseReportEffectiveDate(reportContext)
@@ -503,9 +397,7 @@ export default class ReportService {
         purchasesUsd += usd
 
         movements.push(
-
           this.buildMovement({
-
             id: Number(purchase.id),
 
             type: 'purchase',
@@ -515,9 +407,7 @@ export default class ReportService {
             label: `Compra #${purchase.id}${purchase.invoiceNumber ? ` — Factura ${purchase.invoiceNumber}` : ''}`,
 
             account: purchase.account
-
               ? { id: Number(purchase.account.id), name: purchase.account.name }
-
               : null,
 
             native: nativeUsd,
@@ -547,18 +437,12 @@ export default class ReportService {
             creditOverdue: creditStatus === 'overdue',
 
             creditReportStatus: creditStatus ?? undefined,
-
           })
-
         )
-
       }
-
     }
 
-
     if (types.has('expenses')) {
-
       const query = Expense.query()
 
         .where('date', '>=', period.from)
@@ -571,18 +455,11 @@ export default class ReportService {
 
         .orderBy('id', 'desc')
 
-
-
       this.applyAccountFilter(query, filters)
-
-
 
       const expenses = await query
 
-
-
       for (const expense of expenses) {
-
         const currencyCode = expense.currencyCode ?? 'USD'
 
         const native = Number(expense.amountUsd ?? 0)
@@ -592,9 +469,7 @@ export default class ReportService {
         expensesUsd += usd
 
         movements.push(
-
           this.buildMovement({
-
             id: Number(expense.id),
 
             type: 'expense',
@@ -604,9 +479,7 @@ export default class ReportService {
             label: expense.description,
 
             account: expense.account
-
               ? { id: Number(expense.account.id), name: expense.account.name }
-
               : null,
 
             native,
@@ -622,19 +495,12 @@ export default class ReportService {
             referenceId: Number(expense.id),
 
             isIncome: false,
-
           })
-
         )
-
       }
-
     }
 
-
-
     if (types.has('machine_expenses')) {
-
       const query = MachineExpense.query()
 
         .where('date', '>=', period.from)
@@ -649,18 +515,11 @@ export default class ReportService {
 
         .orderBy('id', 'desc')
 
-
-
       this.applyAccountFilter(query, filters)
-
-
 
       const machineExpenses = await query
 
-
-
       for (const expense of machineExpenses) {
-
         const currencyCode = expense.currencyCode ?? 'USD'
 
         const native = Number(expense.amount ?? 0)
@@ -672,9 +531,7 @@ export default class ReportService {
         const machineName = expense.machine?.name ?? 'Máquina'
 
         movements.push(
-
           this.buildMovement({
-
             id: Number(expense.id),
 
             type: 'machine_expense',
@@ -684,9 +541,7 @@ export default class ReportService {
             label: `${machineName} — ${expense.description}`,
 
             account: expense.account
-
               ? { id: Number(expense.account.id), name: expense.account.name }
-
               : null,
 
             native,
@@ -702,43 +557,27 @@ export default class ReportService {
             referenceId: Number(expense.id),
 
             isIncome: false,
-
           })
-
         )
-
       }
-
     }
 
-
-
     movements.sort((a, b) => {
-
       const dateCompare = b.date.localeCompare(a.date)
 
       if (dateCompare !== 0) {
-
         return dateCompare
-
       }
 
       return b.id - a.id
-
     })
-
-
 
     const netUsd = salesUsd - purchasesUsd - expensesUsd - machineExpensesUsd
 
-
-
     return {
-
       period,
 
       summary: {
-
         displayCurrency,
 
         salesUsd: salesUsd.toFixed(4),
@@ -751,104 +590,73 @@ export default class ReportService {
 
         netUsd: netUsd.toFixed(4),
 
-        sales: this.formatDisplay(this.currencyService.fromUsd(salesUsd, displayCurrency, rates), displayCurrency),
+        sales: this.formatDisplay(
+          this.currencyService.fromUsd(salesUsd, displayCurrency, rates),
+          displayCurrency
+        ),
 
         purchases: this.formatDisplay(
-
           this.currencyService.fromUsd(purchasesUsd, displayCurrency, rates),
 
           displayCurrency
-
         ),
 
         expenses: this.formatDisplay(
-
           this.currencyService.fromUsd(expensesUsd, displayCurrency, rates),
 
           displayCurrency
-
         ),
 
         machineExpenses: this.formatDisplay(
-
           this.currencyService.fromUsd(machineExpensesUsd, displayCurrency, rates),
 
           displayCurrency
-
         ),
 
         net: this.formatDisplay(
-
           this.currencyService.fromUsd(netUsd, displayCurrency, rates),
 
           displayCurrency
-
         ),
 
         rates: this.currencyService.formatRates(rates),
-
       },
 
       movements,
-
     }
-
   }
 
-
-
   private resolveOrderSaleAmount(
-
     order: Order,
 
     rates: Record<string, number>
-
   ): { usd: number; native: number; currencyCode: string } {
-
     const lines = order.orderLines ?? []
 
-
-
     if (lines.length > 0) {
-
       const usd = lines.reduce((sum, line) => {
-
         const active = Math.max(0, Number(line.quantity) - Number(line.returnedQuantity ?? 0))
 
         return sum + active * Number(line.unitPriceUsd)
-
       }, 0)
 
-
-
       return { usd, native: usd, currencyCode: 'USD' }
-
     }
-
-
 
     const native = Number(order.totalPrice ?? 0)
 
     if (native <= 0) {
-
       return { usd: 0, native: 0, currencyCode: 'USD' }
-
     }
-
-
 
     // Pedidos legacy sin líneas de catálogo: total_price en bolívares.
 
     const usd = this.currencyService.toUsd(native, 'VES', rates)
 
     return { usd, native, currencyCode: 'VES' }
-
   }
 
-
-
   private buildMovement(options: {
-
     id: number
 
     type: AccountStatementMovementType
@@ -892,22 +700,16 @@ export default class ReportService {
     creditReportStatus?: 'pending' | 'overdue' | 'settled'
 
     customerId?: number
-
   }): AccountStatementMovement {
     const displayAmount = this.currencyService.fromUsd(
-
       options.usd,
 
       options.displayCurrency,
 
       options.rates
-
     )
 
-
-
     return {
-
       id: options.id,
 
       type: options.type,
@@ -933,15 +735,11 @@ export default class ReportService {
       ...(options.status ? { status: options.status } : {}),
 
       ...(options.type === 'purchase'
-
         ? {
-
             isCreditPurchase: options.isCreditPurchase ?? false,
 
             ...(options.isCreditPurchase
-
               ? {
-
                   creditDueDate: options.creditDueDate ?? null,
 
                   purchaseDate: options.purchaseDate,
@@ -954,23 +752,15 @@ export default class ReportService {
                   creditOverdue: options.creditOverdue ?? false,
 
                   ...(options.creditReportStatus
-
                     ? { creditReportStatus: options.creditReportStatus }
-
                     : {}),
-
                 }
-
               : {}),
-
           }
-
         : {}),
 
       ...(options.type === 'sale' && options.isCreditSale
-
         ? {
-
             isCreditSale: true,
 
             creditDueDate: options.creditDueDate ?? null,
@@ -985,99 +775,58 @@ export default class ReportService {
             creditOverdue: options.creditReportStatus === 'overdue',
 
             ...(options.creditReportStatus
-
               ? { creditReportStatus: options.creditReportStatus }
-
               : {}),
-
           }
-
         : {}),
 
       ...(options.type === 'customer_payment' && options.customerId
-
         ? { customerId: options.customerId }
-
         : {}),
-
     }
   }
 
-
-
   private formatNative(value: number, currencyCode: string): string {
-
     return currencyCode === 'USD' ? value.toFixed(4) : value.toFixed(2)
-
   }
-
-
 
   private formatDisplay(value: number, currencyCode: string): string {
-
     return currencyCode === 'USD' ? value.toFixed(2) : value.toFixed(2)
-
   }
 
-
-
   private resolvePeriod(filters: AccountStatementFilters) {
-
     if (filters.month) {
-
       const start = DateTime.fromISO(`${filters.month}-01`)
 
       return {
-
         from: start.startOf('month').toISODate()!,
 
         to: start.endOf('month').toISODate()!,
-
       }
-
     }
-
-
 
     const now = DateTime.now()
 
     return {
-
       from: filters.from ?? now.startOf('month').toISODate()!,
 
       to: filters.to ?? now.endOf('month').toISODate()!,
-
     }
-
   }
 
-
-
   private applyAccountFilter(
-
     query: {
-
       whereNull(column: string): unknown
 
       where(column: string, value: unknown): unknown
-
     },
 
     filters: AccountStatementFilters
-
   ) {
-
     if (filters.unassigned) {
-
       query.whereNull('accountId')
-
     } else if (filters.account_id) {
-
       query.where('accountId', filters.account_id)
-
     }
-
   }
-
 }
-
