@@ -331,7 +331,7 @@ function VentasCreateView() {
         const notice = formatDraftMaterialNotice(availability.missing)
         setActionError(notice)
         void navigate(`/ventas/${orderId}`, {
-          state: { materialNotice: notice },
+          state: { materialNotice: notice, paymentType },
         })
         return
       }

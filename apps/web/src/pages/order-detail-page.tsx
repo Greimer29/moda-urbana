@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, AlertTriangle, Loader2, RotateCcw, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -34,7 +34,13 @@ import {
   useTransicionOrderMutation,
   useUpdateOrderMutation,
 } from '@/features/orders/hooks/use-orders'
-import type { Order, OrderEstado, RecipeStockInsuficiente } from '@/features/orders/types'
+import type {
+  Order,
+  OrderEstado,
+  OrderPaymentType,
+  OrderTransicionInput,
+  RecipeStockInsuficiente,
+} from '@/features/orders/types'
 import {
   catalogLinesNetTotalUsd,
   orderLineActiveQuantity,
@@ -46,6 +52,41 @@ import { getApiError, getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 import { formatDraftMaterialNotice } from '@/lib/material-availability'
 import { VentasOrderReturnDialog } from '@/features/ventas/components/ventas-order-return-dialog'
+import { useAuth } from '@/features/auth/hooks/use-auth'
+
+type OrderDetailLocationState = {
+  materialNotice?: string
+  paymentType?: OrderPaymentType
+}
+
+function buildTransitionPayload(
+  nuevoEstado: OrderEstado,
+  currentStatus: OrderEstado,
+  paymentType: OrderPaymentType,
+  force?: boolean
+): OrderTransicionInput {
+  const payload: OrderTransicionInput = { new_status: nuevoEstado }
+  if (force) {
+    payload.force = true
+  }
+  if (currentStatus === 'DRAFT' && nuevoEstado === 'CONFIRMED') {
+    payload.payment_type = paymentType
+  }
+  return payload
+}
+
+function validateCreditPayment(paymentType: OrderPaymentType, order: Order): string | null {
+  if (paymentType !== 'CREDIT') {
+    return null
+  }
+  if (!order.customerId) {
+    return 'El crédito solo está disponible para clientes registrados.'
+  }
+  if (!order.customer?.creditDays || order.customer.creditDays <= 0) {
+    return 'El cliente no tiene días de crédito configurados.'
+  }
+  return null
+}
 
 const headerSchema = z.object({
   customer_id: z.coerce.number().min(1),
@@ -94,8 +135,12 @@ export function OrderDetallePage() {
   const orderId = Number(id)
   const navigate = useNavigate()
   const location = useLocation()
+  const locationState = location.state as OrderDetailLocationState | null
+  const { can } = useAuth()
+  const canCreditSale = can('ventas.credit')
 
   const [actionError, setActionError] = useState<string | null>(null)
+  const [paymentType, setPaymentType] = useState<OrderPaymentType>('CASH')
   const [materialNotice, setMaterialNotice] = useState<string | null>(
     (location.state as { materialNotice?: string } | null)?.materialNotice ?? null
   )
@@ -119,6 +164,26 @@ export function OrderDetallePage() {
   const { formatFromUsd } = useFormatMoney()
 
   const isBorrador = order?.status === 'DRAFT'
+  const canUseCredit =
+    Boolean(order?.customerId) &&
+    Boolean(order?.customer?.creditDays && order.customer.creditDays > 0) &&
+    canCreditSale
+
+  useEffect(() => {
+    if (!order) {
+      return
+    }
+
+    const preferredPaymentType = locationState?.paymentType ?? order.paymentType ?? 'CASH'
+    setPaymentType(preferredPaymentType === 'CREDIT' && !canUseCredit ? 'CASH' : preferredPaymentType)
+  }, [canUseCredit, locationState?.paymentType, order])
+
+  useEffect(() => {
+    if (paymentType === 'CREDIT' && !canUseCredit) {
+      setPaymentType('CASH')
+    }
+  }, [canUseCredit, paymentType])
+
   const canReturn =
     order?.status === 'CONFIRMED' ||
     order?.status === 'IN_PRODUCTION' ||
@@ -169,7 +234,9 @@ export function OrderDetallePage() {
     )
   }
 
-  const transiciones = TRANSICIONES[order.status]
+  const activeOrder = order
+
+  const transiciones = TRANSICIONES[activeOrder.status]
   const catalogNetTotalUsd =
     catalogLines.length > 0
       ? catalogLinesNetTotalUsd(catalogLines)
@@ -199,6 +266,14 @@ export function OrderDetallePage() {
   }
 
   async function handleTransicion(nuevoEstado: OrderEstado) {
+    if (activeOrder.status === 'DRAFT' && nuevoEstado === 'CONFIRMED') {
+      const creditError = validateCreditPayment(paymentType, activeOrder)
+      if (creditError) {
+        setActionError(creditError)
+        return
+      }
+    }
+
     const label = ESTADO_LABELS[nuevoEstado]
     const confirmMsg =
       nuevoEstado === 'CANCELLED'
@@ -214,7 +289,7 @@ export function OrderDetallePage() {
     try {
       await transicionMutation.mutateAsync({
         id: orderId,
-        payload: { new_status: nuevoEstado },
+        payload: buildTransitionPayload(nuevoEstado, activeOrder.status, paymentType),
       })
     } catch (err) {
       const apiError = getApiError(err)
@@ -240,7 +315,7 @@ export function OrderDetallePage() {
     try {
       await transicionMutation.mutateAsync({
         id: orderId,
-        payload: { new_status: 'IN_PRODUCTION', force: true },
+        payload: buildTransitionPayload('IN_PRODUCTION', activeOrder.status, paymentType, true),
       })
       setStockModalOpen(false)
       setForceConfirmOpen(false)
@@ -313,6 +388,46 @@ export function OrderDetallePage() {
       </div>
 
       {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
+      {isBorrador ? (
+        <div className="flex flex-wrap items-end justify-between gap-4 rounded-md border bg-neutral-50 p-4">
+          <div className="space-y-2">
+            <Label className="text-xs">Forma de pago al confirmar</Label>
+            <div className="bg-muted inline-flex rounded-lg p-1">
+              <button
+                type="button"
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-xs font-medium',
+                  paymentType === 'CASH' ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                )}
+                onClick={() => setPaymentType('CASH')}
+              >
+                Contado
+              </button>
+              <button
+                type="button"
+                disabled={!canUseCredit}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-xs font-medium',
+                  paymentType === 'CREDIT' ? 'bg-background shadow-sm' : 'text-muted-foreground',
+                  !canUseCredit && 'cursor-not-allowed opacity-50'
+                )}
+                onClick={() => setPaymentType('CREDIT')}
+              >
+                Crédito
+              </button>
+            </div>
+            {paymentType === 'CREDIT' && order.customerId ? (
+              <p className="text-muted-foreground text-xs">
+                Plazo: {order.customer?.creditDays ?? 0} días
+              </p>
+            ) : null}
+          </div>
+          <p className="text-muted-foreground max-w-md text-xs">
+            La forma de pago se envía al confirmar la venta. Si venís desde Ventas, se conserva la
+            selección que hayas hecho allí.
+          </p>
+        </div>
+      ) : null}
       {pendingMaterialNotice ? (
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
