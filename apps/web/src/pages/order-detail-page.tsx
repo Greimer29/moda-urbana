@@ -141,9 +141,7 @@ export function OrderDetallePage() {
 
   const [actionError, setActionError] = useState<string | null>(null)
   const [paymentType, setPaymentType] = useState<OrderPaymentType>('CASH')
-  const [materialNotice, setMaterialNotice] = useState<string | null>(
-    (location.state as { materialNotice?: string } | null)?.materialNotice ?? null
-  )
+  const materialNotice = locationState?.materialNotice ?? null
   const [transicionPending, setTransicionPending] = useState<OrderEstado | null>(null)
   const [stockModalOpen, setStockModalOpen] = useState(false)
   const [stockInsuficiente, setStockInsuficiente] = useState<RecipeStockInsuficiente[]>([])
