@@ -187,7 +187,10 @@ export default class CatalogProductService {
     })
   }
 
-  async actualizar(id: number, input: CatalogProductUpdateInput): Promise<CatalogProductUpdateResult> {
+  async actualizar(
+    id: number,
+    input: CatalogProductUpdateInput
+  ): Promise<CatalogProductUpdateResult> {
     const product = await this.obtener(id)
     const costWarnings: CostWarning[] = []
     const previousFormulaId = product.formulaId
@@ -437,7 +440,8 @@ export default class CatalogProductService {
 
       if (formulaCost === undefined) {
         try {
-          formulaCost = (await this.formulaService.calcularCosto(formulaId)).toFixed(4)
+          const formulaCostValue = await this.formulaService.calcularCosto(formulaId)
+          formulaCost = formulaCostValue.toFixed(4)
         } catch {
           formulaCost = this.normalizeCostUsd(product.costUsd)
         }

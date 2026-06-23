@@ -114,10 +114,7 @@ export default class FormulaService {
   async obtenerMateriales(id: number): Promise<FormulaMaterial[]> {
     await this.obtener(id)
 
-    return FormulaMaterial.query()
-      .where('formulaId', id)
-      .preload('material')
-      .orderBy('id', 'asc')
+    return FormulaMaterial.query().where('formulaId', id).preload('material').orderBy('id', 'asc')
   }
 
   async actualizarMateriales(

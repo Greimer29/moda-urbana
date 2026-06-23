@@ -135,7 +135,13 @@ export default class PurchaseService {
   }
 
   async resumen(): Promise<PurchaseSummary> {
-    const rows = await Purchase.query().select('status', 'total_usd', 'total_usd_snapshot', 'total_bs', 'usd_rate')
+    const rows = await Purchase.query().select(
+      'status',
+      'total_usd',
+      'total_usd_snapshot',
+      'total_bs',
+      'usd_rate'
+    )
 
     let totalUsd = 0
     let count = 0
@@ -305,7 +311,7 @@ export default class PurchaseService {
   }
 
   async confirmar(id: number, input: ConfirmPurchaseInput = {}): Promise<ConfirmPurchaseResult> {
-    const { purchase, costWarnings, materialIds } = await db.transaction(async (trx) => {
+    const txResult = await db.transaction(async (trx) => {
       const purchase = await this.obtenerConLock(id, trx)
 
       if (purchase.status === 'CONFIRMED' || purchase.status === 'VOIDED') {
@@ -320,9 +326,7 @@ export default class PurchaseService {
         purchase.date = DateTime.fromISO(input.date)
       }
       if (input.date_recepcion !== undefined) {
-        purchase.receivedDate = input.date_recepcion
-          ? DateTime.fromISO(input.date_recepcion)
-          : null
+        purchase.receivedDate = input.date_recepcion ? DateTime.fromISO(input.date_recepcion) : null
       }
       if (input.invoice_number !== undefined) {
         purchase.invoiceNumber = input.invoice_number?.trim() || null
@@ -509,9 +513,15 @@ export default class PurchaseService {
       return { purchase, costWarnings, materialIds: [...materialIds] }
     })
 
-    const fulfilledOrders = await this.orderService.intentarProducirPedidosPendientes(materialIds)
+    const fulfilledOrders = await this.orderService.intentarProducirPedidosPendientes(
+      txResult.materialIds
+    )
 
-    return { purchase, costWarnings, fulfilledOrders }
+    return {
+      purchase: txResult.purchase,
+      costWarnings: txResult.costWarnings,
+      fulfilledOrders,
+    }
   }
 
   async devolver(id: number): Promise<Purchase> {
@@ -729,7 +739,7 @@ export default class PurchaseService {
   }
 
   private async preparePurchaseInput(input: PurchaseInput) {
-    let accountId: number | null | undefined = undefined
+    let accountId: number | null | undefined
     if (input.account_id !== undefined) {
       if (input.account_id === null) {
         accountId = null
@@ -847,7 +857,8 @@ export default class PurchaseService {
 
     purchase.totalUsd =
       totalUsd === null || totalUsd === undefined ? '0.0000' : Number(totalUsd).toFixed(4)
-    purchase.totalBs = totalBs === null || totalBs === undefined ? '0.00' : Number(totalBs).toFixed(2)
+    purchase.totalBs =
+      totalBs === null || totalBs === undefined ? '0.00' : Number(totalBs).toFixed(2)
     purchase.useTransaction(trx)
     await purchase.save()
   }

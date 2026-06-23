@@ -10,8 +10,6 @@ export function serializeOrderLine(line: OrderLine) {
     returned_quantity: line.returnedQuantity,
     unit_price_usd: line.unitPriceUsd,
     subtotal_usd: line.subtotalUsd,
-    catalog_product: line.catalogProduct
-      ? serializeCatalogProduct(line.catalogProduct)
-      : undefined,
+    catalog_product: line.catalogProduct ? serializeCatalogProduct(line.catalogProduct) : undefined,
   }
 }

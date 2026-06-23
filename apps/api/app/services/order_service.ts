@@ -179,21 +179,17 @@ export default class OrderService {
 
     if (filters.date_from) {
       query.where((builder) => {
-        builder
-          .where('confirmedAt', '>=', `${filters.date_from} 00:00:00`)
-          .orWhere((sub) => {
-            sub.whereNull('confirmedAt').where('orderDate', '>=', filters.date_from!)
-          })
+        builder.where('confirmedAt', '>=', `${filters.date_from} 00:00:00`).orWhere((sub) => {
+          sub.whereNull('confirmedAt').where('orderDate', '>=', filters.date_from!)
+        })
       })
     }
 
     if (filters.date_to) {
       query.where((builder) => {
-        builder
-          .where('confirmedAt', '<=', `${filters.date_to} 23:59:59`)
-          .orWhere((sub) => {
-            sub.whereNull('confirmedAt').where('orderDate', '<=', filters.date_to!)
-          })
+        builder.where('confirmedAt', '<=', `${filters.date_to} 23:59:59`).orWhere((sub) => {
+          sub.whereNull('confirmedAt').where('orderDate', '<=', filters.date_to!)
+        })
       })
     }
 
@@ -534,9 +530,7 @@ export default class OrderService {
         .preload('customer')
         .preload('orderLines', (query) =>
           query.preload('catalogProduct', (cp) =>
-            cp.preload('formula', (f) =>
-              f.preload('materials', (fm) => fm.preload('material'))
-            )
+            cp.preload('formula', (f) => f.preload('materials', (fm) => fm.preload('material')))
           )
         )
         .preload('orderMaterials', (query) => query.preload('material'))
@@ -607,9 +601,7 @@ export default class OrderService {
         .where('id', id)
         .preload('orderLines', (query) =>
           query.preload('catalogProduct', (cp) =>
-            cp.preload('formula', (f) =>
-              f.preload('materials', (fm) => fm.preload('material'))
-            )
+            cp.preload('formula', (f) => f.preload('materials', (fm) => fm.preload('material')))
           )
         )
         .forUpdate()
@@ -718,7 +710,10 @@ export default class OrderService {
 
       await this.actualizarMontosTrasDevolucion(order, trx)
 
-      const refreshedLines = await OrderLine.query({ client: trx }).where('orderId', Number(order.id))
+      const refreshedLines = await OrderLine.query({ client: trx }).where(
+        'orderId',
+        Number(order.id)
+      )
       const allReturned = refreshedLines.every(
         (line) => Number(line.returnedQuantity ?? 0) >= Number(line.quantity)
       )
@@ -791,9 +786,7 @@ export default class OrderService {
       .whereIn('status', ['DRAFT', 'CONFIRMED'])
       .preload('orderLines', (q) =>
         q.preload('catalogProduct', (cp) =>
-          cp.preload('formula', (f) =>
-            f.preload('materials', (fm) => fm.preload('material'))
-          )
+          cp.preload('formula', (f) => f.preload('materials', (fm) => fm.preload('material')))
         )
       )
       .preload('orderMaterials', (q) => q.preload('material'))
@@ -841,9 +834,7 @@ export default class OrderService {
     }
   }
 
-  async intentarProducirPedidosPendientes(
-    materialIds: number[]
-  ): Promise<FulfilledPendingOrder[]> {
+  async intentarProducirPedidosPendientes(materialIds: number[]): Promise<FulfilledPendingOrder[]> {
     if (materialIds.length === 0) {
       return []
     }
@@ -857,9 +848,7 @@ export default class OrderService {
       .orderBy('id', 'asc')
       .preload('orderLines', (query) =>
         query.preload('catalogProduct', (cp) =>
-          cp.preload('formula', (f) =>
-            f.preload('materials', (fm) => fm.preload('material'))
-          )
+          cp.preload('formula', (f) => f.preload('materials', (fm) => fm.preload('material')))
         )
       )
       .preload('orderMaterials', (query) => query.preload('material'))
@@ -944,9 +933,7 @@ export default class OrderService {
       .where('id', orderId)
       .preload('orderLines', (q) =>
         q.preload('catalogProduct', (cp) =>
-          cp.preload('formula', (f) =>
-            f.preload('materials', (fm) => fm.preload('material'))
-          )
+          cp.preload('formula', (f) => f.preload('materials', (fm) => fm.preload('material')))
         )
       )
       .preload('orderMaterials', (q) => q.preload('material'))
@@ -1187,19 +1174,18 @@ export default class OrderService {
         line.catalogProduct ??
         (await CatalogProduct.query({ client: trx })
           .where('id', Number(line.catalogProductId))
-          .preload('formula', (f) =>
-            f.preload('materials', (fm) => fm.preload('material'))
-          )
+          .preload('formula', (f) => f.preload('materials', (fm) => fm.preload('material')))
           .first())
 
       if (!product) {
         continue
       }
 
-      const { quantity: disponible } = await this.catalogProductStockService.calcularStockDisponible(
-        product,
-        { trx, excludeOrderId: Number(order.id) }
-      )
+      const { quantity: disponible } =
+        await this.catalogProductStockService.calcularStockDisponible(product, {
+          trx,
+          excludeOrderId: Number(order.id),
+        })
       const qty = Number(line.quantity)
 
       if (qty > disponible) {
@@ -1301,11 +1287,7 @@ export default class OrderService {
     }
   }
 
-  private async revertirStockProductos(
-    order: Order,
-    trx: TransactionClientContract,
-    note: string
-  ) {
+  private async revertirStockProductos(order: Order, trx: TransactionClientContract, note: string) {
     const salidas = await ProductInventoryMovement.query({ client: trx })
       .where('orderId', Number(order.id))
       .where('type', 'SALE_OUT')

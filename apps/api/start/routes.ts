@@ -7,17 +7,17 @@
 import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 import { controllers } from '#generated/controllers'
-import FormulasController from '#controllers/formulas_controller'
-import CatalogProductsController from '#controllers/catalog_products_controller'
-import SalesController from '#controllers/sales_controller'
-import ExpensesController from '#controllers/expenses_controller'
-import SettingsController from '#controllers/settings_controller'
-import AccountsController from '#controllers/accounts_controller'
-import CurrenciesController from '#controllers/currencies_controller'
-import ReportsController from '#controllers/reports_controller'
-import CategoriesController from '#controllers/categories_controller'
-import CsrfController from '#controllers/csrf_controller'
-import UsersController from '#controllers/users_controller'
+const FormulasController = () => import('#controllers/formulas_controller')
+const CatalogProductsController = () => import('#controllers/catalog_products_controller')
+const SalesController = () => import('#controllers/sales_controller')
+const ExpensesController = () => import('#controllers/expenses_controller')
+const SettingsController = () => import('#controllers/settings_controller')
+const AccountsController = () => import('#controllers/accounts_controller')
+const CurrenciesController = () => import('#controllers/currencies_controller')
+const ReportsController = () => import('#controllers/reports_controller')
+const CategoriesController = () => import('#controllers/categories_controller')
+const CsrfController = () => import('#controllers/csrf_controller')
+const UsersController = () => import('#controllers/users_controller')
 
 router.get('/health', [controllers.Health, 'show'])
 

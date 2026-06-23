@@ -36,14 +36,11 @@ test.group('Expenses and settings API', (group) => {
   test('CRUD /api/v1/expenses', async ({ client }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
 
-    const createResponse = await client
-      .post('/api/v1/expenses')
-      .loginAs(user)
-      .json({
-        date: '2026-06-01',
-        description: 'Transporte',
-        amount_usd: 25.5,
-      })
+    const createResponse = await client.post('/api/v1/expenses').loginAs(user).json({
+      date: '2026-06-01',
+      description: 'Transporte',
+      amount_usd: 25.5,
+    })
 
     createResponse.assertStatus(200)
     const expenseId = createResponse.body().data.expense.id
@@ -56,14 +53,11 @@ test.group('Expenses and settings API', (group) => {
       },
     })
 
-    const updateResponse = await client
-      .put(`/api/v1/expenses/${expenseId}`)
-      .loginAs(user)
-      .json({
-        date: '2026-06-02',
-        description: 'Transporte actualizado',
-        amount_usd: 30,
-      })
+    const updateResponse = await client.put(`/api/v1/expenses/${expenseId}`).loginAs(user).json({
+      date: '2026-06-02',
+      description: 'Transporte actualizado',
+      amount_usd: 30,
+    })
 
     updateResponse.assertStatus(200)
     updateResponse.assertBodyContains({
@@ -85,15 +79,12 @@ test.group('Expenses and settings API', (group) => {
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
 
-    const response = await client
-      .post('/api/v1/expenses')
-      .loginAs(user)
-      .json({
-        date: '2026-06-01',
-        description: 'Gasto en bolívares',
-        amount_usd: 100,
-        currency_code: 'VES',
-      })
+    const response = await client.post('/api/v1/expenses').loginAs(user).json({
+      date: '2026-06-01',
+      description: 'Gasto en bolívares',
+      amount_usd: 100,
+      currency_code: 'VES',
+    })
 
     response.assertStatus(422)
     response.assertBodyContains({

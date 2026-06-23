@@ -64,6 +64,8 @@ export function serializeCatalogProductDetail(
   return {
     ...serializeCatalogProduct(product, extras),
     formula: product.formula ? serializeFormulaDetail(product.formula) : null,
-    ...(extras?.movimientos ? { movimientos: serializeProductMovimientos(extras.movimientos) } : {}),
+    ...(extras?.movimientos
+      ? { movimientos: serializeProductMovimientos(extras.movimientos) }
+      : {}),
   }
 }

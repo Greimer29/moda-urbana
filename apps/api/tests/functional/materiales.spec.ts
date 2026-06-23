@@ -189,12 +189,15 @@ test.group('Materials API', (group) => {
       active: true,
     })
 
-    const response = await client.post('/api/v1/materials').loginAs(user).json({
-      code: formatCatalogProductCode(Number(product.id)),
-      name: 'Material conflicto',
-      category: 'THREAD',
-      unit: 'UND',
-    })
+    const response = await client
+      .post('/api/v1/materials')
+      .loginAs(user)
+      .json({
+        code: formatCatalogProductCode(Number(product.id)),
+        name: 'Material conflicto',
+        category: 'THREAD',
+        unit: 'UND',
+      })
 
     response.assertStatus(422)
     response.assertBodyContains({
@@ -238,10 +241,7 @@ test.group('Materials API', (group) => {
     })
   })
 
-  test('GET /api/v1/materials search matches code and name', async ({
-    client,
-    assert,
-  }) => {
+  test('GET /api/v1/materials search matches code and name', async ({ client, assert }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
 
     await createMaterial({
@@ -317,7 +317,10 @@ test.group('Materials API', (group) => {
     assert.isFalse(Boolean(material.active))
   })
 
-  test('GET /api/v1/materials?status=out_of_stock filters zero stock', async ({ client, assert }) => {
+  test('GET /api/v1/materials?status=out_of_stock filters zero stock', async ({
+    client,
+    assert,
+  }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const sinStock = await createMaterial({ code: 'OUT-1', name: 'Sin stock test' })
     const conStock = await createMaterial({ code: 'IN-1', name: 'Con stock test' })
@@ -346,14 +349,10 @@ test.group('Materials API', (group) => {
       quantity: '-4',
     })
 
-    const response = await client
-      .get('/api/v1/materials?sort_by=most_used')
-      .loginAs(user)
+    const response = await client.get('/api/v1/materials?sort_by=most_used').loginAs(user)
 
     response.assertStatus(200)
-    const item = response.body().data.materials.find(
-      (m: { code: string }) => m.code === 'RANK-1'
-    )
+    const item = response.body().data.materials.find((m: { code: string }) => m.code === 'RANK-1')
     assert.exists(item)
     assert.equal(item.usedQty, 4)
     assert.isAbove(item.rating, 0)
@@ -369,16 +368,13 @@ test.group('Materials API', (group) => {
       lastPurchasePriceUsd: '10.0000',
     })
 
-    const response = await client
-      .put(`/api/v1/materials/${material.id}`)
-      .loginAs(user)
-      .json({
-        code: 'PRICE-1',
-        name: material.name,
-        category: 'FABRIC',
-        unit: 'ROL',
-        last_purchase_price_usd: 15,
-      })
+    const response = await client.put(`/api/v1/materials/${material.id}`).loginAs(user).json({
+      code: 'PRICE-1',
+      name: material.name,
+      category: 'FABRIC',
+      unit: 'ROL',
+      last_purchase_price_usd: 15,
+    })
 
     response.assertStatus(200)
     assert.equal(response.body().data.material.lastPurchasePriceUsd, '15.0000')
@@ -389,17 +385,14 @@ test.group('Materials API', (group) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const material = await createMaterial({ code: 'REF-1' })
 
-    const response = await client
-      .put(`/api/v1/materials/${material.id}`)
-      .loginAs(user)
-      .json({
-        code: 'REF-1',
-        name: material.name,
-        category: 'FABRIC',
-        unit: 'ROL',
-        reference_sale_price_usd: 9.99,
-        reference_cost_usd: 4.5,
-      })
+    const response = await client.put(`/api/v1/materials/${material.id}`).loginAs(user).json({
+      code: 'REF-1',
+      name: material.name,
+      category: 'FABRIC',
+      unit: 'ROL',
+      reference_sale_price_usd: 9.99,
+      reference_cost_usd: 4.5,
+    })
 
     response.assertStatus(200)
     const body = response.body()
@@ -410,5 +403,4 @@ test.group('Materials API', (group) => {
     assert.isNull(material.referenceSalePriceUsd)
     assert.isNull(material.referenceCostUsd)
   })
-
 })

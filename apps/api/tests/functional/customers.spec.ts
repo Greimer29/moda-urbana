@@ -418,7 +418,9 @@ test.group('Customers API', (group) => {
       body.data.orders.find((order) => order.paymentType === 'CASH' && order.status === 'DELIVERED')
     )
     assert.exists(
-      body.data.orders.find((order) => order.paymentType === 'CREDIT' && order.status === 'CONFIRMED')
+      body.data.orders.find(
+        (order) => order.paymentType === 'CREDIT' && order.status === 'CONFIRMED'
+      )
     )
     assert.equal(body.data.saldoPendienteUsd, '40.0000')
   })

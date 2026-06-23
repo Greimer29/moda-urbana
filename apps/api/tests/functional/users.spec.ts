@@ -44,13 +44,16 @@ test.group('Users API', (group) => {
   test('admin creates operator with partial permissions', async ({ client, assert }) => {
     const admin = await User.findByOrFail('email', TEST_EMAIL)
 
-    const response = await client.post('/api/v1/users').loginAs(admin).json({
-      name: 'Operador Ventas',
-      email: 'operador@hebra.local',
-      password: 'password123',
-      role: 'OPERATOR',
-      permissions: ['dashboard.view', 'ventas.view'],
-    })
+    const response = await client
+      .post('/api/v1/users')
+      .loginAs(admin)
+      .json({
+        name: 'Operador Ventas',
+        email: 'operador@hebra.local',
+        password: 'password123',
+        role: 'OPERATOR',
+        permissions: ['dashboard.view', 'ventas.view'],
+      })
 
     response.assertStatus(200)
 
@@ -64,23 +67,29 @@ test.group('Users API', (group) => {
   test('operator without users.manage cannot create users', async ({ client }) => {
     const admin = await User.findByOrFail('email', TEST_EMAIL)
 
-    await client.post('/api/v1/users').loginAs(admin).json({
-      name: 'Operador Limitado',
-      email: 'limitado@hebra.local',
-      password: 'password123',
-      role: 'OPERATOR',
-      permissions: ['dashboard.view'],
-    })
+    await client
+      .post('/api/v1/users')
+      .loginAs(admin)
+      .json({
+        name: 'Operador Limitado',
+        email: 'limitado@hebra.local',
+        password: 'password123',
+        role: 'OPERATOR',
+        permissions: ['dashboard.view'],
+      })
 
     const operator = await User.findByOrFail('email', 'limitado@hebra.local')
 
-    const response = await client.post('/api/v1/users').loginAs(operator).json({
-      name: 'Otro',
-      email: 'otro@hebra.local',
-      password: 'password123',
-      role: 'OPERATOR',
-      permissions: ['dashboard.view'],
-    })
+    const response = await client
+      .post('/api/v1/users')
+      .loginAs(operator)
+      .json({
+        name: 'Otro',
+        email: 'otro@hebra.local',
+        password: 'password123',
+        role: 'OPERATOR',
+        permissions: ['dashboard.view'],
+      })
 
     response.assertStatus(403)
     response.assertBodyContains({
@@ -91,13 +100,16 @@ test.group('Users API', (group) => {
   test('operator without ventas.confirm cannot create orders', async ({ client }) => {
     const admin = await User.findByOrFail('email', TEST_EMAIL)
 
-    await client.post('/api/v1/users').loginAs(admin).json({
-      name: 'Solo Ver Ventas',
-      email: 'verventas@hebra.local',
-      password: 'password123',
-      role: 'OPERATOR',
-      permissions: ['ventas.view'],
-    })
+    await client
+      .post('/api/v1/users')
+      .loginAs(admin)
+      .json({
+        name: 'Solo Ver Ventas',
+        email: 'verventas@hebra.local',
+        password: 'password123',
+        role: 'OPERATOR',
+        permissions: ['ventas.view'],
+      })
 
     const operator = await User.findByOrFail('email', 'verventas@hebra.local')
 

@@ -9,9 +9,7 @@ export default class extends BaseSchema {
     })
 
     this.defer(async (db) => {
-      await db.rawQuery(
-        'ALTER TABLE orders MODIFY COLUMN customer_id BIGINT UNSIGNED NULL'
-      )
+      await db.rawQuery('ALTER TABLE orders MODIFY COLUMN customer_id BIGINT UNSIGNED NULL')
     })
   }
 
@@ -27,9 +25,7 @@ export default class extends BaseSchema {
       } else {
         await db.from('orders').whereNull('customer_id').delete()
       }
-      await db.rawQuery(
-        'ALTER TABLE orders MODIFY COLUMN customer_id BIGINT UNSIGNED NOT NULL'
-      )
+      await db.rawQuery('ALTER TABLE orders MODIFY COLUMN customer_id BIGINT UNSIGNED NOT NULL')
     })
   }
 }

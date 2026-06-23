@@ -246,7 +246,10 @@ test.group('Dashboard API', (group) => {
     assert.equal(body.data.summary.monto_productos_usd, '24.0000')
   })
 
-  test('GET daily-product-sales uses formula stock for catalog products', async ({ client, assert }) => {
+  test('GET daily-product-sales uses formula stock for catalog products', async ({
+    client,
+    assert,
+  }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const material = await Material.create({
       code: 'MAT-DASH-FORM',

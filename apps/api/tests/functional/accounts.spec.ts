@@ -114,12 +114,15 @@ test.group('Accounts API', (group) => {
       isActive: true,
     })
 
-    const response = await client.post('/api/v1/expenses').loginAs(user).json({
-      date: '2026-06-02',
-      description: 'Internet',
-      amount_usd: 25,
-      account_id: Number(account.id),
-    })
+    const response = await client
+      .post('/api/v1/expenses')
+      .loginAs(user)
+      .json({
+        date: '2026-06-02',
+        description: 'Internet',
+        amount_usd: 25,
+        account_id: Number(account.id),
+      })
 
     response.assertStatus(200)
     response.assertBodyContains({

@@ -287,9 +287,7 @@ test.group('Suppliers API', (group) => {
     assert.exists(body.data.purchases.find((purchase) => purchase.status === 'DRAFT'))
     assert.exists(body.data.purchases.find((purchase) => purchase.status === 'VOIDED'))
     assert.exists(
-      body.data.purchases.find(
-        (purchase) => purchase.status === 'CONFIRMED' && !purchase.isCredit
-      )
+      body.data.purchases.find((purchase) => purchase.status === 'CONFIRMED' && !purchase.isCredit)
     )
     assert.exists(
       body.data.purchases.find((purchase) => purchase.status === 'CONFIRMED' && purchase.isCredit)

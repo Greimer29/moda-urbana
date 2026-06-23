@@ -32,9 +32,12 @@ function assertLoginRateLimit(ip: string) {
   }
 
   if (entry.count >= LOGIN_MAX_ATTEMPTS) {
-    throw Object.assign(new Error('Demasiados intentos de inicio de sesión. Intentá de nuevo más tarde.'), {
-      code: 'TOO_MANY_LOGIN_ATTEMPTS',
-    })
+    throw Object.assign(
+      new Error('Demasiados intentos de inicio de sesión. Intentá de nuevo más tarde.'),
+      {
+        code: 'TOO_MANY_LOGIN_ATTEMPTS',
+      }
+    )
   }
 
   entry.count += 1

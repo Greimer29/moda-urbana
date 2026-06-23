@@ -88,9 +88,7 @@ export default class UserService {
 
     if (input.permissions !== undefined) {
       user.permissions =
-        (input.role ?? user.role) === 'OPERATOR'
-          ? sanitizePermissions(input.permissions)
-          : null
+        (input.role ?? user.role) === 'OPERATOR' ? sanitizePermissions(input.permissions) : null
     } else if (input.role === 'ADMIN') {
       user.permissions = null
     }

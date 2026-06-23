@@ -22,7 +22,6 @@ export type UpdateCurrencyInput = {
 const PROTECTED_CODES = new Set(['USD'])
 
 export default class CurrencyService {
-
   async listar(activeOnly = false): Promise<Currency[]> {
     const query = Currency.query().orderBy('code', 'asc')
     if (activeOnly) {
@@ -111,9 +110,7 @@ export default class CurrencyService {
 
       const rate = Number(currency.ratePerUsd)
       if (!Number.isFinite(rate) || rate <= 0) {
-        throw new TasaCambioInvalidaException(
-          `La tasa de cambio de ${currency.code} no es válida`
-        )
+        throw new TasaCambioInvalidaException(`La tasa de cambio de ${currency.code} no es válida`)
       }
 
       rates[currency.code] = rate
@@ -154,9 +151,7 @@ export default class CurrencyService {
   }
 
   formatRates(rates: Record<string, number>): Record<string, string> {
-    return Object.fromEntries(
-      Object.entries(rates).map(([code, rate]) => [code, rate.toFixed(4)])
-    )
+    return Object.fromEntries(Object.entries(rates).map(([code, rate]) => [code, rate.toFixed(4)]))
   }
 
   private async syncLegacyExchangeRate(currency: Currency) {

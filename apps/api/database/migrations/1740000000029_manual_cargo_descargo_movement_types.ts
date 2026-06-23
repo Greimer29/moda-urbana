@@ -14,7 +14,10 @@ export default class extends BaseSchema {
 
   async down() {
     this.defer(async (db) => {
-      await db.from('inventory_movements').where('type', 'MANUAL_CARGO').update({ type: 'MANUAL_ADJUSTMENT' })
+      await db
+        .from('inventory_movements')
+        .where('type', 'MANUAL_CARGO')
+        .update({ type: 'MANUAL_ADJUSTMENT' })
       await db
         .from('inventory_movements')
         .where('type', 'MANUAL_DESCARGO')

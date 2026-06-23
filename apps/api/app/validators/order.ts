@@ -1,7 +1,14 @@
 import vine from '@vinejs/vine'
 
 const MODALIDADES = ['WHITE_LABEL', 'CORPORATE'] as const
-const ESTADOS = ['DRAFT', 'CONFIRMED', 'IN_PRODUCTION', 'DELIVERED', 'CANCELLED', 'RETURNED'] as const
+const ESTADOS = [
+  'DRAFT',
+  'CONFIRMED',
+  'IN_PRODUCTION',
+  'DELIVERED',
+  'CANCELLED',
+  'RETURNED',
+] as const
 const ESTADOS_TRANSICION = ['CONFIRMED', 'IN_PRODUCTION', 'DELIVERED', 'CANCELLED'] as const
 const DIRECTION = ['asc', 'desc'] as const
 

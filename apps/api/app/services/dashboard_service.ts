@@ -315,10 +315,7 @@ export default class DashboardService {
     const expenses = await db
       .from('expenses')
       .where('date', hoy)
-      .select(
-        db.raw('COUNT(*) as qty'),
-        db.raw('COALESCE(SUM(amount_usd), 0) as total_usd')
-      )
+      .select(db.raw('COUNT(*) as qty'), db.raw('COALESCE(SUM(amount_usd), 0) as total_usd'))
       .first()
 
     const machineRows = await db
@@ -344,9 +341,7 @@ export default class DashboardService {
       .whereIn('orders.status', [...SALE_STATUSES])
       .where('orders.order_date', hoy)
       .select(
-        db.raw(
-          'COALESCE(SUM(order_lines.quantity - order_lines.returned_quantity), 0) as qty'
-        ),
+        db.raw('COALESCE(SUM(order_lines.quantity - order_lines.returned_quantity), 0) as qty'),
         db.raw(
           'COALESCE(SUM((order_lines.quantity - order_lines.returned_quantity) * order_lines.unit_price_usd), 0) as total_usd'
         ),
@@ -420,8 +415,7 @@ export default class DashboardService {
     const products: DailySoldProductItem[] = rows.map((row) => {
       const quantitySold = Number(row.quantitySold ?? 0)
       const totalUsd = Number(row.totalUsd ?? 0)
-      const unitPriceUsd =
-        quantitySold > 0 ? (totalUsd / quantitySold).toFixed(4) : '0.0000'
+      const unitPriceUsd = quantitySold > 0 ? (totalUsd / quantitySold).toFixed(4) : '0.0000'
       const productId = Number(row.id)
       const stock = stockByProductId.get(productId)
 
@@ -485,11 +479,7 @@ export default class DashboardService {
       })),
       ...machineRows.map((row) => {
         const currencyCode = row.currencyCode ? String(row.currencyCode) : 'USD'
-        const amountUsd = this.currencyService.toUsd(
-          Number(row.amount ?? 0),
-          currencyCode,
-          rates
-        )
+        const amountUsd = this.currencyService.toUsd(Number(row.amount ?? 0), currencyCode, rates)
 
         return {
           id: Number(row.id),

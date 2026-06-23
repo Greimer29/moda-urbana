@@ -69,12 +69,12 @@ export default class extends BaseSchema {
         }
 
         const [formulaId] = await db.table('formulas').insert({
-            name: `${product.name} — fórmula`,
-            description: null,
-            active: true,
-            created_at: now,
-            updated_at: now,
-          })
+          name: `${product.name} — fórmula`,
+          description: null,
+          active: true,
+          created_at: now,
+          updated_at: now,
+        })
 
         const resolvedFormulaId = Number(formulaId)
 

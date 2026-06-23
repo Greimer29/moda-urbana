@@ -35,7 +35,9 @@ export default class MaterialTransformer extends BaseTransformer<Material> {
       ]),
       active: Boolean(this.resource.active),
       ...(extra.stockActual !== undefined ? { stockActual: extra.stockActual } : {}),
-      ...(extra.stockComprometido !== undefined ? { stockComprometido: extra.stockComprometido } : {}),
+      ...(extra.stockComprometido !== undefined
+        ? { stockComprometido: extra.stockComprometido }
+        : {}),
       ...(extra.movimientos ? { movimientos: extra.movimientos } : {}),
       ...(extra.purchasedQty !== undefined ? { purchasedQty: extra.purchasedQty } : {}),
       ...(extra.usedQty !== undefined ? { usedQty: extra.usedQty } : {}),

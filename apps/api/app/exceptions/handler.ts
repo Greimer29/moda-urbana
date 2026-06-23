@@ -66,7 +66,8 @@ export default class HttpExceptionHandler extends ExceptionHandler {
       return ctx.response.status(403).json({
         error: {
           code: 'CSRF_TOKEN_MISMATCH',
-          message: 'La sesión expiró o el token de seguridad no es válido. Recargá la página e intentá de nuevo.',
+          message:
+            'La sesión expiró o el token de seguridad no es válido. Recargá la página e intentá de nuevo.',
         },
       })
     }

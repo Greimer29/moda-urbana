@@ -13,10 +13,7 @@ import {
   updateOrderMaterialValidator,
 } from '#validators/order_material'
 import { serializeOrderLine } from '#transformers/order_line_transformer'
-import {
-  createOrderLineValidator,
-  updateOrderLineValidator,
-} from '#validators/order_line'
+import { createOrderLineValidator, updateOrderLineValidator } from '#validators/order_line'
 import type { HttpContext } from '@adonisjs/core/http'
 
 export default class OrdersController {

@@ -21,9 +21,7 @@ export default class extends BaseSchema {
     })
 
     this.defer(async (db) => {
-      await db.rawQuery(
-        "UPDATE orders SET status = 'CANCELLED' WHERE status = 'RETURNED'"
-      )
+      await db.rawQuery("UPDATE orders SET status = 'CANCELLED' WHERE status = 'RETURNED'")
       await db.rawQuery(
         "ALTER TABLE orders MODIFY COLUMN status ENUM('DRAFT', 'CONFIRMED', 'IN_PRODUCTION', 'DELIVERED', 'CANCELLED') NOT NULL DEFAULT 'DRAFT'"
       )

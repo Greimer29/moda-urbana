@@ -1,7 +1,10 @@
 import ProductoCatalogoStockFormulaException from '#exceptions/producto_catalogo_stock_formula_exception'
 import ProductoCatalogoNoEncontradoException from '#exceptions/producto_catalogo_no_encontrado_exception'
 import StockInsuficienteException from '#exceptions/stock_insuficiente_exception'
-import { resolveInventoryAdjustment, type InventoryAdjustmentMode } from '#constants/inventory_adjustment'
+import {
+  resolveInventoryAdjustment,
+  type InventoryAdjustmentMode,
+} from '#constants/inventory_adjustment'
 import CatalogProduct from '#models/catalog_product'
 import ProductInventoryMovement, {
   type ProductMovementType,
@@ -32,7 +35,10 @@ export default class ProductInventoryService {
       .orderBy('id', 'desc')
   }
 
-  async ajustar(catalogProductId: number, input: AjusteProductoInput): Promise<ProductInventoryMovement> {
+  async ajustar(
+    catalogProductId: number,
+    input: AjusteProductoInput
+  ): Promise<ProductInventoryMovement> {
     const product = await CatalogProduct.find(catalogProductId)
     if (!product) {
       throw new ProductoCatalogoNoEncontradoException()
@@ -43,7 +49,11 @@ export default class ProductInventoryService {
     }
 
     const stockActual = Number(product.stockQuantity)
-    const { delta, movementType } = resolveInventoryAdjustment(input.mode, input.quantity, stockActual)
+    const { delta, movementType } = resolveInventoryAdjustment(
+      input.mode,
+      input.quantity,
+      stockActual
+    )
 
     return this.registrarMovimiento({
       catalogProductId,
@@ -115,7 +125,7 @@ export default class ProductInventoryService {
       return run(trx)
     }
 
-    const db = (await import('@adonisjs/lucid/services/db')).default
-    return db.transaction(run)
+    const dbModule = await import('@adonisjs/lucid/services/db')
+    return dbModule.default.transaction(run)
   }
 }

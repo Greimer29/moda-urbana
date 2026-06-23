@@ -16,7 +16,11 @@ export default class extends BaseSchema {
 
     this.schema.alterTable('orders', (table) => {
       table.timestamp('confirmed_at').nullable().after('status')
-      table.enum('payment_type', ['CASH', 'CREDIT']).notNullable().defaultTo('CASH').after('confirmed_at')
+      table
+        .enum('payment_type', ['CASH', 'CREDIT'])
+        .notNullable()
+        .defaultTo('CASH')
+        .after('confirmed_at')
       table.date('credit_due_date').nullable().after('payment_type')
       table.decimal('amount_paid_usd', 15, 4).notNullable().defaultTo(0).after('credit_due_date')
       table.decimal('balance_usd', 15, 4).notNullable().defaultTo(0).after('amount_paid_usd')
