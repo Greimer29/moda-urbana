@@ -1,6 +1,7 @@
 import MonedaNoEncontradaException from '#exceptions/moneda_no_encontrada_exception'
 import CurrencyService from '#services/currency_service'
 import {
+  creditPurchaseReportAmountUsd,
   creditPurchaseReportEffectiveDate,
   creditPurchaseReportStatus,
   creditPurchaseVisibleInReport,
@@ -493,17 +494,8 @@ export default class ReportService {
         const creditStatus = creditPurchaseReportStatus(reportContext)
 
         const usd = purchase.isCredit
-
-          ? balanceUsd > 0
-
-            ? balanceUsd
-
-            : Number(purchase.totalUsd ?? purchase.totalUsdSnapshot ?? 0) ||
-
-              this.currencyService.toUsd(Number(purchase.totalBs ?? 0), 'VES', rates)
-
+          ? creditPurchaseReportAmountUsd(reportContext)
           : Number(purchase.totalUsd ?? purchase.totalUsdSnapshot ?? 0) ||
-
             this.currencyService.toUsd(Number(purchase.totalBs ?? 0), 'VES', rates)
 
         const nativeUsd = usd
@@ -890,8 +882,6 @@ export default class ReportService {
     creditBalanceUsd?: number
 
     creditDueDate?: string | null
-
-    creditBalanceUsd?: number
 
     purchaseDate?: string
 

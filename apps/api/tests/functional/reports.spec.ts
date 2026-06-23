@@ -337,6 +337,63 @@ test.group('Reports API', (group) => {
     }
   })
 
+  test('GET account-statement lists settled credit purchases informatively with zero amount', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const supplier = await Supplier.create({ name: 'Proveedor saldado', active: true })
+    const reportMonth = '2026-06'
+    const dueDate = DateTime.fromISO('2026-06-15')
+
+    await Purchase.create({
+      supplierId: supplier.id,
+      date: DateTime.fromISO('2026-05-20'),
+      invoiceNumber: 'F-CRED-SALD',
+      totalUsd: '100.0000',
+      totalBs: '3600.00',
+      status: 'CONFIRMED',
+      isCredit: true,
+      creditDueDate: dueDate,
+      balanceUsd: '0.0000',
+      amountPaidUsd: '100.0000',
+    })
+
+    await Purchase.create({
+      supplierId: supplier.id,
+      date: DateTime.fromISO('2026-06-10'),
+      invoiceNumber: 'F-CONTADO-REF',
+      totalUsd: '25.0000',
+      totalBs: '900.00',
+      status: 'CONFIRMED',
+      isCredit: false,
+    })
+
+    const response = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: reportMonth, types: 'purchases', display_currency: 'USD' })
+      .loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        movements: Array<{
+          amountUsd: string
+          isCreditPurchase?: boolean
+          creditReportStatus?: string
+        }>
+        summary: { purchasesUsd: string }
+      }
+    }
+
+    const settledCredit = body.data.movements.find((m) => m.amountUsd === '0.0000')
+    assert.exists(settledCredit)
+    assert.equal(settledCredit!.isCreditPurchase, true)
+    assert.equal(settledCredit!.creditReportStatus, 'settled')
+    assert.equal(body.data.summary.purchasesUsd, '25.0000')
+    assert.exists(body.data.movements.find((m) => m.amountUsd === '25.0000'))
+  })
+
   test('GET account-statement excludes credit sales from summary but lists them informatively', async ({
     client,
     assert,
