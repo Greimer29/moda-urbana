@@ -14,6 +14,7 @@ type DashboardSalesChartProps = {
   onModeChange: (mode: 'daily' | 'weekly' | 'monthly') => void
   chartError?: string | null
   isUpdating?: boolean
+  dailyEnabled?: boolean
 }
 
 const MODE_SUBTITLE: Record<DashboardSalesChartProps['mode'], string> = {
@@ -28,6 +29,7 @@ export function DashboardSalesChart({
   onModeChange,
   chartError,
   isUpdating = false,
+  dailyEnabled = true,
 }: DashboardSalesChartProps) {
   const { formatFromUsd } = useFormatMoney()
 
@@ -50,9 +52,16 @@ export function DashboardSalesChart({
           <div className="inline-flex rounded-full bg-neutral-100 p-1">
           <button
             type="button"
+            disabled={!dailyEnabled}
+            title={
+              dailyEnabled
+                ? undefined
+                : 'La vista diaria aún no está disponible en el servidor.'
+            }
             className={cn(
               'rounded-full px-3 py-1 text-xs font-medium',
-              mode === 'daily' ? 'bg-neutral-900 text-white' : 'text-neutral-600'
+              mode === 'daily' ? 'bg-neutral-900 text-white' : 'text-neutral-600',
+              !dailyEnabled && 'cursor-not-allowed opacity-50'
             )}
             onClick={() => onModeChange('daily')}
           >

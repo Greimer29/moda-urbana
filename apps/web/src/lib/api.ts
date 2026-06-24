@@ -150,7 +150,7 @@ api.interceptors.response.use(
         requestUrl.includes('/auth/login') || requestUrl.includes('/auth/me')
 
       if (!isAuthBootstrap) {
-        unauthorizedHandler?.()
+        queueMicrotask(() => unauthorizedHandler?.())
       }
     }
 

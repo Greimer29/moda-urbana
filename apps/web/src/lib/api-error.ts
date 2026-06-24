@@ -256,7 +256,15 @@ export function formatApiErrorDetails(details: unknown): string[] {
     }
 
     if (details.every(isVineValidationDetail)) {
-      return details.map((item) => item.message).filter(Boolean)
+      return details
+        .map((item) => {
+          if (item.field === 'chart') {
+            return 'El período del gráfico no es válido o aún no está disponible en el servidor.'
+          }
+
+          return item.message
+        })
+        .filter(Boolean)
     }
 
     if (details.every(isStockInsuficienteDetail)) {

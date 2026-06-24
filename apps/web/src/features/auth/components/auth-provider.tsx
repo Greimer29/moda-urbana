@@ -59,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logSessionError(error)
 
       if (isUnauthorizedError(error)) {
+        queryClient.clear()
         setUser(null)
         setSessionBootstrapError(false)
         return
