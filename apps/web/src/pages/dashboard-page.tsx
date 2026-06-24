@@ -42,6 +42,7 @@ export function DashboardPage() {
   useEffect(() => {
     if (data && !isError && !isFetching) {
       lastSuccessfulChartModeRef.current = chartMode
+      setChartError(null)
     }
   }, [chartMode, data, isError, isFetching])
 
