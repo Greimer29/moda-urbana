@@ -259,6 +259,29 @@ export function formatApiErrorDetails(details: unknown): string[] {
   return []
 }
 
+/** Indica si `details` incluye un error de validación para el campo dado. */
+export function apiErrorDetailsIncludeField(details: unknown, field: string): boolean {
+  if (!details) {
+    return false
+  }
+
+  if (Array.isArray(details)) {
+    return details.some(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        'field' in item &&
+        (item as VineValidationDetail).field === field
+    )
+  }
+
+  if (typeof details === 'object') {
+    return field in details
+  }
+
+  return false
+}
+
 /** Mensaje listo para mostrar en UI: prioriza `details` sobre el mensaje genérico. */
 export function getApiErrorMessage(error: unknown): string {
   const apiError = getApiError(error)
