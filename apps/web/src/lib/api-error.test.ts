@@ -2,6 +2,7 @@ import axios from 'axios'
 import { describe, expect, it } from 'vitest'
 
 import {
+  apiErrorDetailsIncludeField,
   formatApiErrorDetails,
   formatValidationDetails,
   getApiError,
@@ -73,6 +74,25 @@ describe('formatApiErrorDetails', () => {
     expect(formatApiErrorDetails(null)).toEqual([])
     expect(formatApiErrorDetails([])).toEqual([])
     expect(formatApiErrorDetails([{ foo: 'bar' }])).toEqual([])
+  })
+})
+
+describe('apiErrorDetailsIncludeField', () => {
+  it('matches Vine validation field names', () => {
+    const details = [
+      {
+        message: 'The selected chart is invalid',
+        field: 'chart',
+      },
+    ]
+
+    expect(apiErrorDetailsIncludeField(details, 'chart')).toBe(true)
+    expect(apiErrorDetailsIncludeField(details, 'email')).toBe(false)
+  })
+
+  it('matches legacy record keys', () => {
+    expect(apiErrorDetailsIncludeField({ chart: 'Valor inválido' }, 'chart')).toBe(true)
+    expect(apiErrorDetailsIncludeField({ email: 'Email inválido' }, 'chart')).toBe(false)
   })
 })
 

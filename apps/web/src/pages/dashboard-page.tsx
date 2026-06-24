@@ -7,17 +7,15 @@ import { DashboardSalesChart } from '@/features/dashboard/components/dashboard-s
 import { dashboardUi } from '@/features/dashboard/dashboard-ui'
 import { useDashboardOverviewQuery } from '@/features/dashboard/hooks/use-dashboard'
 import type { DashboardChartMode } from '@/features/dashboard/types'
-import { formatApiErrorDetails, getApiError, getApiErrorMessage } from '@/lib/api-error'
+import { apiErrorDetailsIncludeField, getApiError, getApiErrorMessage } from '@/lib/api-error'
 
 function isDashboardChartValidationError(error: unknown): boolean {
   const apiError = getApiError(error)
 
-  if (apiError.code !== 'VALIDATION_ERROR') {
-    return false
-  }
-
-  const lines = formatApiErrorDetails(apiError.details)
-  return lines.some((line) => line.toLowerCase().includes('chart'))
+  return (
+    apiError.code === 'VALIDATION_ERROR' &&
+    apiErrorDetailsIncludeField(apiError.details, 'chart')
+  )
 }
 
 function todayLabel() {
