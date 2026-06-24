@@ -13,12 +13,16 @@ export default class PermissionMiddleware {
     }
 
     const authenticatedUser = ctx.auth.getUserOrFail()
-    const permission = resolveRoutePermission(
+    const resolved = resolveRoutePermission(
       ctx.request.method(),
       ctx.request.url().split('?')[0] ?? ctx.request.url()
     )
 
-    if (!permission) {
+    if (resolved === 'deny') {
+      throw new PermisoDenegadoException()
+    }
+
+    if (resolved === 'auth_only') {
       return next()
     }
 
@@ -26,7 +30,7 @@ export default class PermissionMiddleware {
       ? authenticatedUser.permissions
       : null
 
-    if (!userHasPermission(authenticatedUser.role, permissions, permission)) {
+    if (!userHasPermission(authenticatedUser.role, permissions, resolved)) {
       throw new PermisoDenegadoException()
     }
 

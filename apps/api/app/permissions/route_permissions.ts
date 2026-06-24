@@ -97,13 +97,15 @@ const ROUTE_RULES: RouteRule[] = [
   { method: 'DELETE', pattern: /^\/categories(\/|$)/, permission: 'catalog.edit' },
 ]
 
-const PUBLIC_AUTH_PATHS = new Set(['/auth/me', '/auth/logout'])
+const AUTH_ONLY_PATHS = new Set(['/auth/me', '/auth/logout'])
 
-export function resolveRoutePermission(method: string, pathname: string): PermissionKey | null {
+export type ResolvedRoutePermission = PermissionKey | 'auth_only' | 'deny'
+
+export function resolveRoutePermission(method: string, pathname: string): ResolvedRoutePermission {
   const path = pathname.replace(/^\/api\/v1/, '') || '/'
 
-  if (PUBLIC_AUTH_PATHS.has(path)) {
-    return null
+  if (AUTH_ONLY_PATHS.has(path)) {
+    return 'auth_only'
   }
 
   for (const rule of ROUTE_RULES) {
@@ -112,5 +114,5 @@ export function resolveRoutePermission(method: string, pathname: string): Permis
     }
   }
 
-  return null
+  return 'deny'
 }
