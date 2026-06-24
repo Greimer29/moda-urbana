@@ -93,6 +93,7 @@ export async function listOrders(params: OrderListParams = {}) {
       per_page: params.perPage,
       customer_id: params.customer_id,
       status: params.status,
+      exclude_status: params.exclude_status,
       modality: params.modalidad,
       date_from: params.date_desde,
       date_to: params.date_hasta,

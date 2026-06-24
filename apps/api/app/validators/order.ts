@@ -40,6 +40,7 @@ export const listOrdersValidator = vine.create({
   per_page: vine.number().min(1).max(100).optional(),
   customer_id: vine.number().min(1).optional(),
   status: vine.enum(ESTADOS).optional(),
+  exclude_status: vine.enum(ESTADOS).optional(),
   modality: vine.enum(MODALIDADES).optional(),
   date_from: isoDate.optional(),
   date_to: isoDate.optional(),
