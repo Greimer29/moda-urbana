@@ -16,7 +16,7 @@ export function ReportFlowChart({ movements }: ReportFlowChartProps) {
       acc[movement.type] = (acc[movement.type] ?? 0) + Number(movement.amountDisplay)
       return acc
     },
-    { sale: 0, customer_payment: 0, purchase: 0, expense: 0, machine_expense: 0 }
+    { sale: 0, customer_payment: 0, purchase: 0, supplier_payment: 0, expense: 0, machine_expense: 0 }
   )
 
   const rows = (Object.keys(totals) as Array<AccountStatementMovement['type']>)
@@ -59,7 +59,9 @@ export function ReportFlowChart({ movements }: ReportFlowChartProps) {
                   <span
                     className={cn(
                       'font-semibold tabular-nums',
-                      row.type === 'sale' ? reportUi.income : reportUi.expense
+                      row.type === 'sale' || row.type === 'customer_payment'
+                        ? reportUi.income
+                        : reportUi.expense
                     )}
                   >
                     {formatMoney(row.value, displayCurrency)}

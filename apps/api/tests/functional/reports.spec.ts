@@ -7,6 +7,7 @@ import Order from '#models/order'
 import OrderLine from '#models/order_line'
 import Purchase from '#models/purchase'
 import Supplier from '#models/supplier'
+import SupplierPayment from '#models/supplier_payment'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
@@ -22,6 +23,7 @@ async function resetDatabase() {
   await db.from('expenses').delete()
   await db.from('machine_expenses').delete()
   await db.from('customer_payments').delete()
+  await db.from('supplier_payments').delete()
   await db.from('order_lines').delete()
   await db.from('order_materials').delete()
   await db.from('orders').delete()
@@ -612,6 +614,89 @@ test.group('Reports API', (group) => {
     assert.equal(filteredBody.data.summary.sales, '30.00')
     assert.lengthOf(filteredBody.data.movements, 1)
     assert.equal(filteredBody.data.movements[0].amountUsd, '30.0000')
+  })
+
+  test('GET account-statement includes supplier payments in purchases', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const supplier = await Supplier.create({ name: 'Proveedor pago reporte', active: true })
+    const purchase = await Purchase.create({
+      supplierId: supplier.id,
+      date: DateTime.fromISO('2026-05-20'),
+      invoiceNumber: 'F-CRED-PAY',
+      totalUsd: '80.0000',
+      totalBs: '2880.00',
+      status: 'CONFIRMED',
+      isCredit: true,
+      creditDueDate: DateTime.fromISO('2026-06-20'),
+      balanceUsd: '30.0000',
+      amountPaidUsd: '50.0000',
+    })
+
+    await SupplierPayment.create({
+      supplierId: Number(supplier.id),
+      purchaseId: Number(purchase.id),
+      accountId: null,
+      amountUsd: '50.0000',
+      date: DateTime.fromISO('2026-06-15'),
+      note: 'Pago parcial',
+    })
+
+    const response = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: '2026-06', types: 'purchases', display_currency: 'USD' })
+      .loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        movements: Array<{ type: string; date: string; isIncome: boolean; amountUsd: string }>
+        summary: { purchasesUsd: string; purchases: string }
+      }
+    }
+
+    assert.equal(body.data.summary.purchasesUsd, '80.0000')
+    assert.equal(body.data.summary.purchases, '80.00')
+    const paymentMovement = body.data.movements.find((m) => m.type === 'supplier_payment')
+    assert.exists(paymentMovement)
+    assert.equal(paymentMovement!.date, '2026-06-15')
+    assert.equal(paymentMovement!.isIncome, false)
+    assert.equal(paymentMovement!.amountUsd, '50.0000')
+  })
+
+  test('GET account-statement omits supplier payments outside period', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const supplier = await Supplier.create({ name: 'Proveedor pago fuera', active: true })
+
+    await SupplierPayment.create({
+      supplierId: Number(supplier.id),
+      purchaseId: null,
+      accountId: null,
+      amountUsd: '35.0000',
+      date: DateTime.fromISO('2026-07-05'),
+      note: 'Pago julio',
+    })
+
+    const response = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: '2026-06', types: 'purchases', display_currency: 'USD' })
+      .loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body() as {
+      data: {
+        movements: Array<{ type: string }>
+        summary: { purchasesUsd: string }
+      }
+    }
+
+    assert.equal(body.data.summary.purchasesUsd, '0.0000')
+    assert.isEmpty(body.data.movements)
   })
 
   test('GET account-statement shows net credit sale amount after returns without counting as income', async ({

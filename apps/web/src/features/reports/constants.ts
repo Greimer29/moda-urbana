@@ -6,6 +6,7 @@ export const MOVEMENT_TYPE_LABELS = {
   sale: 'Venta',
   customer_payment: 'Abono cliente',
   purchase: 'Compra',
+  supplier_payment: 'Pago proveedor',
   expense: 'Gasto empresa',
   machine_expense: 'Gasto máquina',
 } as const

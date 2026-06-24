@@ -24,6 +24,8 @@ function movementLink(movement: AccountStatementMovement): string | null {
       return `/ventas/${movement.referenceId}`
     case 'customer_payment':
       return movement.customerId ? `/customers/${movement.customerId}` : null
+    case 'supplier_payment':
+      return movement.supplierId ? `/suppliers/${movement.supplierId}` : null
     case 'purchase':
       return `/purchases/${movement.referenceId}`
     case 'machine_expense':
@@ -72,6 +74,14 @@ function PaymentTypeCell({ movement }: { movement: AccountStatementMovement }) {
     return (
       <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
         Abono
+      </span>
+    )
+  }
+
+  if (movement.type === 'supplier_payment') {
+    return (
+      <span className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-900">
+        Pago
       </span>
     )
   }

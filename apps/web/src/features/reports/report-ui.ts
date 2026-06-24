@@ -23,6 +23,12 @@ export const movementTheme: Record<
     badge: 'bg-[#ecf4f0] text-[#0d3d2e] border border-[#cfe0d8]',
     label: 'Compra',
   },
+  supplier_payment: {
+    bar: '#115e59',
+    chart: '#0f766e',
+    badge: 'bg-teal-50 text-teal-900 border border-teal-200',
+    label: 'Pago',
+  },
   expense: {
     bar: '#64748b',
     chart: '#64748b',
