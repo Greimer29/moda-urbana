@@ -159,6 +159,103 @@ test.group('Ventas — material pendiente y compra', (group) => {
     assert.equal(salidas[0].quantity, '-10.000')
   })
 
+  test('confirm purchase auto-produces DRAFT credit order with credit balances', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente crédito pendiente',
+      type: 'CORPORATE',
+      creditDays: 30,
+      active: true,
+    })
+    const supplier = await Supplier.create({
+      name: 'Proveedor crédito venta',
+      rif: 'J777777777',
+      active: true,
+    })
+    const material = await Material.create({
+      code: 'TEL-CRED',
+      name: 'Tela crédito',
+      category: 'FABRIC',
+      unit: 'ROL',
+      minimumStock: '1',
+      lastPurchasePriceUsd: '2.0000',
+      active: true,
+    })
+    const formula = await Formula.create({
+      name: 'Formula crédito',
+      active: true,
+    })
+    await FormulaMaterial.create({
+      formulaId: Number(formula.id),
+      materialId: Number(material.id),
+      quantity: '5.000',
+    })
+    const product = await CatalogProduct.create({
+      name: 'Conjunto crédito',
+      category: 'UNIFORM',
+      formulaId: Number(formula.id),
+      salePriceUsd: '20.0000',
+      costUsd: '10.0000',
+      stockQuantity: '0.000',
+      active: true,
+    })
+    const order = await Order.create({
+      code: 'PED-202605-0302',
+      customerId: Number(customer.id),
+      modality: 'CORPORATE',
+      description: 'Venta crédito pendiente material',
+      totalQuantity: 2,
+      orderDate: DateTime.fromISO('2026-05-01'),
+      status: 'DRAFT',
+      paymentType: 'CREDIT',
+    })
+    await OrderLine.create({
+      orderId: Number(order.id),
+      catalogProductId: Number(product.id),
+      quantity: '2.000',
+      unitPriceUsd: '20.0000',
+      subtotalUsd: '40.0000',
+    })
+    const purchase = await Purchase.create({
+      supplierId: Number(supplier.id),
+      date: DateTime.fromISO('2026-05-20'),
+      invoiceNumber: 'F-CRED-1',
+      status: 'DRAFT',
+      totalBs: '0.00',
+    })
+    await PurchaseItem.create({
+      purchaseId: Number(purchase.id),
+      materialId: Number(material.id),
+      quantity: '10.000',
+      unitPriceUsd: '2.0000',
+      unitPriceBs: '100.00',
+      subtotalUsd: '20.0000',
+      subtotalBs: '1000.00',
+    })
+
+    const confirmResponse = await client
+      .post(`/api/v1/purchases/${purchase.id}/confirm`)
+      .loginAs(user)
+      .json({})
+
+    confirmResponse.assertStatus(200)
+    confirmResponse.assertBodyContains({
+      data: {
+        fulfilled_orders: [{ id: Number(order.id), code: order.code }],
+      },
+    })
+
+    await order.refresh()
+    assert.equal(order.status, 'IN_PRODUCTION')
+    assert.equal(order.paymentType, 'CREDIT')
+    assert.equal(order.balanceUsd, '40.0000')
+    assert.equal(order.amountPaidUsd, '0.0000')
+    assert.isNotNull(order.creditDueDate)
+  })
+
   test('confirm purchase does not auto-produce DRAFT order when manual product stock is insufficient', async ({
     client,
     assert,

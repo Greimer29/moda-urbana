@@ -62,6 +62,7 @@ export type OrderInput = {
   estimated_delivery_date?: string
   total_price?: number
   notes?: string
+  payment_type?: 'CASH' | 'CREDIT'
 }
 
 export type OrderLineInput = {
@@ -355,6 +356,7 @@ export default class OrderService {
       await this.assertCustomerExiste(input.customer_id)
     }
     const data = this.prepareInput(input)
+    await this.assertCreditoEnBorrador(data.customerId, input.payment_type)
 
     return db.transaction(async (trx) => {
       const code = await this.codeService.generar(data.orderDate, trx)
@@ -372,6 +374,7 @@ export default class OrderService {
           status: 'DRAFT',
           totalPrice: data.totalPrice,
           notes: data.notes,
+          paymentType: input.payment_type ?? 'CASH',
         },
         { client: trx }
       )
@@ -389,6 +392,7 @@ export default class OrderService {
     }
 
     const data = this.prepareInput(input)
+    await this.assertCreditoEnBorrador(data.customerId, input.payment_type)
 
     order.merge({
       customerId: data.customerId,
@@ -400,6 +404,7 @@ export default class OrderService {
       estimatedDeliveryDate: data.estimatedDeliveryDate,
       totalPrice: data.totalPrice,
       notes: data.notes,
+      ...(input.payment_type !== undefined ? { paymentType: input.payment_type } : {}),
     })
 
     await order.save()
@@ -874,7 +879,9 @@ export default class OrderService {
             await this.procesarDescuentoStockProductos(locked, trx)
             locked.status = 'CONFIRMED'
             locked.confirmedAt = DateTime.now()
-            await this.aplicarPagoAlConfirmar(locked, 'CASH', trx)
+            const paymentType: 'CASH' | 'CREDIT' =
+              locked.paymentType === 'CREDIT' ? 'CREDIT' : 'CASH'
+            await this.aplicarPagoAlConfirmar(locked, paymentType, trx)
             locked.useTransaction(trx)
             await locked.save()
           }
@@ -1119,6 +1126,24 @@ export default class OrderService {
 
     if (!hasCustomer && !hasGuest) {
       throw new ClienteOInvitadoRequeridoException()
+    }
+  }
+
+  private async assertCreditoEnBorrador(
+    customerId: number | null,
+    paymentType: 'CASH' | 'CREDIT' | undefined
+  ) {
+    if (paymentType !== 'CREDIT') {
+      return
+    }
+
+    if (!customerId) {
+      throw new ClienteSinCreditoException()
+    }
+
+    const customer = await Customer.find(customerId)
+    if (!customer?.creditDays || customer.creditDays <= 0) {
+      throw new ClienteSinCreditoException()
     }
   }
 

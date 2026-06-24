@@ -116,6 +116,7 @@ export type OrderInput = {
   date_entrega_estimada?: string
   total_price?: number
   notes?: string
+  payment_type?: OrderPaymentType
 }
 
 export type OrderListParams = {

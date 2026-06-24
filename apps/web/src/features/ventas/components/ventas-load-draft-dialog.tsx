@@ -26,6 +26,7 @@ export type LoadedDraft = {
   customerName: string | null
   customerCreditDays: number | null
   guestName: string | null
+  paymentType: 'CASH' | 'CREDIT'
   cart: { product: CatalogProduct; quantity: number }[]
 }
 
@@ -88,6 +89,7 @@ export function VentasLoadDraftDialog({ open, onOpenChange, onLoaded }: VentasLo
         customerName: detail.customer?.name ?? null,
         customerCreditDays: detail.customer?.creditDays ?? null,
         guestName: detail.guestName,
+        paymentType: detail.paymentType === 'CREDIT' ? 'CREDIT' : 'CASH',
         cart,
       })
       onOpenChange(false)

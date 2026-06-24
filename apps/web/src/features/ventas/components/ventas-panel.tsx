@@ -213,6 +213,7 @@ function VentasCreateView() {
       setCustomerCreditDays(null)
       setClientName(draft.guestName ?? '')
     }
+    setPaymentType(draft.paymentType)
     setSourceOrderId(draft.orderId)
     setSourceOrderCode(draft.orderCode)
     setActionError(null)
@@ -239,6 +240,7 @@ function VentasCreateView() {
       description: description || 'Venta desde catálogo',
       quantity_total: totalQty,
       total_price: cartTotal,
+      payment_type: paymentType,
     }
 
     if (sourceOrderId) {
