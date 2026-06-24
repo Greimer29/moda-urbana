@@ -1,4 +1,5 @@
 import OrderService from '#services/order_service'
+import { assertPermission } from '#permissions/check'
 import { serializeOrder, serializeOrderListItem } from '#transformers/order_transformer'
 import { serializeOrderMaterial } from '#transformers/order_material_transformer'
 import {
@@ -142,8 +143,13 @@ export default class OrdersController {
   /**
    * POST /api/v1/orders/:id/transition
    */
-  async transition({ params, request, serialize }: HttpContext) {
+  async transition({ params, request, serialize, auth }: HttpContext) {
     const payload = await request.validateUsing(transitionOrderValidator)
+
+    if (payload.payment_type === 'CREDIT') {
+      assertPermission(auth.getUserOrFail(), 'ventas.credit')
+    }
+
     const { order, warnings } = await this.service.transicionar(
       Number(params.id),
       payload.new_status,

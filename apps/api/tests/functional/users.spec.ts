@@ -123,6 +123,67 @@ test.group('Users API', (group) => {
     response.assertStatus(403)
   })
 
+  test('operator without ventas.credit cannot confirm orders on credit', async ({ client }) => {
+    const admin = await User.findByOrFail('email', TEST_EMAIL)
+
+    await client
+      .post('/api/v1/users')
+      .loginAs(admin)
+      .json({
+        name: 'Confirmar Sin Crédito',
+        email: 'confirmar-sin-credito@hebra.local',
+        password: 'password123',
+        role: 'OPERATOR',
+        permissions: ['ventas.view', 'ventas.confirm'],
+      })
+
+    const operator = await User.findByOrFail('email', 'confirmar-sin-credito@hebra.local')
+
+    const customerResponse = await client.post('/api/v1/customers').loginAs(admin).json({
+      name: 'Cliente crédito permiso',
+      type: 'CORPORATE',
+      credit_days: 30,
+      active: true,
+    })
+
+    const customerId = customerResponse.body().data.customer.id as number
+
+    const orderResponse = await client.post('/api/v1/orders').loginAs(admin).json({
+      customer_id: customerId,
+      modality: 'CORPORATE',
+      description: 'Pedido crédito permiso',
+      total_quantity: 1,
+      order_date: DateTime.now().toISODate(),
+    })
+
+    const orderId = orderResponse.body().data.order.id as number
+
+    const denied = await client
+      .post(`/api/v1/orders/${orderId}/transition`)
+      .loginAs(operator)
+      .json({ new_status: 'CONFIRMED', payment_type: 'CREDIT' })
+
+    denied.assertStatus(403)
+    denied.assertBodyContains({
+      error: { code: 'PERMISO_DENEGADO' },
+    })
+
+    const allowed = await client
+      .post(`/api/v1/orders/${orderId}/transition`)
+      .loginAs(operator)
+      .json({ new_status: 'CONFIRMED', payment_type: 'CASH' })
+
+    allowed.assertStatus(200)
+    allowed.assertBodyContains({
+      data: {
+        order: {
+          status: 'CONFIRMED',
+          paymentType: 'CASH',
+        },
+      },
+    })
+  })
+
   test('GET /api/v1/users lists users for admin', async ({ client, assert }) => {
     const admin = await User.findByOrFail('email', TEST_EMAIL)
 
