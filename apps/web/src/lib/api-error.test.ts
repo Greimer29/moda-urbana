@@ -126,6 +126,40 @@ describe('getApiErrorMessage', () => {
     expect(getApiError(error).message).toBe('Usuario no encontrado')
     expect(getApiErrorMessage(error)).toBe('Usuario no encontrado')
   })
+
+  it('reads top-level message when error wrapper is missing', () => {
+    const error = axiosErrorWithBody(404, {
+      message: 'Usuario no encontrado',
+      code: 'USER_NOT_FOUND',
+    })
+
+    expect(getApiError(error).message).toBe('Usuario no encontrado')
+    expect(getApiErrorMessage(error)).toBe('Usuario no encontrado')
+  })
+
+  it('reads top-level Vine messages when error wrapper is missing', () => {
+    const error = axiosErrorWithBody(422, {
+      message: 'Validation failed',
+      messages: [
+        {
+          message: 'The email field must be a valid email address',
+          field: 'email',
+        },
+      ],
+    })
+
+    expect(getApiErrorMessage(error)).toBe('The email field must be a valid email address')
+  })
+
+  it('reads legacy top-level errors record when error wrapper is missing', () => {
+    const error = axiosErrorWithBody(422, {
+      errors: {
+        email: 'Email inválido',
+      },
+    })
+
+    expect(getApiErrorMessage(error)).toBe('email: Email inválido')
+  })
 })
 
 describe('formatValidationDetails', () => {

@@ -6,6 +6,94 @@ import type {
   VineValidationDetail,
 } from '@/types/auth'
 
+function isVineValidationDetail(value: unknown): value is VineValidationDetail {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'message' in value &&
+    typeof (value as VineValidationDetail).message === 'string'
+  )
+}
+
+function defaultCodeForStatus(status: number): string {
+  if (status === 422) {
+    return 'VALIDATION_ERROR'
+  }
+
+  if (status === 404) {
+    return 'NOT_FOUND'
+  }
+
+  if (status === 403) {
+    return 'FORBIDDEN'
+  }
+
+  if (status === 401) {
+    return 'UNAUTHORIZED'
+  }
+
+  if (status >= 500) {
+    return 'SERVER_ERROR'
+  }
+
+  return 'UNKNOWN_ERROR'
+}
+
+function parseLooseErrorPayload(data: unknown, status: number): ApiErrorBody | null {
+  if (!data || typeof data !== 'object') {
+    return null
+  }
+
+  const payload = data as Record<string, unknown>
+  const message = payload.message
+  const code = payload.code
+  const details = payload.details
+  const messages = payload.messages
+
+  if (Array.isArray(messages) && messages.length > 0 && messages.every(isVineValidationDetail)) {
+    return {
+      code: typeof code === 'string' ? code : 'VALIDATION_ERROR',
+      message: typeof message === 'string' ? message : 'Los datos enviados no son válidos',
+      details: messages,
+    }
+  }
+
+  const errors = payload.errors
+  if (errors && typeof errors === 'object' && !Array.isArray(errors)) {
+    return {
+      code: typeof code === 'string' ? code : 'VALIDATION_ERROR',
+      message: typeof message === 'string' ? message : 'Los datos enviados no son válidos',
+      details: errors as Record<string, string | string[]>,
+    }
+  }
+
+  if (typeof message === 'string' && message.trim().length > 0) {
+    const body: ApiErrorBody = {
+      code: typeof code === 'string' ? code : defaultCodeForStatus(status),
+      message: message.trim(),
+    }
+
+    if (details !== undefined) {
+      body.details = details as ApiErrorBody['details']
+    }
+
+    return body
+  }
+
+  if (details !== undefined) {
+    return {
+      code: typeof code === 'string' ? code : defaultCodeForStatus(status),
+      message:
+        typeof message === 'string' && message.trim().length > 0
+          ? message.trim()
+          : 'Ocurrió un error al procesar la solicitud.',
+      details: details as ApiErrorBody['details'],
+    }
+  }
+
+  return null
+}
+
 export function getApiError(error: unknown): ApiErrorBody {
   if (axios.isAxiosError(error) && error.response?.data?.error) {
     return error.response.data.error as ApiErrorBody
@@ -13,7 +101,19 @@ export function getApiError(error: unknown): ApiErrorBody {
 
   if (axios.isAxiosError(error) && error.response) {
     const status = error.response.status
-    const payload = error.response.data as { message?: string } | undefined
+    const loosePayload = parseLooseErrorPayload(error.response.data, status)
+
+    if (loosePayload) {
+      if (status === 404 && loosePayload.message.includes('Cannot GET')) {
+        return {
+          ...loosePayload,
+          message:
+            'No se pudo comunicar con el servidor. Recargá la página e intentá de nuevo.',
+        }
+      }
+
+      return loosePayload
+    }
 
     if (status === 403) {
       return {
@@ -25,9 +125,7 @@ export function getApiError(error: unknown): ApiErrorBody {
     if (status === 404) {
       return {
         code: 'NOT_FOUND',
-        message: payload?.message?.includes('Cannot GET')
-          ? 'No se pudo comunicar con el servidor. Recargá la página e intentá de nuevo.'
-          : 'El recurso solicitado no existe.',
+        message: 'El recurso solicitado no existe.',
       }
     }
 
@@ -62,12 +160,14 @@ export function getApiError(error: unknown): ApiErrorBody {
   }
 
   if (axios.isAxiosError(error) && error.response?.status && error.response.status >= 500) {
-    const payload = error.response.data as { error?: { message?: string } } | undefined
+    const loosePayload = parseLooseErrorPayload(error.response.data, error.response.status)
+    if (loosePayload) {
+      return loosePayload
+    }
+
     return {
       code: 'SERVER_ERROR',
-      message:
-        payload?.error?.message ??
-        'El servidor respondió con un error inesperado. Intentá de nuevo en unos segundos.',
+      message: 'El servidor respondió con un error inesperado. Intentá de nuevo en unos segundos.',
     }
   }
 
@@ -75,15 +175,6 @@ export function getApiError(error: unknown): ApiErrorBody {
     code: 'UNKNOWN_ERROR',
     message: 'Ocurrió un error inesperado. Intentá de nuevo.',
   }
-}
-
-function isVineValidationDetail(value: unknown): value is VineValidationDetail {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'message' in value &&
-    typeof (value as VineValidationDetail).message === 'string'
-  )
 }
 
 function isStockInsuficienteDetail(value: unknown): value is StockInsuficienteDetail {
