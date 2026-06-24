@@ -91,7 +91,13 @@ export function AccountStatementPanel() {
         </div>
       ) : isError ? (
         <div className={reportUi.error}>{getApiErrorMessage(error)}</div>
-      ) : data ? (
+      ) : !data ? (
+        <div className={reportUi.panel}>
+          <p className={`${reportUi.body} px-5 py-12 text-center`}>
+            No se recibió información del reporte. Intentá actualizar la página o cambiar el período.
+          </p>
+        </div>
+      ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">
             <p className={reportUi.muted}>
@@ -123,7 +129,7 @@ export function AccountStatementPanel() {
             subtitle={`${data.movements.length} registro${data.movements.length === 1 ? '' : 's'} en el período`}
           />
         </>
-      ) : null}
+      )}
     </div>
   )
 }
