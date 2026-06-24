@@ -28,7 +28,7 @@ describe('computeMovementPeriodTotals', () => {
         movement({
           id: 2,
           type: 'sale',
-          amountUsd: '100.0000',
+          amountUsd: '60.0000',
           isCreditSale: true,
           creditReportStatus: 'pending',
           creditBalanceUsd: '60.0000',

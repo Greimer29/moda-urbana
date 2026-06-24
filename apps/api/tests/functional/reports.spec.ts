@@ -586,12 +586,22 @@ test.group('Reports API', (group) => {
     response.assertStatus(200)
     const body = response.body() as {
       data: {
-        movements: Array<{ type: string; date: string; isIncome: boolean; amountUsd: string }>
+        movements: Array<{
+          type: string
+          date: string
+          isIncome: boolean
+          isCreditSale?: boolean
+          amountUsd: string
+        }>
         summary: { sales: string }
       }
     }
 
     assert.equal(body.data.summary.sales, '40.00')
+    const creditSale = body.data.movements.find((m) => m.type === 'sale')
+    assert.exists(creditSale)
+    assert.equal(creditSale!.isCreditSale, true)
+    assert.equal(creditSale!.amountUsd, '60.0000')
     const paymentMovement = body.data.movements.find((m) => m.type === 'customer_payment')
     assert.exists(paymentMovement)
     assert.equal(paymentMovement!.date, '2026-06-15')

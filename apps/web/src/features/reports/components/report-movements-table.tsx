@@ -219,10 +219,7 @@ export function ReportMovementsTable({
                         )}
                       >
                         {isInformationalCreditSale || isInformationalCreditPurchase ? (
-                          formatReportDisplayAmount(
-                            movement.creditBalanceUsd ?? movement.amountUsd,
-                            formatFromUsd
-                          )
+                          formatReportDisplayAmount(movement.amountUsd, formatFromUsd)
                         ) : (
                           <>
                             {movement.isIncome ? '+' : '−'}{' '}
