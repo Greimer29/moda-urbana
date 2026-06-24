@@ -330,6 +330,8 @@ test.group('Reports API', (group) => {
         movements: Array<{
           amountUsd: string
           isCreditPurchase?: boolean
+          isCreditPurchaseCarryover?: boolean
+          creditBalanceUsd?: string
           creditReportStatus?: string
         }>
       }
@@ -337,8 +339,68 @@ test.group('Reports API', (group) => {
 
     assert.exists(nextBody.data.movements.find((m) => m.amountUsd === '80.0000'))
     if (duePast < nextMonth.startOf('month')) {
-      assert.exists(nextBody.data.movements.find((m) => m.amountUsd === '100.0000'))
+      const carryover = nextBody.data.movements.find(
+        (m) => m.isCreditPurchase && m.creditBalanceUsd === '100.0000'
+      )
+      assert.exists(carryover)
+      assert.equal(carryover!.amountUsd, '0.0000')
+      assert.equal(carryover!.isCreditPurchaseCarryover, true)
     }
+  })
+
+  test('GET account-statement does not double-count overdue credit purchases across months', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const supplier = await Supplier.create({ name: 'Proveedor arrastre', active: true })
+
+    await Purchase.create({
+      supplierId: supplier.id,
+      date: DateTime.fromISO('2026-05-10'),
+      invoiceNumber: 'F-CRED-ARR',
+      totalUsd: '120.0000',
+      totalBs: '4320.00',
+      status: 'CONFIRMED',
+      isCredit: true,
+      creditDueDate: DateTime.fromISO('2026-06-10'),
+      balanceUsd: '120.0000',
+      amountPaidUsd: '0.0000',
+    })
+
+    const dueMonth = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: '2026-06', types: 'purchases', display_currency: 'USD' })
+      .loginAs(user)
+
+    dueMonth.assertStatus(200)
+    const dueBody = dueMonth.body() as {
+      data: { summary: { purchasesUsd: string } }
+    }
+    assert.equal(dueBody.data.summary.purchasesUsd, '120.0000')
+
+    const carryoverMonth = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: '2026-07', types: 'purchases', display_currency: 'USD' })
+      .loginAs(user)
+
+    carryoverMonth.assertStatus(200)
+    const carryoverBody = carryoverMonth.body() as {
+      data: {
+        movements: Array<{
+          amountUsd: string
+          isCreditPurchaseCarryover?: boolean
+          creditBalanceUsd?: string
+        }>
+        summary: { purchasesUsd: string }
+      }
+    }
+
+    assert.equal(carryoverBody.data.summary.purchasesUsd, '0.0000')
+    const carryover = carryoverBody.data.movements.find((m) => m.isCreditPurchaseCarryover)
+    assert.exists(carryover)
+    assert.equal(carryover!.amountUsd, '0.0000')
+    assert.equal(carryover!.creditBalanceUsd, '120.0000')
   })
 
   test('GET account-statement lists settled credit purchases informatively with zero amount', async ({

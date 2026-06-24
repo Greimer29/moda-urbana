@@ -76,3 +76,18 @@ export function creditPurchaseReportAmountUsd(ctx: CreditPurchaseReportContext):
 
   return 0
 }
+
+/**
+ * Créditos impagos visibles por arrastre en meses posteriores al vencimiento
+ * no deben volver a sumar en purchasesUsd: solo cuentan en el mes del vencimiento.
+ */
+export function creditPurchaseCountsTowardPeriodTotal(
+  ctx: CreditPurchaseReportContext,
+  period: { from: string; to: string }
+): boolean {
+  if (!ctx.isCredit || ctx.balanceUsd <= 0 || !ctx.creditDueDate) {
+    return false
+  }
+
+  return ctx.creditDueDate >= period.from && ctx.creditDueDate <= period.to
+}

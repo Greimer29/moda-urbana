@@ -77,6 +77,36 @@ describe('computeMovementPeriodTotals', () => {
     })
   })
 
+  it('ignores carryover credit purchases when summing pending credit', () => {
+    const totals = computeMovementPeriodTotals(
+      [
+        movement({
+          id: 1,
+          type: 'purchase',
+          amountUsd: '0.0000',
+          isCreditPurchase: true,
+          isCreditPurchaseCarryover: true,
+          creditReportStatus: 'overdue',
+          creditBalanceUsd: '120.0000',
+        }),
+        movement({
+          id: 2,
+          type: 'purchase',
+          amountUsd: '45.0000',
+          isCreditPurchase: true,
+          creditReportStatus: 'pending',
+        }),
+      ],
+      'compras'
+    )
+
+    expect(totals).toEqual({
+      kind: 'credit_split',
+      cashUsd: 0,
+      pendingCreditUsd: 45,
+    })
+  })
+
   it('sums gastos empresa as a single total', () => {
     const totals = computeMovementPeriodTotals(
       [

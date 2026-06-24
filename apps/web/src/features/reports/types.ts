@@ -30,6 +30,8 @@ export type AccountStatementMovement = {
 
   isCreditPurchase?: boolean
 
+  isCreditPurchaseCarryover?: boolean
+
   creditDueDate?: string | null
 
   purchaseDate?: string
