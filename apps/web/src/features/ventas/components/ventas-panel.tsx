@@ -89,7 +89,12 @@ function VentasCreateView() {
   const createLineMutation = useCreateOrderLineMutation()
   const { data: categories = [] } = useActiveCategoriesQuery()
 
-  const { data: catalogData, isLoading: loadingCatalog } = useCatalogProductsQuery({
+  const {
+    data: catalogData,
+    isLoading: loadingCatalog,
+    isError: catalogError,
+    error: catalogQueryError,
+  } = useCatalogProductsQuery({
     page,
     perPage: CATALOG_PER_PAGE,
     search: debouncedSearch || undefined,
@@ -539,6 +544,10 @@ function VentasCreateView() {
                 <div className="flex justify-center py-8">
                   <Loader2 className="text-muted-foreground size-6 animate-spin" />
                 </div>
+              ) : catalogError ? (
+                <p className="text-destructive py-8 text-center text-sm whitespace-pre-line">
+                  {getApiErrorMessage(catalogQueryError)}
+                </p>
               ) : products.length === 0 ? (
                 <p className="text-muted-foreground py-8 text-center text-sm">
                   No hay productos en el catálogo.
