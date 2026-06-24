@@ -53,7 +53,7 @@ export function ChartPlotCanvas({
       ))}
 
       <div className={dashboardUi.chartBarsLayer}>
-        {series.map((point) => {
+        {series.map((point, index) => {
           const valueUsd = Number(point.totalUsd)
           const heightPct = yMaxUsd > 0 ? (valueUsd / yMaxUsd) * 100 : 0
           const isPeak = valueUsd > 0 && valueUsd === seriesPeak
@@ -63,7 +63,7 @@ export function ChartPlotCanvas({
               : ''
 
           return (
-            <div key={point.label} className={dashboardUi.chartBarSlot}>
+            <div key={index} className={dashboardUi.chartBarSlot}>
               <div className={dashboardUi.chartTooltip}>
                 <p className="font-semibold">{formatFromUsd(valueUsd)}</p>
                 <p className="font-normal text-neutral-500">
