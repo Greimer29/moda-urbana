@@ -879,7 +879,8 @@ export default class OrderService {
             await this.procesarDescuentoStockProductos(locked, trx)
             locked.status = 'CONFIRMED'
             locked.confirmedAt = DateTime.now()
-            const paymentType: 'CASH' | 'CREDIT' = locked.paymentType === 'CREDIT' ? 'CREDIT' : 'CASH'
+            const paymentType: 'CASH' | 'CREDIT' =
+              locked.paymentType === 'CREDIT' ? 'CREDIT' : 'CASH'
             await this.aplicarPagoAlConfirmar(locked, paymentType, trx)
             locked.useTransaction(trx)
             await locked.save()
