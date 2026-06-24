@@ -26,7 +26,7 @@ export function useMaterialQuery(id: number) {
   return useQuery({
     queryKey: [...materialsQueryKey, 'detail', id],
     queryFn: () => getMaterial(id),
-    enabled: id > 0,
+    enabled: Number.isFinite(id) && id > 0,
   })
 }
 
@@ -84,7 +84,7 @@ export function useHistorialPreciosQuery(materialId: number) {
   return useQuery({
     queryKey: [...materialsQueryKey, 'historial', materialId],
     queryFn: () => getHistorialPrecios(materialId),
-    enabled: materialId > 0,
+    enabled: Number.isFinite(materialId) && materialId > 0,
   })
 }
 

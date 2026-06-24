@@ -28,7 +28,11 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function resolveDateRange(filter: DateFilter, customFrom: string, customTo: string) {
+function resolveDateRange(
+  filter: DateFilter,
+  customFrom: string,
+  customTo: string
+): Record<string, string> | null {
   if (filter === 'today') {
     const today = todayIso()
     return { date_desde: today, date_hasta: today }
@@ -36,7 +40,10 @@ function resolveDateRange(filter: DateFilter, customFrom: string, customTo: stri
   if (filter === 'month') {
     return { date_desde: startOfMonthIso(), date_hasta: todayIso() }
   }
-  if (filter === 'custom' && customFrom) {
+  if (filter === 'custom') {
+    if (!customFrom) {
+      return null
+    }
     return { date_desde: customFrom, date_hasta: customTo || customFrom }
   }
   return {}
@@ -61,14 +68,18 @@ export function VentasHistoryPanel() {
   }, [searchInput])
 
   const dateRange = resolveDateRange(dateFilter, customFrom, customTo)
+  const customRangePending = dateFilter === 'custom' && dateRange === null
 
-  const { data, isLoading, isError, error, refetch } = useOrdersQuery({
-    page,
-    perPage: PER_PAGE,
-    search: debouncedSearch || undefined,
-    exclude_status: 'DRAFT',
-    ...dateRange,
-  })
+  const { data, isLoading, isError, error, refetch } = useOrdersQuery(
+    {
+      page,
+      perPage: PER_PAGE,
+      search: debouncedSearch || undefined,
+      exclude_status: 'DRAFT',
+      ...(dateRange ?? {}),
+    },
+    { enabled: !customRangePending }
+  )
 
   const orders = data?.orders ?? []
   const meta = data?.meta
@@ -144,6 +155,10 @@ export function VentasHistoryPanel() {
               <Loader2 className="size-4 animate-spin" />
               Cargando ventas…
             </div>
+          ) : customRangePending ? (
+            <p className="text-muted-foreground py-12 text-center text-sm">
+              Seleccioná la fecha desde para aplicar el rango personalizado.
+            </p>
           ) : isError ? (
             <p className="text-destructive py-8 text-center text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
           ) : orders.length === 0 ? (

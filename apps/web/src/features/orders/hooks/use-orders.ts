@@ -41,7 +41,7 @@ export function useOrderQuery(id: number) {
   return useQuery({
     queryKey: [...ordersQueryKey, 'detail', id],
     queryFn: () => getOrder(id),
-    enabled: id > 0,
+    enabled: Number.isFinite(id) && id > 0,
   })
 }
 
@@ -187,7 +187,7 @@ export function useOrderBudgetQuery(orderId: number, enabled = true) {
   return useQuery({
     queryKey: [...ordersQueryKey, 'budget', orderId],
     queryFn: () => getOrderBudget(orderId),
-    enabled: orderId > 0 && enabled,
+    enabled: Number.isFinite(orderId) && orderId > 0 && enabled,
   })
 }
 
@@ -195,6 +195,6 @@ export function useOrderMaterialAvailabilityQuery(orderId: number, enabled = tru
   return useQuery({
     queryKey: [...ordersQueryKey, 'material-availability', orderId],
     queryFn: () => getOrderMaterialAvailability(orderId),
-    enabled: orderId > 0 && enabled,
+    enabled: Number.isFinite(orderId) && orderId > 0 && enabled,
   })
 }

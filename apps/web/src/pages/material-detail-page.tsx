@@ -31,6 +31,8 @@ import {
 } from '@/features/materials/hooks/use-materials'
 
 import { getApiErrorMessage } from '@/lib/api-error'
+import { detailPageErrorMessage } from '@/lib/detail-page-messages'
+import { parsePositiveIntRouteParam } from '@/lib/route-id'
 
 import { cn } from '@/lib/utils'
 
@@ -60,7 +62,7 @@ export function MaterialDetallePage() {
 
   const navigate = useNavigate()
 
-  const materialId = Number(id)
+  const { id: materialId, isValid: isValidMaterialId } = parsePositiveIntRouteParam(id)
 
   const [tab, setTab] = useState<TabId>('movimientos')
 
@@ -90,6 +92,24 @@ export function MaterialDetallePage() {
 
 
 
+  if (!isValidMaterialId) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-24">
+        <p className="text-destructive text-sm">
+          {detailPageErrorMessage({
+            isValidId: false,
+            isError: false,
+            error: null,
+            entityLabel: 'material',
+          })}
+        </p>
+        <Button variant="outline" asChild>
+          <Link to="/materials">Volver al listado</Link>
+        </Button>
+      </div>
+    )
+  }
+
   if (isLoading) {
 
     return (
@@ -114,7 +134,14 @@ export function MaterialDetallePage() {
 
       <div className="flex flex-col items-center gap-4 py-24">
 
-        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">
+          {detailPageErrorMessage({
+            isValidId: true,
+            isError,
+            error,
+            entityLabel: 'material',
+          })}
+        </p>
 
         <Button variant="outline" asChild>
 

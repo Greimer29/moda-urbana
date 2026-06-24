@@ -48,14 +48,15 @@ import {
 } from '@/features/orders/utils/order-line-totals'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { useFormatMoney } from '@/features/currencies/context/display-currency-context'
-import { getApiError, getApiErrorMessage } from '@/lib/api-error'
+import { getApiError, getApiErrorMessage, parseStockInsuficienteDetails } from '@/lib/api-error'
+import { detailPageErrorMessage } from '@/lib/detail-page-messages'
+import { parsePositiveIntRouteParam } from '@/lib/route-id'
 import { cn } from '@/lib/utils'
 import { formatDraftMaterialNotice } from '@/lib/material-availability'
 import { VentasOrderReturnDialog } from '@/features/ventas/components/ventas-order-return-dialog'
 import { useAuth } from '@/features/auth/hooks/use-auth'
 
 type OrderDetailLocationState = {
-  materialNotice?: string
   paymentType?: OrderPaymentType
 }
 
@@ -69,7 +70,7 @@ function buildTransitionPayload(
   if (force) {
     payload.force = true
   }
-  if (currentStatus === 'DRAFT' && nuevoEstado === 'CONFIRMED') {
+  if (currentStatus === 'DRAFT' && (nuevoEstado === 'CONFIRMED' || nuevoEstado === 'DELIVERED')) {
     payload.payment_type = paymentType
   }
   return payload
@@ -168,7 +169,7 @@ function toHeaderPayload(values: HeaderFormValues) {
 
 export function OrderDetallePage() {
   const { id } = useParams<{ id: string }>()
-  const orderId = Number(id)
+  const { id: orderId, isValid: isValidOrderId } = parsePositiveIntRouteParam(id)
   const navigate = useNavigate()
   const location = useLocation()
   const locationState = location.state as OrderDetailLocationState | null
@@ -177,7 +178,6 @@ export function OrderDetallePage() {
 
   const [actionError, setActionError] = useState<string | null>(null)
   const [paymentType, setPaymentType] = useState<OrderPaymentType>('CASH')
-  const materialNotice = locationState?.materialNotice ?? null
   const [transicionPending, setTransicionPending] = useState<OrderEstado | null>(null)
   const [stockModalOpen, setStockModalOpen] = useState(false)
   const [stockInsuficiente, setStockInsuficiente] = useState<RecipeStockInsuficiente[]>([])
@@ -243,10 +243,9 @@ export function OrderDetallePage() {
     order?.status === 'IN_PRODUCTION' ||
     order?.status === 'DELIVERED'
   const pendingMaterialNotice =
-    materialNotice ??
-    (materialAvailability?.has_recipe && !materialAvailability.sufficient
+    materialAvailability?.has_recipe && !materialAvailability.sufficient
       ? formatDraftMaterialNotice(materialAvailability.missing)
-      : null)
+      : null
   const catalogLines = order?.lines ?? []
   const legacyRecipe = order?.materials ?? []
   const showRecetaVaciaBanner =
@@ -257,6 +256,24 @@ export function OrderDetallePage() {
     order?.guestName ??
     customers.find((c) => c.id === order?.customerId)?.name ??
     'Sin cliente'
+
+  if (!isValidOrderId) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-24">
+        <p className="text-destructive text-sm">
+          {detailPageErrorMessage({
+            isValidId: false,
+            isError: false,
+            error: null,
+            entityLabel: 'pedido',
+          })}
+        </p>
+        <Button variant="outline" asChild>
+          <Link to="/ventas">Volver al listado</Link>
+        </Button>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -270,7 +287,14 @@ export function OrderDetallePage() {
   if (isError || !order) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">
+          {detailPageErrorMessage({
+            isValidId: true,
+            isError,
+            error,
+            entityLabel: 'pedido',
+          })}
+        </p>
         <Button variant="outline" asChild>
           <Link to="/ventas">Volver al listado</Link>
         </Button>
@@ -310,7 +334,10 @@ export function OrderDetallePage() {
   }
 
   async function handleTransicion(nuevoEstado: OrderEstado) {
-    if (activeOrder.status === 'DRAFT' && nuevoEstado === 'CONFIRMED') {
+    if (
+      activeOrder.status === 'DRAFT' &&
+      (nuevoEstado === 'CONFIRMED' || nuevoEstado === 'DELIVERED')
+    ) {
       const creditError = validateCreditPayment(paymentType, activeOrder)
       if (creditError) {
         setActionError(creditError)
@@ -337,12 +364,13 @@ export function OrderDetallePage() {
       })
     } catch (err) {
       const apiError = getApiError(err)
+      const stockDetails = parseStockInsuficienteDetails(apiError.details)
       if (
         nuevoEstado === 'IN_PRODUCTION' &&
         apiError.code === 'STOCK_INSUFICIENTE' &&
-        Array.isArray(apiError.details)
+        stockDetails
       ) {
-        setStockInsuficiente(apiError.details as RecipeStockInsuficiente[])
+        setStockInsuficiente(stockDetails)
         setForceConfirmOpen(false)
         setStockModalOpen(true)
       } else {

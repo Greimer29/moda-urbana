@@ -14,6 +14,8 @@ type LoginAttemptEntry = {
 
 const loginAttemptsByIp = new Map<string, LoginAttemptEntry>()
 
+// Almacén en memoria por proceso; no comparte estado entre réplicas ni reinicios.
+
 function getClientIp(request: HttpContext['request']): string {
   const forwarded = request.header('x-forwarded-for')
   if (forwarded) {

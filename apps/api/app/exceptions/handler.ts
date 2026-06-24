@@ -13,6 +13,7 @@ import MonedaNoEncontradaException from '#exceptions/moneda_no_encontrada_except
 import MonedaProtegidaException from '#exceptions/moneda_protegida_exception'
 import MonedaRegistroUsdRequeridaException from '#exceptions/moneda_registro_usd_requerida_exception'
 import TasaCambioInvalidaException from '#exceptions/tasa_cambio_invalida_exception'
+import PurchaseItemReferenciaInvalidaException from '#exceptions/compra_item_referencia_invalida_exception'
 import PurchaseItemNoEncontradoException from '#exceptions/compra_item_no_encontrado_exception'
 import PurchaseNoEditableException from '#exceptions/compra_no_editable_exception'
 import PurchaseNoEncontradaException from '#exceptions/compra_no_encontrada_exception'
@@ -57,6 +58,7 @@ import ArchivoImagenNoDisponibleException from '#exceptions/archivo_imagen_no_di
 import VentaNoEncontradaException from '#exceptions/venta_no_encontrada_exception'
 import PedidoLineaNoEncontradaException from '#exceptions/pedido_linea_no_encontrada_exception'
 import LineaVentaInvalidaException from '#exceptions/linea_venta_invalida_exception'
+import PagoClienteExcedeSaldoException from '#exceptions/pago_cliente_excede_saldo_exception'
 
 export default class HttpExceptionHandler extends ExceptionHandler {
   protected debug = !app.inProduction
@@ -303,6 +305,15 @@ export default class HttpExceptionHandler extends ExceptionHandler {
         error: {
           code: PurchaseItemNoEncontradoException.code,
           message: error.message || PurchaseItemNoEncontradoException.message,
+        },
+      })
+    }
+
+    if (error instanceof PurchaseItemReferenciaInvalidaException) {
+      return ctx.response.status(422).json({
+        error: {
+          code: PurchaseItemReferenciaInvalidaException.code,
+          message: error.message || PurchaseItemReferenciaInvalidaException.message,
         },
       })
     }
@@ -584,6 +595,15 @@ export default class HttpExceptionHandler extends ExceptionHandler {
         error: {
           code: LineaVentaInvalidaException.code,
           message: error.message || LineaVentaInvalidaException.message,
+        },
+      })
+    }
+
+    if (error instanceof PagoClienteExcedeSaldoException) {
+      return ctx.response.status(422).json({
+        error: {
+          code: PagoClienteExcedeSaldoException.code,
+          message: error.message || PagoClienteExcedeSaldoException.message,
         },
       })
     }

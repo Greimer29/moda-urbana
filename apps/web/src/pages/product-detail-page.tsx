@@ -15,6 +15,8 @@ import { PRODUCT_MOVIMIENTO_LABELS } from '@/features/ventas/product-inventory-c
 import { productSaleUnitAbrev } from '@/features/ventas/constants'
 import { useCatalogProductQuery, useDeleteCatalogProductMutation } from '@/features/ventas/hooks/use-catalog'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { detailPageErrorMessage } from '@/lib/detail-page-messages'
+import { parsePositiveIntRouteParam } from '@/lib/route-id'
 import { isBelowCost } from '@/lib/cost-warnings'
 import {
   calcProfitMarginPercent,
@@ -34,7 +36,7 @@ export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const productId = Number(id)
+  const { id: productId, isValid: isValidProductId } = parsePositiveIntRouteParam(id)
   const [ajusteOpen, setAjusteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -53,6 +55,24 @@ export function ProductDetailPage() {
     setSearchParams(next, { replace: true })
   }, [searchParams, setSearchParams])
 
+  if (!isValidProductId) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-24">
+        <p className="text-destructive text-sm">
+          {detailPageErrorMessage({
+            isValidId: false,
+            isError: false,
+            error: null,
+            entityLabel: 'producto',
+          })}
+        </p>
+        <Button variant="outline" asChild>
+          <Link to="/productos">Volver al catálogo</Link>
+        </Button>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="text-muted-foreground flex items-center justify-center gap-2 py-24 text-sm">
@@ -65,7 +85,14 @@ export function ProductDetailPage() {
   if (isError || !product) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">
+          {detailPageErrorMessage({
+            isValidId: true,
+            isError,
+            error,
+            entityLabel: 'producto',
+          })}
+        </p>
         <Button variant="outline" asChild>
           <Link to="/productos">Volver al catálogo</Link>
         </Button>

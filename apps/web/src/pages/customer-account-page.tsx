@@ -12,7 +12,8 @@ import { OrderEstadoBadge } from '@/features/orders/components/order-status-badg
 import { formatFecha } from '@/features/orders/constants'
 import type { OrderEstado } from '@/features/orders/types'
 import { CreditPurchaseBadge } from '@/features/purchases/components/credit-purchase-badge'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { detailPageErrorMessage } from '@/lib/detail-page-messages'
+import { parsePositiveIntRouteParam } from '@/lib/route-id'
 
 const BILLABLE_STATUSES = new Set<OrderEstado>(['CONFIRMED', 'IN_PRODUCTION', 'DELIVERED'])
 
@@ -26,7 +27,7 @@ function creditEstado(creditDueDate: string | null, balanceUsd: string) {
 
 export function CustomerAccountPage() {
   const { id } = useParams<{ id: string }>()
-  const customerId = Number(id)
+  const { id: customerId, isValid: isValidCustomerId } = parsePositiveIntRouteParam(id)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [paymentOrderId, setPaymentOrderId] = useState<number | undefined>()
   const [paymentMaxUsd, setPaymentMaxUsd] = useState<number | undefined>()
@@ -37,6 +38,24 @@ export function CustomerAccountPage() {
     () => (data ? computeCustomerAccountSummary(data.orders, data.payments) : null),
     [data]
   )
+
+  if (!isValidCustomerId) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-24">
+        <p className="text-destructive text-sm">
+          {detailPageErrorMessage({
+            isValidId: false,
+            isError: false,
+            error: null,
+            entityLabel: 'cliente',
+          })}
+        </p>
+        <Button variant="outline" asChild>
+          <Link to="/customers">Volver a clientes</Link>
+        </Button>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -50,7 +69,14 @@ export function CustomerAccountPage() {
   if (isError || !data) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">
+          {detailPageErrorMessage({
+            isValidId: true,
+            isError,
+            error,
+            entityLabel: 'estado de cuenta',
+          })}
+        </p>
         <Button variant="outline" asChild>
           <Link to="/customers">Volver a clientes</Link>
         </Button>

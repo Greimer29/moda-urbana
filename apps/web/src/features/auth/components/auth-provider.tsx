@@ -9,7 +9,7 @@ import axios from 'axios'
 import { AuthContext } from '@/features/auth/auth-context'
 import * as authService from '@/features/auth/services/auth-service'
 import { canAccess, type PermissionKey } from '@/features/permissions/catalog'
-import { refreshCsrfToken } from '@/lib/api'
+import { refreshCsrfToken, setUnauthorizedHandler } from '@/lib/api'
 import type { User } from '@/types/auth'
 
 const SESSION_KEEPALIVE_MS = 25 * 60 * 1000
@@ -115,6 +115,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void loadUser()
   }, [loadUser])
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setSessionBootstrapError(false)
+      setUser(null)
+    })
+
+    return () => {
+      setUnauthorizedHandler(null)
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) {

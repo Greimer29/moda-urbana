@@ -5,6 +5,11 @@ const PUBLIC_API_URL = 'https://moda-urbana-production.up.railway.app'
 let apiBaseUrl = import.meta.env.VITE_API_URL ?? PUBLIC_API_URL
 let cachedCsrfToken: string | null = null
 let csrfBootstrapPromise: Promise<string | null> | null = null
+let unauthorizedHandler: (() => void) | null = null
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler
+}
 
 export const api = axios.create({
   withCredentials: true,
@@ -139,6 +144,16 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401 && error.config) {
+      const requestUrl = error.config.url ?? ''
+      const isAuthBootstrap =
+        requestUrl.includes('/auth/login') || requestUrl.includes('/auth/me')
+
+      if (!isAuthBootstrap) {
+        unauthorizedHandler?.()
+      }
+    }
+
     if (!axios.isAxiosError(error) || !error.config || error.response?.status !== 403) {
       throw error
     }

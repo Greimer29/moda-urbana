@@ -47,7 +47,7 @@ export function VentasLoadDraftDialog({ open, onOpenChange, onLoaded }: VentasLo
     return () => window.clearTimeout(timer)
   }, [searchInput])
 
-  const { data, isLoading } = useOrdersQuery(
+  const { data, isLoading, isError, error } = useOrdersQuery(
     {
       page: 1,
       perPage: 20,
@@ -125,6 +125,10 @@ export function VentasLoadDraftDialog({ open, onOpenChange, onLoaded }: VentasLo
             <div className="flex justify-center py-8">
               <Loader2 className="text-muted-foreground size-5 animate-spin" />
             </div>
+          ) : isError ? (
+            <p className="text-destructive py-8 text-center text-sm whitespace-pre-line">
+              {getApiErrorMessage(error)}
+            </p>
           ) : drafts.length === 0 ? (
             <p className="text-muted-foreground py-8 text-center text-sm">
               No hay borradores disponibles.

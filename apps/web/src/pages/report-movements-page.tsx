@@ -91,7 +91,13 @@ export function ReportMovementsPage() {
         </div>
       ) : isError ? (
         <div className={reportUi.error}>{getApiErrorMessage(error)}</div>
-      ) : data ? (
+      ) : !data ? (
+        <div className={reportUi.panel}>
+          <p className={`${reportUi.body} px-5 py-12 text-center`}>
+            No se recibió información del reporte. Intentá actualizar la página o cambiar el período.
+          </p>
+        </div>
+      ) : (
         <div className="report-content-enter">
           <ReportMovementsTable
             movements={movements}
@@ -100,7 +106,7 @@ export function ReportMovementsPage() {
             categorySlug={category.slug}
           />
         </div>
-      ) : null}
+      )}
     </div>
   )
 }

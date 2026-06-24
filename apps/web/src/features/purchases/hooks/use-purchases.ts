@@ -41,7 +41,7 @@ export function usePurchaseQuery(id: number) {
   return useQuery({
     queryKey: [...purchasesQueryKey, 'detail', id],
     queryFn: () => getPurchase(id),
-    enabled: id > 0,
+    enabled: Number.isFinite(id) && id > 0,
   })
 }
 

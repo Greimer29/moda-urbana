@@ -51,6 +51,8 @@ import { useSuppliersQuery } from '@/features/suppliers/hooks/use-suppliers'
 import { supplierImageUrl } from '@/features/suppliers/constants'
 import { PublicImage } from '@/components/public-image'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { detailPageErrorMessage } from '@/lib/detail-page-messages'
+import { parsePositiveIntRouteParam } from '@/lib/route-id'
 import { parseDecimalInput } from '@/lib/numeric-input'
 import { cn } from '@/lib/utils'
 
@@ -135,7 +137,7 @@ export function PurchaseDetallePage() {
   const { id } = useParams<{ id: string }>()
   const { can } = useAuth()
   const canEditPurchase = can('purchases.edit')
-  const purchaseId = Number(id)
+  const { id: purchaseId, isValid: isValidPurchaseId } = parsePositiveIntRouteParam(id)
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -543,6 +545,24 @@ export function PurchaseDetallePage() {
     }
   }
 
+  if (!isValidPurchaseId) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-24">
+        <p className="text-destructive text-sm">
+          {detailPageErrorMessage({
+            isValidId: false,
+            isError: false,
+            error: null,
+            entityLabel: 'compra',
+          })}
+        </p>
+        <Button variant="outline" asChild>
+          <Link to="/purchases">Volver al listado</Link>
+        </Button>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="text-muted-foreground flex items-center justify-center gap-2 py-24 text-sm">
@@ -555,7 +575,14 @@ export function PurchaseDetallePage() {
   if (isError || !purchase) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">
+          {detailPageErrorMessage({
+            isValidId: true,
+            isError,
+            error,
+            entityLabel: 'compra',
+          })}
+        </p>
         <Button variant="outline" asChild>
           <Link to="/purchases">Volver al listado</Link>
         </Button>

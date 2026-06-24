@@ -145,14 +145,6 @@ export function getApiError(error: unknown): ApiErrorBody {
   }
 
   if (axios.isAxiosError(error) && (error.code === 'ERR_NETWORK' || error.message === 'Network Error')) {
-    const status = error.response?.status
-    if (status && status >= 500) {
-      return {
-        code: 'SERVER_ERROR',
-        message: 'El servidor respondió con un error al procesar la solicitud. Intentá de nuevo en unos segundos.',
-      }
-    }
-
     return {
       code: 'NETWORK_ERROR',
       message: 'No se pudo conectar con el servidor. Verificá tu conexión e intentá de nuevo.',
@@ -177,7 +169,7 @@ export function getApiError(error: unknown): ApiErrorBody {
   }
 }
 
-function isStockInsuficienteDetail(value: unknown): value is StockInsuficienteDetail {
+export function isStockInsuficienteDetail(value: unknown): value is StockInsuficienteDetail {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -185,6 +177,18 @@ function isStockInsuficienteDetail(value: unknown): value is StockInsuficienteDe
     'name' in value &&
     'faltante' in value
   )
+}
+
+export function parseStockInsuficienteDetails(details: unknown): StockInsuficienteDetail[] | null {
+  if (!Array.isArray(details) || details.length === 0) {
+    return null
+  }
+
+  if (!details.every(isStockInsuficienteDetail)) {
+    return null
+  }
+
+  return details
 }
 
 function isStockInsuficienteDevolucionDetail(
@@ -220,6 +224,26 @@ function formatRecordDetails(details: Record<string, unknown>): string[] {
   return messages
 }
 
+function formatDetailItem(item: unknown): string | null {
+  if (isVineValidationDetail(item)) {
+    return item.message
+  }
+
+  if (isStockInsuficienteDetail(item)) {
+    return `${item.name}: faltan ${item.faltante} unidades (stock ${item.stock_actual}, consumo ${item.consumo_proyectado})`
+  }
+
+  if (isStockInsuficienteDevolucionDetail(item)) {
+    return `${item.material_name}: se requieren ${item.required} y hay ${item.available} disponibles`
+  }
+
+  if (typeof item === 'string' && item.trim().length > 0) {
+    return item.trim()
+  }
+
+  return null
+}
+
 /** Convierte `error.details` de la API en mensajes legibles para el usuario. */
 export function formatApiErrorDetails(details: unknown): string[] {
   if (!details) {
@@ -249,7 +273,7 @@ export function formatApiErrorDetails(details: unknown): string[] {
       )
     }
 
-    return []
+    return details.map(formatDetailItem).filter((line): line is string => Boolean(line))
   }
 
   if (typeof details === 'object') {

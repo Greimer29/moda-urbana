@@ -11,16 +11,35 @@ import { formatFecha } from '@/features/orders/constants'
 import { DisplayMoney } from '@/features/currencies/components/display-money'
 import { OrderEstadoBadge } from '@/features/orders/components/order-status-badge'
 import type { OrderEstado } from '@/features/orders/types'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { detailPageErrorMessage } from '@/lib/detail-page-messages'
+import { parsePositiveIntRouteParam } from '@/lib/route-id'
 import { cn } from '@/lib/utils'
 
 export function CustomerDetallePage() {
   const { id } = useParams<{ id: string }>()
-  const customerId = Number(id)
+  const { id: customerId, isValid: isValidCustomerId } = parsePositiveIntRouteParam(id)
   const [editOpen, setEditOpen] = useState(false)
   const [paymentOpen, setPaymentOpen] = useState(false)
 
   const { data: customer, isLoading, isError, error } = useCustomerQuery(customerId)
+
+  if (!isValidCustomerId) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-24">
+        <p className="text-destructive text-sm">
+          {detailPageErrorMessage({
+            isValidId: false,
+            isError: false,
+            error: null,
+            entityLabel: 'cliente',
+          })}
+        </p>
+        <Button variant="outline" asChild>
+          <Link to="/customers">Volver al listado</Link>
+        </Button>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -34,7 +53,14 @@ export function CustomerDetallePage() {
   if (isError || !customer) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">
+          {detailPageErrorMessage({
+            isValidId: true,
+            isError,
+            error,
+            entityLabel: 'cliente',
+          })}
+        </p>
         <Button variant="outline" asChild>
           <Link to="/customers">Volver al listado</Link>
         </Button>

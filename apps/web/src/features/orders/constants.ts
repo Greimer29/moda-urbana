@@ -31,6 +31,7 @@ export const TRANSICIONES: Record<
 > = {
   DRAFT: [
     { destino: 'CONFIRMED', label: 'Confirmar venta' },
+    { destino: 'DELIVERED', label: 'Facturar y entregar' },
     { destino: 'CANCELLED', label: 'Cancelar', variant: 'destructive' },
   ],
   CONFIRMED: [

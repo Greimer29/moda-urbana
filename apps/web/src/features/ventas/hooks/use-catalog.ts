@@ -23,7 +23,7 @@ export function useCatalogProductQuery(id: number | undefined) {
   return useQuery({
     queryKey: ['catalog-products', id],
     queryFn: () => getCatalogProduct(id!),
-    enabled: id !== undefined,
+    enabled: id !== undefined && Number.isFinite(id) && id > 0,
   })
 }
 

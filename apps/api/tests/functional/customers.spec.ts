@@ -515,6 +515,49 @@ test.group('Customers API', (group) => {
     assert.equal(order.amountPaidUsd, '12.0000')
   })
 
+  test('POST /api/v1/customers/:id/payments rejects overpayment', async ({ client, assert }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente Sobrepago',
+      type: 'CORPORATE',
+      creditDays: 30,
+      active: true,
+    })
+
+    const order = await Order.create({
+      code: 'PED-SOBRE-001',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Pedido a crédito',
+      totalQuantity: 1,
+      orderDate: DateTime.now().minus({ days: 2 }),
+      status: 'CONFIRMED',
+      paymentType: 'CREDIT',
+      amountPaidUsd: '0.0000',
+      balanceUsd: '10.0000',
+      creditDueDate: DateTime.fromISO('2026-06-20'),
+      totalPrice: '10.0000',
+      confirmedAt: DateTime.now().minus({ days: 2 }),
+    })
+
+    const response = await client
+      .post(`/api/v1/customers/${customer.id}/payments`)
+      .loginAs(user)
+      .json({
+        order_id: order.id,
+        account_id: null,
+        amount_usd: 15,
+        date: '2026-06-20',
+      })
+
+    response.assertStatus(422)
+    assert.equal(response.body().error.code, 'PAGO_CLIENTE_EXCEDE_SALDO')
+
+    await order.refresh()
+    assert.equal(order.balanceUsd, '10.0000')
+    assert.equal(order.amountPaidUsd, '0.0000')
+  })
+
   test('GET /api/v1/customers/:id/image requires authentication', async ({ client }) => {
     const customer = await Customer.create({
       name: 'Cliente sin auth',

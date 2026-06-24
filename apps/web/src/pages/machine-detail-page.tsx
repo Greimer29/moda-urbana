@@ -14,7 +14,8 @@ import {
 import { useMachineQuery } from '@/features/machines/hooks/use-machines'
 import { AccountSelect } from '@/features/accounts/components/account-select'
 import { DisplayMoney } from '@/features/currencies/components/display-money'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { detailPageErrorMessage } from '@/lib/detail-page-messages'
+import { parsePositiveIntRouteParam } from '@/lib/route-id'
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) {
@@ -29,13 +30,31 @@ function formatDateTime(value: string | null | undefined) {
 
 export function MachineDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const machineId = Number(id)
+  const { id: machineId, isValid: isValidMachineId } = parsePositiveIntRouteParam(id)
   const [editOpen, setEditOpen] = useState(false)
   const [expenseOpen, setExpenseOpen] = useState(false)
   const [accountFilter, setAccountFilter] = useState<number | null>(null)
   const [unassignedOnly, setUnassignedOnly] = useState(false)
 
   const { data: machine, isLoading, isError, error } = useMachineQuery(machineId)
+
+  if (!isValidMachineId) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-24">
+        <p className="text-destructive text-sm">
+          {detailPageErrorMessage({
+            isValidId: false,
+            isError: false,
+            error: null,
+            entityLabel: 'máquina',
+          })}
+        </p>
+        <Button variant="outline" asChild>
+          <Link to="/machines">Volver al listado</Link>
+        </Button>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -49,7 +68,14 @@ export function MachineDetailPage() {
   if (isError || !machine) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">
+          {detailPageErrorMessage({
+            isValidId: true,
+            isError,
+            error,
+            entityLabel: 'máquina',
+          })}
+        </p>
         <Button variant="outline" asChild>
           <Link to="/machines">Volver al listado</Link>
         </Button>

@@ -29,7 +29,7 @@ export function useCustomerQuery(id: number) {
   return useQuery({
     queryKey: [...customersQueryKey, 'detail', id],
     queryFn: () => getCustomer(id),
-    enabled: id > 0,
+    enabled: Number.isFinite(id) && id > 0,
   })
 }
 

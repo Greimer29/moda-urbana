@@ -119,6 +119,12 @@ export function ReportMovementsTable({
         <div>
           <h3 className={reportUi.sectionTitle}>{title}</h3>
           <p className={reportUi.muted}>{meta}</p>
+          {periodTotals && categorySlug ? (
+            <p className={`${reportUi.muted} mt-1 max-w-xl`}>
+              Los totales del encabezado reflejan flujo de caja y saldos; la columna Monto puede
+              mostrar montos informativos en ventas o compras a crédito.
+            </p>
+          ) : null}
         </div>
         {periodTotals && categorySlug ? (
           <ReportMovementsTotals
@@ -218,7 +224,20 @@ export function ReportMovementsTable({
                               : reportUi.expense
                         )}
                       >
-                        {isInformationalCreditSale || isInformationalCreditPurchase ? (
+                        {isInformationalCreditSale ? (
+                          movement.creditReportStatus === 'settled' ||
+                          Number(movement.creditBalanceUsd ?? movement.amountUsd) === 0 ? (
+                            'Saldado'
+                          ) : (
+                            <>
+                              Saldo{' '}
+                              {formatReportDisplayAmount(
+                                movement.creditBalanceUsd ?? movement.amountUsd,
+                                formatFromUsd
+                              )}
+                            </>
+                          )
+                        ) : isInformationalCreditPurchase ? (
                           formatReportDisplayAmount(movement.amountUsd, formatFromUsd)
                         ) : (
                           <>

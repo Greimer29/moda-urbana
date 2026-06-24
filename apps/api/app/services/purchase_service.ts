@@ -1,5 +1,6 @@
 import ArchivoFacturaFaltanteException from '#exceptions/archivo_factura_faltante_exception'
 import ArchivoFacturaNoAdjuntoException from '#exceptions/archivo_factura_no_adjunto_exception'
+import PurchaseItemReferenciaInvalidaException from '#exceptions/compra_item_referencia_invalida_exception'
 import PurchaseItemNoEncontradoException from '#exceptions/compra_item_no_encontrado_exception'
 import PurchaseNoDevolvableException from '#exceptions/compra_no_devolvable_exception'
 import PurchaseNoEditableException from '#exceptions/compra_no_editable_exception'
@@ -820,7 +821,7 @@ export default class PurchaseService {
     const hasProduct = input.catalog_product_id !== undefined && input.catalog_product_id !== null
 
     if (hasMaterial === hasProduct) {
-      throw new PurchaseItemNoEncontradoException()
+      throw new PurchaseItemReferenciaInvalidaException()
     }
 
     if (hasMaterial) {

@@ -10,7 +10,8 @@ import { ESTADO_LABELS, formatFecha, type PurchaseEstado } from '@/features/purc
 import { SupplierAccountSummaryCards } from '@/features/suppliers/components/supplier-account-summary-cards'
 import { useSupplierAccountStatementQuery } from '@/features/suppliers/hooks/use-suppliers'
 import { computeSupplierAccountSummary } from '@/features/suppliers/utils/supplier-account-summary'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { detailPageErrorMessage } from '@/lib/detail-page-messages'
+import { parsePositiveIntRouteParam } from '@/lib/route-id'
 import { cn } from '@/lib/utils'
 
 function purchaseStatusBadge(status: string) {
@@ -43,7 +44,7 @@ function creditEstado(creditDueDate: string | null, balanceUsd: string) {
 
 export function SupplierAccountPage() {
   const { id } = useParams<{ id: string }>()
-  const supplierId = Number(id)
+  const { id: supplierId, isValid: isValidSupplierId } = parsePositiveIntRouteParam(id)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [paymentPurchaseId, setPaymentPurchaseId] = useState<number | undefined>()
   const [paymentMaxUsd, setPaymentMaxUsd] = useState<number | undefined>()
@@ -58,6 +59,24 @@ export function SupplierAccountPage() {
     [data]
   )
 
+  if (!isValidSupplierId) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-24">
+        <p className="text-destructive text-sm">
+          {detailPageErrorMessage({
+            isValidId: false,
+            isError: false,
+            error: null,
+            entityLabel: 'proveedor',
+          })}
+        </p>
+        <Button variant="outline" asChild>
+          <Link to="/suppliers">Volver a proveedores</Link>
+        </Button>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="text-muted-foreground flex items-center justify-center gap-2 py-24 text-sm">
@@ -70,7 +89,14 @@ export function SupplierAccountPage() {
   if (isError || !data) {
     return (
       <div className="flex flex-col items-center gap-4 py-24">
-        <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
+        <p className="text-destructive text-sm whitespace-pre-line">
+          {detailPageErrorMessage({
+            isValidId: true,
+            isError,
+            error,
+            entityLabel: 'estado de cuenta',
+          })}
+        </p>
         <Button variant="outline" asChild>
           <Link to="/suppliers">Volver a proveedores</Link>
         </Button>

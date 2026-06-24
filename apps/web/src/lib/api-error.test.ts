@@ -182,6 +182,18 @@ describe('getApiErrorMessage', () => {
   })
 })
 
+describe('formatApiErrorDetails mixed arrays', () => {
+  it('formats mixed validation detail arrays', () => {
+    const details = [
+      { message: 'Error en email', field: 'email' },
+      { foo: 'bar' },
+      'Texto adicional',
+    ]
+
+    expect(formatApiErrorDetails(details)).toEqual(['Error en email', 'Texto adicional'])
+  })
+})
+
 describe('formatValidationDetails', () => {
   it('joins detail lines with middle dot', () => {
     expect(

@@ -37,8 +37,12 @@ export function DashboardDailyProductsPage() {
           <Loader2 className="size-4 animate-spin" />
           Cargando ventas del día…
         </div>
-      ) : isError || !data ? (
+      ) : isError ? (
         <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
+      ) : !data ? (
+        <p className="text-muted-foreground py-24 text-center text-sm">
+          No se recibió información del reporte. Intentá actualizar la página.
+        </p>
       ) : (
         <Card>
           <CardHeader>

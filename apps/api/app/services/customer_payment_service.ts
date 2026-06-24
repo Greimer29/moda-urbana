@@ -1,3 +1,4 @@
+import PagoClienteExcedeSaldoException from '#exceptions/pago_cliente_excede_saldo_exception'
 import ClienteNoEncontradoException from '#exceptions/cliente_no_encontrado_exception'
 import OrderNoEncontradoException from '#exceptions/pedido_no_encontrado_exception'
 import Customer from '#models/customer'
@@ -80,12 +81,18 @@ export default class CustomerPaymentService {
         }
       }
 
+      if (remaining > 0.0001) {
+        throw new PagoClienteExcedeSaldoException()
+      }
+
+      const appliedAmount = input.amount_usd - remaining
+
       return CustomerPayment.create(
         {
           customerId: input.customer_id,
           orderId: input.order_id ?? null,
           accountId: input.account_id ?? null,
-          amountUsd: input.amount_usd.toFixed(4),
+          amountUsd: appliedAmount.toFixed(4),
           date: DateTime.fromISO(input.date),
           note: input.note?.trim() || null,
         },
