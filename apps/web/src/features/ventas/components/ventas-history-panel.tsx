@@ -66,10 +66,11 @@ export function VentasHistoryPanel() {
     page,
     perPage: PER_PAGE,
     search: debouncedSearch || undefined,
+    exclude_status: 'DRAFT',
     ...dateRange,
   })
 
-  const orders = (data?.orders ?? []).filter((o) => o.status !== 'DRAFT')
+  const orders = data?.orders ?? []
   const meta = data?.meta
 
   return (

@@ -30,6 +30,7 @@ export default class OrdersController {
       perPage: filters.per_page,
       customer_id: filters.customer_id,
       status: filters.status,
+      exclude_status: filters.exclude_status,
       modality: filters.modality,
       date_from: filters.date_from,
       date_to: filters.date_to,

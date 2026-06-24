@@ -108,6 +108,7 @@ export type ListOrdersFilters = {
   perPage?: number
   customer_id?: number
   status?: string
+  exclude_status?: string
   modality?: string
   date_from?: string
   date_to?: string
@@ -172,6 +173,10 @@ export default class OrderService {
 
     if (filters.status) {
       query.where('status', filters.status)
+    }
+
+    if (filters.exclude_status) {
+      query.whereNot('status', filters.exclude_status)
     }
 
     if (filters.modality) {

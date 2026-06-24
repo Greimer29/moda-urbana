@@ -315,6 +315,46 @@ test.group('Orders API', (group) => {
     assert.equal(body.data.orders[0].customer.name, 'Customer Orders')
   })
 
+  test('GET /api/v1/orders exclude_status omits drafts from total and page', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await seedCustomer()
+
+    await Order.create({
+      code: 'PED-202605-0299',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Borrador historial',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO('2026-05-10'),
+      status: 'DRAFT',
+    })
+
+    await Order.create({
+      code: 'PED-202605-0298',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Confirmado historial',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO('2026-05-10'),
+      status: 'CONFIRMED',
+      confirmedAt: DateTime.fromISO('2026-05-10'),
+    })
+
+    const response = await client
+      .get(`/api/v1/orders?customer_id=${customer.id}&exclude_status=DRAFT`)
+      .loginAs(user)
+
+    response.assertStatus(200)
+
+    const body = response.body()
+    assert.equal(body.data.meta.total, 1)
+    assert.lengthOf(body.data.orders, 1)
+    assert.equal(body.data.orders[0].description, 'Confirmado historial')
+  })
+
   test('POST transition cancel from IN_PRODUCTION reverts catalog product stock', async ({
     client,
     assert,

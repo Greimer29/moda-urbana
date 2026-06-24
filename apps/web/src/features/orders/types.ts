@@ -124,6 +124,7 @@ export type OrderListParams = {
   perPage?: number
   customer_id?: number
   status?: OrderEstado
+  exclude_status?: OrderEstado
   modalidad?: OrderModalidad
   date_desde?: string
   date_hasta?: string
