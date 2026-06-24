@@ -6,6 +6,18 @@ import type {
   VineValidationDetail,
 } from '@/types/auth'
 
+function usesLocalApiProxy(): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  if (import.meta.env.DEV) {
+    return true
+  }
+
+  return window.location.port === '51740'
+}
+
 function isVineValidationDetail(value: unknown): value is VineValidationDetail {
   return (
     typeof value === 'object' &&
@@ -145,6 +157,14 @@ export function getApiError(error: unknown): ApiErrorBody {
   }
 
   if (axios.isAxiosError(error) && (error.code === 'ERR_NETWORK' || error.message === 'Network Error')) {
+    if (usesLocalApiProxy()) {
+      return {
+        code: 'NETWORK_ERROR',
+        message:
+          'No se pudo conectar con el servidor. Si usás la web, iniciá `pnpm dev` en apps/web y abrí http://localhost:5174. Si usás la app de escritorio, verificá tu conexión a internet.',
+      }
+    }
+
     return {
       code: 'NETWORK_ERROR',
       message: 'No se pudo conectar con el servidor. Verificá tu conexión e intentá de nuevo.',

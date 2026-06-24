@@ -75,10 +75,6 @@ export async function ensureCsrfToken(): Promise<void> {
     return
   }
 
-  if (!isCrossOriginApi()) {
-    return
-  }
-
   if (cachedCsrfToken) {
     return
   }
