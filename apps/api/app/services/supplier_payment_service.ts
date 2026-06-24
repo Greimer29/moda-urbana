@@ -1,3 +1,4 @@
+import PagoProveedorExcedeSaldoException from '#exceptions/pago_proveedor_excede_saldo_exception'
 import SupplierNoEncontradoException from '#exceptions/proveedor_no_encontrado_exception'
 import PurchaseNoEncontradaException from '#exceptions/compra_no_encontrada_exception'
 import Supplier from '#models/supplier'
@@ -80,12 +81,18 @@ export default class SupplierPaymentService {
         }
       }
 
+      if (remaining > 0.0001) {
+        throw new PagoProveedorExcedeSaldoException()
+      }
+
+      const appliedAmount = input.amount_usd - remaining
+
       return SupplierPayment.create(
         {
           supplierId: input.supplier_id,
           purchaseId: input.purchase_id ?? null,
           accountId: input.account_id ?? null,
-          amountUsd: input.amount_usd.toFixed(4),
+          amountUsd: appliedAmount.toFixed(4),
           date: DateTime.fromISO(input.date),
           note: input.note?.trim() || null,
         },

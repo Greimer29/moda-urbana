@@ -1,20 +1,12 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
 import { AuthProvider } from '@/features/auth/components/auth-provider'
 import { loadRuntimeApiConfig, ensureCsrfToken } from '@/lib/api'
+import { queryClient } from '@/lib/query-client'
 import { router } from '@/routes/router'
 import '@/index.css'
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      retry: import.meta.env.PROD ? 0 : 1,
-    },
-  },
-})
 
 async function bootstrap() {
   await loadRuntimeApiConfig()

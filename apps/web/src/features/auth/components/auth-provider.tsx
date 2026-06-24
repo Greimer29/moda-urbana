@@ -10,6 +10,7 @@ import { AuthContext } from '@/features/auth/auth-context'
 import * as authService from '@/features/auth/services/auth-service'
 import { canAccess, type PermissionKey } from '@/features/permissions/catalog'
 import { refreshCsrfToken, setUnauthorizedHandler } from '@/lib/api'
+import { queryClient } from '@/lib/query-client'
 import type { User } from '@/types/auth'
 
 const SESSION_KEEPALIVE_MS = 25 * 60 * 1000
@@ -119,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       setSessionBootstrapError(false)
+      queryClient.clear()
       setUser(null)
     })
 
@@ -162,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authService.logout()
     } finally {
       setSessionBootstrapError(false)
+      queryClient.clear()
       setUser(null)
     }
   }, [])

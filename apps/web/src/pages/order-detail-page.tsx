@@ -304,7 +304,14 @@ export function OrderDetallePage() {
 
   const activeOrder = order
 
-  const transiciones = TRANSICIONES[activeOrder.status]
+  const transiciones = TRANSICIONES[activeOrder.status].filter(
+    (transition) =>
+      !(
+        isBorrador &&
+        transition.destino === 'DELIVERED' &&
+        catalogLines.length === 0
+      )
+  )
   const catalogNetTotalUsd =
     catalogLines.length > 0
       ? catalogLinesNetTotalUsd(catalogLines)
@@ -463,7 +470,7 @@ export function OrderDetallePage() {
       {isBorrador ? (
         <div className="flex flex-wrap items-end justify-between gap-4 rounded-md border bg-neutral-50 p-4">
           <div className="space-y-2">
-            <Label className="text-xs">Forma de pago al confirmar</Label>
+            <Label className="text-xs">Forma de pago al facturar</Label>
             <div className="bg-muted inline-flex rounded-lg p-1">
               <button
                 type="button"
@@ -495,8 +502,8 @@ export function OrderDetallePage() {
             ) : null}
           </div>
           <p className="text-muted-foreground max-w-md text-xs">
-            La forma de pago se envía al confirmar la venta. Si venís desde Ventas, se conserva la
-            selección que hayas hecho allí.
+            La forma de pago se aplica al confirmar o entregar la venta. Si venís desde Ventas, se
+            conserva la selección que hayas hecho allí.
           </p>
         </div>
       ) : null}

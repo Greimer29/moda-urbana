@@ -81,8 +81,16 @@ export function VentasHistoryPanel() {
     { enabled: !customRangePending }
   )
 
-  const orders = data?.orders ?? []
-  const meta = data?.meta
+  const orders = customRangePending ? [] : (data?.orders ?? [])
+  const meta = customRangePending ? undefined : data?.meta
+
+  const historyDescription = customRangePending
+    ? 'Seleccioná la fecha desde para aplicar el rango personalizado.'
+    : meta
+      ? `${meta.total} venta${meta.total === 1 ? '' : 's'}`
+      : isLoading
+        ? 'Cargando…'
+        : 'Sin resultados'
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
@@ -94,9 +102,7 @@ export function VentasHistoryPanel() {
         <CardHeader className="shrink-0 gap-4">
           <div>
             <CardTitle className="text-base">Historial de ventas</CardTitle>
-            <CardDescription>
-              {meta ? `${meta.total} venta${meta.total === 1 ? '' : 's'}` : 'Cargando…'}
-            </CardDescription>
+            <CardDescription>{historyDescription}</CardDescription>
           </div>
 
           <div className="flex flex-wrap items-end gap-3">

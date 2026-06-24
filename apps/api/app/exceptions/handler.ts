@@ -59,6 +59,7 @@ import VentaNoEncontradaException from '#exceptions/venta_no_encontrada_exceptio
 import PedidoLineaNoEncontradaException from '#exceptions/pedido_linea_no_encontrada_exception'
 import LineaVentaInvalidaException from '#exceptions/linea_venta_invalida_exception'
 import PagoClienteExcedeSaldoException from '#exceptions/pago_cliente_excede_saldo_exception'
+import PagoProveedorExcedeSaldoException from '#exceptions/pago_proveedor_excede_saldo_exception'
 
 export default class HttpExceptionHandler extends ExceptionHandler {
   protected debug = !app.inProduction
@@ -604,6 +605,15 @@ export default class HttpExceptionHandler extends ExceptionHandler {
         error: {
           code: PagoClienteExcedeSaldoException.code,
           message: error.message || PagoClienteExcedeSaldoException.message,
+        },
+      })
+    }
+
+    if (error instanceof PagoProveedorExcedeSaldoException) {
+      return ctx.response.status(422).json({
+        error: {
+          code: PagoProveedorExcedeSaldoException.code,
+          message: error.message || PagoProveedorExcedeSaldoException.message,
         },
       })
     }

@@ -146,16 +146,31 @@ export default class DashboardService {
     return sumMachineExpenseRowsUsd(rows, rates, this.currencyService)
   }
 
-  private async sumLegacyOrdersSalesUsd(desde: string, hasta: string): Promise<number> {
-    const rates = await this.currencyService.getActiveRates()
-    const rows = await db
+  private legacyOrdersQuery(desde: string, hasta: string, paymentType?: 'CREDIT') {
+    const query = db
       .from('orders')
       .leftJoin('order_lines', 'order_lines.order_id', 'orders.id')
       .whereIn('orders.status', [...SALE_STATUSES])
       .where('orders.order_date', '>=', desde)
       .where('orders.order_date', '<=', hasta)
       .whereNull('order_lines.id')
-      .select('orders.total_price as totalPrice')
+
+    if (paymentType) {
+      query.where('orders.payment_type', paymentType)
+    }
+
+    return query
+  }
+
+  private async sumLegacyOrdersSalesUsd(
+    desde: string,
+    hasta: string,
+    paymentType?: 'CREDIT'
+  ): Promise<number> {
+    const rates = await this.currencyService.getActiveRates()
+    const rows = await this.legacyOrdersQuery(desde, hasta, paymentType).select(
+      'orders.total_price as totalPrice'
+    )
 
     let totalUsd = 0
     for (const row of rows) {
@@ -168,14 +183,12 @@ export default class DashboardService {
     return totalUsd
   }
 
-  private async countLegacyOrders(desde: string, hasta: string): Promise<number> {
-    const row = await db
-      .from('orders')
-      .leftJoin('order_lines', 'order_lines.order_id', 'orders.id')
-      .whereIn('orders.status', [...SALE_STATUSES])
-      .where('orders.order_date', '>=', desde)
-      .where('orders.order_date', '<=', hasta)
-      .whereNull('order_lines.id')
+  private async sumLegacyOrdersCreditUsd(desde: string, hasta: string): Promise<number> {
+    return this.sumLegacyOrdersSalesUsd(desde, hasta, 'CREDIT')
+  }
+
+  private async countLegacyCreditOrders(desde: string, hasta: string): Promise<number> {
+    const row = await this.legacyOrdersQuery(desde, hasta, 'CREDIT')
       .count('orders.id as total')
       .first()
 
@@ -424,13 +437,14 @@ export default class DashboardService {
 
     const gastos = await this.gastosDelDia()
     const legacySalesUsd = await this.sumLegacyOrdersSalesUsd(hoy, hoy)
-    const legacyOrderCount = await this.countLegacyOrders(hoy, hoy)
+    const legacyCreditUsd = await this.sumLegacyOrdersCreditUsd(hoy, hoy)
+    const legacyCreditCount = await this.countLegacyCreditOrders(hoy, hoy)
 
     return {
-      productosVendidos: Number(ventas?.qty ?? 0) + legacyOrderCount,
+      productosVendidos: Number(ventas?.qty ?? 0),
       montoProductosUsd: (Number(ventas?.total_usd ?? 0) + legacySalesUsd).toFixed(4),
-      montoCreditoUsd: Number(ventas?.credit_usd ?? 0).toFixed(4),
-      pedidosCredito: Number(ventas?.pedidos_credito ?? 0),
+      montoCreditoUsd: (Number(ventas?.credit_usd ?? 0) + legacyCreditUsd).toFixed(4),
+      pedidosCredito: Number(ventas?.pedidos_credito ?? 0) + legacyCreditCount,
       gastosCantidad: gastos.cantidad,
       gastosMontoUsd: gastos.montoUsd.toFixed(4),
     }
@@ -600,7 +614,7 @@ export default class DashboardService {
       .first()
 
     const profit = Number(row?.profit ?? 0)
-    const sales = Number(row?.sales ?? 0) + (await this.sumLegacyOrdersSalesUsd(hoy, hoy))
+    const sales = Number(row?.sales ?? 0)
     const creditProfit = Number(row?.credit_profit ?? 0)
     const creditSales = Number(row?.credit_sales ?? 0)
     const gastos = await this.gastosDelDia()

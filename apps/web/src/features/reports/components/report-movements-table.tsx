@@ -158,11 +158,9 @@ export function ReportMovementsTable({
                 const theme = movementTheme[movement.type] ?? movementTheme.sale
                 const typeLabel = MOVEMENT_TYPE_LABELS[movement.type] ?? movement.type
 
-                const isInformationalCreditSale = movement.type === 'sale' && movement.isCreditSale
-                const isInformationalCreditPurchase =
-                  movement.type === 'purchase' &&
-                  (movement.isCreditPurchaseCarryover ||
-                    (movement.isCreditPurchase && Number(movement.amountUsd) === 0))
+                const isCreditBalanceMovement =
+                  (movement.type === 'sale' && movement.isCreditSale) ||
+                  (movement.type === 'purchase' && movement.isCreditPurchase)
 
                 return (
                   <tr
@@ -217,14 +215,14 @@ export function ReportMovementsTable({
                       <span
                         className={cn(
                           'tabular-nums',
-                          isInformationalCreditSale || isInformationalCreditPurchase
+                          isCreditBalanceMovement
                             ? reportUi.muted
                             : movement.isIncome
                               ? reportUi.income
                               : reportUi.expense
                         )}
                       >
-                        {isInformationalCreditSale ? (
+                        {isCreditBalanceMovement ? (
                           movement.creditReportStatus === 'settled' ||
                           Number(movement.creditBalanceUsd ?? movement.amountUsd) === 0 ? (
                             'Saldado'
@@ -237,8 +235,6 @@ export function ReportMovementsTable({
                               )}
                             </>
                           )
-                        ) : isInformationalCreditPurchase ? (
-                          formatReportDisplayAmount(movement.amountUsd, formatFromUsd)
                         ) : (
                           <>
                             {movement.isIncome ? '+' : '−'}{' '}

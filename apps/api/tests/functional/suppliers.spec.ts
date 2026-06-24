@@ -294,4 +294,46 @@ test.group('Suppliers API', (group) => {
     )
     assert.equal(body.data.saldoPendienteUsd, '50.0000')
   })
+
+  test('POST /api/v1/suppliers/:id/payments rejects overpayment on specific purchase', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+
+    const supplier = await Supplier.create({
+      name: 'Proveedor Sobrepago',
+      active: true,
+    })
+
+    const purchase = await Purchase.create({
+      supplierId: supplier.id,
+      date: DateTime.now().minus({ days: 2 }),
+      invoiceNumber: 'F-SOBRE',
+      totalUsd: '10.0000',
+      totalBs: '360.00',
+      status: 'CONFIRMED',
+      isCredit: true,
+      creditDueDate: DateTime.fromISO('2026-06-20'),
+      balanceUsd: '10.0000',
+      amountPaidUsd: '0.0000',
+    })
+
+    const response = await client
+      .post(`/api/v1/suppliers/${supplier.id}/payments`)
+      .loginAs(user)
+      .json({
+        purchase_id: purchase.id,
+        account_id: null,
+        amount_usd: 15,
+        date: '2026-06-20',
+      })
+
+    response.assertStatus(422)
+    assert.equal(response.body().error.code, 'PAGO_PROVEEDOR_EXCEDE_SALDO')
+
+    await purchase.refresh()
+    assert.equal(purchase.balanceUsd, '10.0000')
+    assert.equal(purchase.amountPaidUsd, '0.0000')
+  })
 })
