@@ -72,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchCurrentUser = useCallback(async () => {
     const currentUser = await authService.getCurrentUser()
+    await refreshCsrfToken()
     setUser(currentUser)
     setSessionBootstrapError(false)
     return currentUser
