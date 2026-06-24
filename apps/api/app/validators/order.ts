@@ -27,12 +27,19 @@ const orderFields = {
   payment_type: vine.enum(['CASH', 'CREDIT'] as const).optional(),
 }
 
+const orderLineFields = vine.object({
+  catalog_product_id: vine.number().min(1),
+  quantity: vine.number().min(0.001),
+})
+
 export const createOrderValidator = vine.create({
   ...orderFields,
+  lines: vine.array(orderLineFields).minLength(1).optional(),
 })
 
 export const updateOrderValidator = vine.create({
   ...orderFields,
+  lines: vine.array(orderLineFields).minLength(1).optional(),
 })
 
 export const listOrdersValidator = vine.create({

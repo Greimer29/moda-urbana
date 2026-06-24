@@ -63,6 +63,7 @@ export type OrderInput = {
   total_price?: number
   notes?: string
   payment_type?: 'CASH' | 'CREDIT'
+  lines?: OrderLineInput[]
 }
 
 export type OrderLineInput = {
@@ -279,26 +280,7 @@ export default class OrderService {
       const order = await this.obtenerConLock(orderId, trx)
       this.assertBorrador(order)
 
-      const product = await CatalogProduct.find(input.catalog_product_id)
-      if (!product) {
-        throw new ProductoCatalogoNoEncontradoException()
-      }
-
-      const unitPrice = product.salePriceUsd
-      const subtotal = (input.quantity * Number(unitPrice)).toFixed(4)
-
-      const line = await OrderLine.create(
-        {
-          orderId: Number(order.id),
-          catalogProductId: input.catalog_product_id,
-          quantity: input.quantity.toFixed(3),
-          returnedQuantity: '0.000',
-          unitPriceUsd: unitPrice,
-          subtotalUsd: subtotal,
-        },
-        { client: trx }
-      )
-
+      const line = await this.crearLineaEnTrx(order, input, trx)
       await line.load('catalogProduct')
       return line
     })
@@ -384,11 +366,48 @@ export default class OrderService {
         { client: trx }
       )
 
+      if (input.lines) {
+        await this.reemplazarLineasEnTrx(order, input.lines, trx)
+      }
+
       return order
     })
   }
 
   async actualizar(id: number, input: OrderInput): Promise<Order> {
+    if (input.lines) {
+      return db.transaction(async (trx) => {
+        const order = await this.obtenerConLock(id, trx)
+        this.assertBorrador(order)
+        this.assertClienteOInvitado(input)
+        if (input.customer_id) {
+          await this.assertCustomerExiste(input.customer_id)
+        }
+
+        const data = this.prepareInput(input)
+        await this.assertCreditoEnBorrador(data.customerId, input.payment_type)
+
+        order.merge({
+          customerId: data.customerId,
+          guestName: data.guestName,
+          modality: data.modality,
+          description: data.description,
+          totalQuantity: data.totalQuantity,
+          orderDate: data.orderDate,
+          estimatedDeliveryDate: data.estimatedDeliveryDate,
+          totalPrice: data.totalPrice,
+          notes: data.notes,
+          ...(input.payment_type !== undefined ? { paymentType: input.payment_type } : {}),
+        })
+
+        order.useTransaction(trx)
+        await order.save()
+        await this.reemplazarLineasEnTrx(order, input.lines!, trx)
+
+        return order
+      })
+    }
+
     const order = await this.obtener(id)
     this.assertBorrador(order)
     this.assertClienteOInvitado(input)
@@ -1116,6 +1135,47 @@ export default class OrderService {
         : null,
       totalPrice: input.total_price !== undefined ? input.total_price.toFixed(2) : null,
       notes: input.notes?.trim() || null,
+    }
+  }
+
+  private async crearLineaEnTrx(
+    order: Order,
+    input: OrderLineInput,
+    trx: TransactionClientContract
+  ): Promise<OrderLine> {
+    const product = await CatalogProduct.query({ client: trx })
+      .where('id', input.catalog_product_id)
+      .first()
+
+    if (!product) {
+      throw new ProductoCatalogoNoEncontradoException()
+    }
+
+    const unitPrice = product.salePriceUsd
+    const subtotal = (input.quantity * Number(unitPrice)).toFixed(4)
+
+    return OrderLine.create(
+      {
+        orderId: Number(order.id),
+        catalogProductId: input.catalog_product_id,
+        quantity: input.quantity.toFixed(3),
+        returnedQuantity: '0.000',
+        unitPriceUsd: unitPrice,
+        subtotalUsd: subtotal,
+      },
+      { client: trx }
+    )
+  }
+
+  private async reemplazarLineasEnTrx(
+    order: Order,
+    inputs: OrderLineInput[],
+    trx: TransactionClientContract
+  ) {
+    await OrderLine.query({ client: trx }).where('orderId', Number(order.id)).delete()
+
+    for (const input of inputs) {
+      await this.crearLineaEnTrx(order, input, trx)
     }
   }
 

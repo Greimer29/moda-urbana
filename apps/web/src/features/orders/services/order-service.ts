@@ -83,6 +83,7 @@ function mapOrderPayload(payload: OrderInput) {
     total_price: payload.total_price,
     notes: payload.notes,
     payment_type: payload.payment_type,
+    lines: payload.lines,
   }
 }
 
