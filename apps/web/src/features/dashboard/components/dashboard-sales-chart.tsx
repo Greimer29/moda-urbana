@@ -99,8 +99,8 @@ export function DashboardSalesChart({
         </div>
 
         <div className={dashboardUi.chartXRow}>
-          {series.map((point) => (
-            <span key={point.label} className={dashboardUi.chartXLabel}>
+          {series.map((point, index) => (
+            <span key={index} className={dashboardUi.chartXLabel}>
               {point.label}
             </span>
           ))}
