@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/hooks/use-auth'
 import { canAccess, canAccessNav, type PermissionKey } from '@/features/permissions/catalog'
 import { ForbiddenPage } from '@/pages/forbidden-page'
@@ -11,12 +12,29 @@ function AuthLoadingScreen() {
   )
 }
 
+function SessionBootstrapErrorScreen({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex min-h-svh flex-col items-center justify-center gap-4 px-4 text-center">
+      <p className="text-muted-foreground max-w-sm text-sm">
+        No se pudo verificar tu sesión. Revisá la conexión e intentá de nuevo.
+      </p>
+      <Button type="button" onClick={onRetry}>
+        Reintentar
+      </Button>
+    </div>
+  )
+}
+
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, sessionBootstrapError, retryBootstrap } = useAuth()
   const location = useLocation()
 
   if (isLoading) {
     return <AuthLoadingScreen />
+  }
+
+  if (sessionBootstrapError) {
+    return <SessionBootstrapErrorScreen onRetry={() => void retryBootstrap()} />
   }
 
   if (!isAuthenticated) {
@@ -27,10 +45,14 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export function GuestRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, sessionBootstrapError, retryBootstrap } = useAuth()
 
   if (isLoading) {
     return <AuthLoadingScreen />
+  }
+
+  if (sessionBootstrapError) {
+    return <SessionBootstrapErrorScreen onRetry={() => void retryBootstrap()} />
   }
 
   if (isAuthenticated) {
@@ -49,11 +71,15 @@ export function PermissionRoute({
   permission?: PermissionKey
   navPath?: string
 }) {
-  const { user, isLoading, isAuthenticated } = useAuth()
+  const { user, isLoading, isAuthenticated, sessionBootstrapError, retryBootstrap } = useAuth()
   const location = useLocation()
 
   if (isLoading) {
     return <AuthLoadingScreen />
+  }
+
+  if (sessionBootstrapError) {
+    return <SessionBootstrapErrorScreen onRetry={() => void retryBootstrap()} />
   }
 
   if (!isAuthenticated) {
