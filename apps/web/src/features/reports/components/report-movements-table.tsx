@@ -153,6 +153,10 @@ export function ReportMovementsTable({
                 const typeLabel = MOVEMENT_TYPE_LABELS[movement.type] ?? movement.type
 
                 const isInformationalCreditSale = movement.type === 'sale' && movement.isCreditSale
+                const isInformationalCreditPurchase =
+                  movement.type === 'purchase' &&
+                  (movement.isCreditPurchaseCarryover ||
+                    (movement.isCreditPurchase && Number(movement.amountUsd) === 0))
 
                 return (
                   <tr
@@ -207,15 +211,18 @@ export function ReportMovementsTable({
                       <span
                         className={cn(
                           'tabular-nums',
-                          isInformationalCreditSale
+                          isInformationalCreditSale || isInformationalCreditPurchase
                             ? reportUi.muted
                             : movement.isIncome
                               ? reportUi.income
                               : reportUi.expense
                         )}
                       >
-                        {isInformationalCreditSale ? (
-                          formatReportDisplayAmount(movement.amountUsd, formatFromUsd)
+                        {isInformationalCreditSale || isInformationalCreditPurchase ? (
+                          formatReportDisplayAmount(
+                            movement.creditBalanceUsd ?? movement.amountUsd,
+                            formatFromUsd
+                          )
                         ) : (
                           <>
                             {movement.isIncome ? '+' : '−'}{' '}

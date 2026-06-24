@@ -66,6 +66,10 @@ function computePurchaseTotals(movements: AccountStatementMovement[]): CreditSpl
     }
 
     if (movement.isCreditPurchase) {
+      if (movement.isCreditPurchaseCarryover) {
+        continue
+      }
+
       pendingCreditUsd += pendingCreditAmount(movement)
       continue
     }

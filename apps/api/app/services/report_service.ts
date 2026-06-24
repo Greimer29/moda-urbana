@@ -2,6 +2,7 @@ import MonedaNoEncontradaException from '#exceptions/moneda_no_encontrada_except
 import CurrencyService from '#services/currency_service'
 import {
   creditPurchaseReportAmountUsd,
+  creditPurchaseCountsTowardPeriodTotal,
   creditPurchaseReportEffectiveDate,
   creditPurchaseReportStatus,
   creditPurchaseVisibleInReport,
@@ -69,6 +70,8 @@ export type AccountStatementMovement = {
   status?: string
 
   isCreditPurchase?: boolean
+
+  isCreditPurchaseCarryover?: boolean
 
   creditDueDate?: string | null
 
@@ -391,12 +394,20 @@ export default class ReportService {
 
         const creditStatus = creditPurchaseReportStatus(reportContext)
 
-        const usd = purchase.isCredit
+        const balanceUsdAmount = purchase.isCredit
           ? creditPurchaseReportAmountUsd(reportContext)
           : Number(purchase.totalUsd ?? purchase.totalUsdSnapshot ?? 0) ||
             this.currencyService.toUsd(Number(purchase.totalBs ?? 0), 'VES', rates)
 
-        const nativeUsd = usd
+        const countsTowardTotal = purchase.isCredit
+          ? creditPurchaseCountsTowardPeriodTotal(reportContext, period)
+          : true
+
+        const usd = countsTowardTotal ? balanceUsdAmount : 0
+        const isCreditPurchaseCarryover =
+          Boolean(purchase.isCredit) && balanceUsdAmount > 0 && !countsTowardTotal
+
+        const nativeUsd = balanceUsdAmount
 
         purchasesUsd += usd
 
@@ -431,6 +442,8 @@ export default class ReportService {
             isIncome: false,
 
             isCreditPurchase: Boolean(purchase.isCredit),
+
+            isCreditPurchaseCarryover,
 
             creditDueDate,
 
@@ -735,6 +748,8 @@ export default class ReportService {
 
     isCreditPurchase?: boolean
 
+    isCreditPurchaseCarryover?: boolean
+
     isCreditSale?: boolean
 
     creditBalanceUsd?: number
@@ -795,6 +810,8 @@ export default class ReportService {
                   creditDueDate: options.creditDueDate ?? null,
 
                   purchaseDate: options.purchaseDate,
+
+                  ...(options.isCreditPurchaseCarryover ? { isCreditPurchaseCarryover: true } : {}),
 
                   creditBalanceUsd:
                     options.creditBalanceUsd !== undefined
