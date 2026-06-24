@@ -99,7 +99,13 @@ export async function ensureCsrfToken(): Promise<void> {
 export async function refreshCsrfToken(): Promise<void> {
   cachedCsrfToken = null
   csrfBootstrapPromise = null
-  await ensureCsrfToken()
+
+  try {
+    const token = await fetchCsrfTokenFromApi()
+    cachedCsrfToken = token
+  } catch {
+    cachedCsrfToken = null
+  }
 }
 
 function applyCsrfHeader(config: import('axios').InternalAxiosRequestConfig) {
