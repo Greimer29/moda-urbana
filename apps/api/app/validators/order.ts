@@ -24,6 +24,7 @@ const orderFields = {
   estimated_delivery_date: isoDate.optional(),
   total_price: vine.number().min(0).optional(),
   notes: vine.string().trim().optional(),
+  payment_type: vine.enum(['CASH', 'CREDIT'] as const).optional(),
 }
 
 export const createOrderValidator = vine.create({

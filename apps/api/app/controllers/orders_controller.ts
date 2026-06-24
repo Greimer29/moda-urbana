@@ -63,8 +63,13 @@ export default class OrdersController {
   /**
    * POST /api/v1/orders
    */
-  async store({ request, serialize }: HttpContext) {
+  async store({ request, serialize, auth }: HttpContext) {
     const payload = await request.validateUsing(createOrderValidator)
+
+    if (payload.payment_type === 'CREDIT') {
+      assertPermission(auth.getUserOrFail(), 'ventas.credit')
+    }
+
     const order = await this.service.crear(payload)
 
     return serialize({
@@ -75,8 +80,13 @@ export default class OrdersController {
   /**
    * PUT /api/v1/orders/:id
    */
-  async update({ params, request, serialize }: HttpContext) {
+  async update({ params, request, serialize, auth }: HttpContext) {
     const payload = await request.validateUsing(updateOrderValidator)
+
+    if (payload.payment_type === 'CREDIT') {
+      assertPermission(auth.getUserOrFail(), 'ventas.credit')
+    }
+
     const order = await this.service.actualizar(Number(params.id), payload)
 
     return serialize({

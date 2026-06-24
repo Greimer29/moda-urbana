@@ -82,6 +82,7 @@ function mapOrderPayload(payload: OrderInput) {
     estimated_delivery_date: payload.date_entrega_estimada,
     total_price: payload.total_price,
     notes: payload.notes,
+    payment_type: payload.payment_type,
   }
 }
 
