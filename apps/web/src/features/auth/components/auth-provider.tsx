@@ -33,6 +33,7 @@ function isApiUnreachableError(error: unknown): boolean {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [sessionBootstrapError, setSessionBootstrapError] = useState(false)
 
   const permissions = user?.permissions ?? []
 
@@ -46,36 +47,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [can]
   )
 
-  const handleSessionError = useCallback((error: unknown) => {
+  const logSessionError = useCallback((error: unknown) => {
     if (!isUnauthorizedError(error) && !isApiUnreachableError(error) && import.meta.env.DEV) {
       console.error('No se pudo cargar la sesión', error)
     }
+  }, [])
 
-    if (isUnauthorizedError(error)) {
-      setUser(null)
-    }
+  const applySessionFailure = useCallback(
+    (error: unknown, options?: { bootstrap?: boolean }) => {
+      logSessionError(error)
+
+      if (isUnauthorizedError(error)) {
+        setUser(null)
+        setSessionBootstrapError(false)
+        return
+      }
+
+      if (options?.bootstrap) {
+        setSessionBootstrapError(true)
+      }
+    },
+    [logSessionError]
+  )
+
+  const fetchCurrentUser = useCallback(async () => {
+    const currentUser = await authService.getCurrentUser()
+    setUser(currentUser)
+    setSessionBootstrapError(false)
+    return currentUser
   }, [])
 
   const loadUser = useCallback(async () => {
+    setIsLoading(true)
+    setSessionBootstrapError(false)
+
     try {
-      const currentUser = await authService.getCurrentUser()
-      setUser(currentUser)
+      await fetchCurrentUser()
     } catch (error) {
-      handleSessionError(error)
-      setUser(null)
+      applySessionFailure(error, { bootstrap: true })
     } finally {
       setIsLoading(false)
     }
-  }, [handleSessionError])
+  }, [applySessionFailure, fetchCurrentUser])
+
+  const retryBootstrap = useCallback(async () => {
+    setIsLoading(true)
+    setSessionBootstrapError(false)
+
+    try {
+      await fetchCurrentUser()
+    } catch (error) {
+      applySessionFailure(error, { bootstrap: true })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [applySessionFailure, fetchCurrentUser])
 
   const revalidateSession = useCallback(async () => {
     try {
-      const currentUser = await authService.getCurrentUser()
-      setUser(currentUser)
+      await fetchCurrentUser()
     } catch (error) {
-      handleSessionError(error)
+      applySessionFailure(error)
     }
-  }, [handleSessionError])
+  }, [applySessionFailure, fetchCurrentUser])
 
   useEffect(() => {
     void loadUser()
@@ -107,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const authenticatedUser = await authService.login({ email, password })
     await refreshCsrfToken()
+    setSessionBootstrapError(false)
     setUser(authenticatedUser)
   }, [])
 
@@ -114,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authService.logout()
     } finally {
+      setSessionBootstrapError(false)
       setUser(null)
     }
   }, [])
@@ -124,12 +160,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       permissions,
       isLoading,
       isAuthenticated: user !== null,
+      sessionBootstrapError,
+      retryBootstrap,
       can,
       canAny,
       login,
       logout,
     }),
-    [user, permissions, isLoading, can, canAny, login, logout]
+    [
+      user,
+      permissions,
+      isLoading,
+      sessionBootstrapError,
+      retryBootstrap,
+      can,
+      canAny,
+      login,
+      logout,
+    ]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
