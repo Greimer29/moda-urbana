@@ -646,6 +646,11 @@ test.group('Ventas API — catálogo y ventas', (group) => {
     })
   })
 
+  test('GET catalog product image requires authentication', async ({ client }) => {
+    const response = await client.get('/api/v1/catalog-products/1/image')
+    response.assertStatus(401)
+  })
+
   test('GET catalog product image clears stale image_path when file is missing', async ({
     client,
     assert,
@@ -662,7 +667,9 @@ test.group('Ventas API — catálogo y ventas', (group) => {
       imagePath: 'catalog-products/999999/missing.webp',
     })
 
-    const imageResponse = await client.get(`/api/v1/catalog-products/${catalog.id}/image`)
+    const imageResponse = await client
+      .get(`/api/v1/catalog-products/${catalog.id}/image`)
+      .loginAs(user)
 
     imageResponse.assertStatus(404)
     imageResponse.assertBodyContains({

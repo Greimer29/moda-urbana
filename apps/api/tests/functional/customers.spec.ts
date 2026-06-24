@@ -514,4 +514,16 @@ test.group('Customers API', (group) => {
     assert.equal(order.balanceUsd, '0.0000')
     assert.equal(order.amountPaidUsd, '12.0000')
   })
+
+  test('GET /api/v1/customers/:id/image requires authentication', async ({ client }) => {
+    const customer = await Customer.create({
+      name: 'Cliente sin auth',
+      type: 'CORPORATE',
+      active: true,
+    })
+
+    const response = await client.get(`/api/v1/customers/${customer.id}/image`)
+
+    response.assertStatus(401)
+  })
 })
