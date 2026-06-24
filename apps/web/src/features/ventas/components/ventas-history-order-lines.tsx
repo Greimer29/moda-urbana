@@ -1,6 +1,10 @@
 import { Loader2 } from 'lucide-react'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { useOrderQuery } from '@/features/orders/hooks/use-orders'
+import {
+  orderLineActiveQuantity,
+  orderLineNetSubtotalUsd,
+} from '@/features/orders/utils/order-line-totals'
 import { catalogProductCode } from '@/features/ventas/components/ventas-order-cart'
 import { getApiErrorMessage } from '@/lib/api-error'
 
@@ -38,8 +42,8 @@ export function VentasHistoryOrderLines({ orderId }: VentasHistoryOrderLinesProp
               </thead>
               <tbody>
                 {lines.map((line) => {
-                  const netQty =
-                    Number(line.quantity) - Number(line.returned_quantity ?? 0)
+                  const netQty = orderLineActiveQuantity(line)
+                  const netSubtotalUsd = orderLineNetSubtotalUsd(line)
 
                   return (
                     <tr key={line.id} className="border-b last:border-b-0">
@@ -54,7 +58,7 @@ export function VentasHistoryOrderLines({ orderId }: VentasHistoryOrderLinesProp
                         <DisplayMoneyFromUsd amountUsd={line.unit_price_usd} size="sm" />
                       </td>
                       <td className="px-3 py-2 text-right">
-                        <DisplayMoneyFromUsd amountUsd={line.subtotal_usd} size="sm" />
+                        <DisplayMoneyFromUsd amountUsd={netSubtotalUsd} size="sm" />
                       </td>
                     </tr>
                   )
