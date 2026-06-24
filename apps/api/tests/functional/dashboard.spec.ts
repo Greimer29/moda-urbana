@@ -941,4 +941,30 @@ test.group('Dashboard API', (group) => {
     assert.equal(dashboardTotal, reportTotal)
     assert.equal(dashboardTotal, '65.00')
   })
+
+  test('GET dashboard overview daily chart spans the same ISO week as weekly chart', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+
+    const dailyResponse = await client
+      .get('/api/v1/dashboard/overview')
+      .qs({ chart: 'daily' })
+      .loginAs(user)
+    const weeklyResponse = await client
+      .get('/api/v1/dashboard/overview')
+      .qs({ chart: 'weekly' })
+      .loginAs(user)
+
+    dailyResponse.assertStatus(200)
+    weeklyResponse.assertStatus(200)
+
+    const dailySeries = dailyResponse.body().data.ventasSeries as Array<{ label: string }>
+    const weeklySeries = weeklyResponse.body().data.ventasSeries as Array<{ label: string }>
+
+    assert.lengthOf(dailySeries, 7)
+    assert.lengthOf(weeklySeries, 8)
+    assert.match(dailySeries[0]!.label, /^lun/i)
+  })
 })
