@@ -11,6 +11,11 @@ import {
   type CreditPurchaseReportContext,
 } from '#utils/credit_purchase_report'
 import { sumMachineExpenseRowsUsd } from '#utils/machine_expense_totals'
+import {
+  buildDailyVentasBuckets,
+  buildMonthlyVentasBuckets,
+  buildWeeklyVentasBuckets,
+} from '#utils/dashboard_chart_periods'
 
 export type BajoStockItem = {
   id: number
@@ -574,42 +579,12 @@ export default class DashboardService {
 
   private async ventasSeries(chart: 'daily' | 'weekly' | 'monthly'): Promise<VentasSeriePoint[]> {
     const hoy = DateTime.now()
-    const buckets: { desde: string; hasta: string; label: string }[] = []
-
-    if (chart === 'daily') {
-      const sundayOffset = hoy.weekday === 7 ? 0 : hoy.weekday
-      const weekStart = hoy.minus({ days: sundayOffset }).startOf('day')
-      const dayLabels = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
-
-      for (let i = 0; i < 7; i++) {
-        const day = weekStart.plus({ days: i })
-        buckets.push({
-          desde: day.toISODate()!,
-          hasta: day.toISODate()!,
-          label: dayLabels[i]!,
-        })
-      }
-    } else if (chart === 'weekly') {
-      for (let i = 7; i >= 0; i--) {
-        const start = hoy.minus({ weeks: i }).startOf('week')
-        const end = start.endOf('week')
-        buckets.push({
-          desde: start.toISODate()!,
-          hasta: end.toISODate()!,
-          label: String(8 - i),
-        })
-      }
-    } else {
-      for (let i = 5; i >= 0; i--) {
-        const start = hoy.minus({ months: i }).startOf('month')
-        const end = start.endOf('month')
-        buckets.push({
-          desde: start.toISODate()!,
-          hasta: end.toISODate()!,
-          label: start.setLocale('es').toFormat('MMMM'),
-        })
-      }
-    }
+    const buckets =
+      chart === 'daily'
+        ? buildDailyVentasBuckets(hoy)
+        : chart === 'weekly'
+          ? buildWeeklyVentasBuckets(hoy)
+          : buildMonthlyVentasBuckets(hoy)
 
     const points: VentasSeriePoint[] = []
     let prevTotal = 0
