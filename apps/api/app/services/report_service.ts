@@ -15,6 +15,7 @@ import MachineExpense from '#models/machine_expense'
 import Order from '#models/order'
 
 import Purchase from '#models/purchase'
+import SupplierPayment from '#models/supplier_payment'
 
 import { DateTime } from 'luxon'
 
@@ -22,6 +23,7 @@ export type AccountStatementMovementType =
   | 'sale'
   | 'customer_payment'
   | 'purchase'
+  | 'supplier_payment'
   | 'expense'
   | 'machine_expense'
 
@@ -83,6 +85,8 @@ export type AccountStatementMovement = {
   saleDate?: string
 
   customerId?: number
+
+  supplierId?: number
 }
 
 export type AccountStatementSummary = {
@@ -440,6 +444,52 @@ export default class ReportService {
           })
         )
       }
+
+      const supplierPaymentQuery = SupplierPayment.query()
+        .where('date', '>=', period.from)
+        .where('date', '<=', period.to)
+        .preload('supplier')
+        .preload('purchase')
+        .preload('account')
+        .orderBy('date', 'desc')
+        .orderBy('id', 'desc')
+
+      this.applyAccountFilter(supplierPaymentQuery, filters)
+
+      const supplierPayments = await supplierPaymentQuery
+
+      for (const payment of supplierPayments) {
+        const usd = Number(payment.amountUsd)
+
+        if (usd <= 0) {
+          continue
+        }
+
+        purchasesUsd += usd
+
+        const supplierName = payment.supplier?.name ?? 'Proveedor'
+        const purchaseRef = payment.purchase ? ` (Compra #${payment.purchase.id})` : ''
+
+        movements.push(
+          this.buildMovement({
+            id: Number(payment.id),
+            type: 'supplier_payment',
+            date: payment.date.toISODate()!,
+            label: `Pago proveedor — ${supplierName}${purchaseRef}`,
+            account: payment.account
+              ? { id: Number(payment.account.id), name: payment.account.name }
+              : null,
+            native: usd,
+            currencyCode: 'USD',
+            usd,
+            displayCurrency,
+            rates,
+            referenceId: Number(payment.id),
+            supplierId: Number(payment.supplierId),
+            isIncome: false,
+          })
+        )
+      }
     }
 
     if (types.has('expenses')) {
@@ -700,6 +750,8 @@ export default class ReportService {
     creditReportStatus?: 'pending' | 'overdue' | 'settled'
 
     customerId?: number
+
+    supplierId?: number
   }): AccountStatementMovement {
     const displayAmount = this.currencyService.fromUsd(
       options.usd,
@@ -782,6 +834,10 @@ export default class ReportService {
 
       ...(options.type === 'customer_payment' && options.customerId
         ? { customerId: options.customerId }
+        : {}),
+
+      ...(options.type === 'supplier_payment' && options.supplierId
+        ? { supplierId: options.supplierId }
         : {}),
     }
   }

@@ -50,7 +50,7 @@ describe('computeMovementPeriodTotals', () => {
     })
   })
 
-  it('sums compras contado and pending credit separately', () => {
+  it('sums compras contado, supplier payments and pending credit separately', () => {
     const totals = computeMovementPeriodTotals(
       [
         movement({ id: 1, type: 'purchase', amountUsd: '30.0000' }),
@@ -61,13 +61,18 @@ describe('computeMovementPeriodTotals', () => {
           isCreditPurchase: true,
           creditReportStatus: 'overdue',
         }),
+        movement({
+          id: 3,
+          type: 'supplier_payment',
+          amountUsd: '20.0000',
+        }),
       ],
       'compras'
     )
 
     expect(totals).toEqual({
       kind: 'credit_split',
-      cashUsd: 30,
+      cashUsd: 50,
       pendingCreditUsd: 45,
     })
   })

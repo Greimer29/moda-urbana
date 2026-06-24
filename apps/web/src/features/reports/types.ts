@@ -1,4 +1,4 @@
-export type AccountStatementMovementType = 'sale' | 'customer_payment' | 'purchase' | 'expense' | 'machine_expense'
+export type AccountStatementMovementType = 'sale' | 'customer_payment' | 'purchase' | 'supplier_payment' | 'expense' | 'machine_expense'
 
 
 
@@ -45,6 +45,8 @@ export type AccountStatementMovement = {
   saleDate?: string
 
   customerId?: number
+
+  supplierId?: number
 
 }
 

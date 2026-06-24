@@ -56,6 +56,11 @@ function computePurchaseTotals(movements: AccountStatementMovement[]): CreditSpl
   let pendingCreditUsd = 0
 
   for (const movement of movements) {
+    if (movement.type === 'supplier_payment') {
+      cashUsd += Number(movement.amountUsd)
+      continue
+    }
+
     if (movement.type !== 'purchase') {
       continue
     }
