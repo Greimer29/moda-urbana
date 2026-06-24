@@ -26,11 +26,6 @@ router
     router.get('csrf', [CsrfController, 'show'])
     router.post('auth/login', [controllers.Auth, 'login'])
 
-    router.get('catalog-products/:id/image', [CatalogProductsController, 'downloadImage'])
-    router.get('materials/:id/image', [controllers.Materials, 'downloadImage'])
-    router.get('suppliers/:id/image', [controllers.Suppliers, 'downloadImage'])
-    router.get('customers/:id/image', [controllers.Customers, 'downloadImage'])
-
     router
       .group(() => {
         router.post('auth/logout', [controllers.Auth, 'logout'])
@@ -43,6 +38,7 @@ router
         router.put('customers/:id', [controllers.Customers, 'update'])
         router.delete('customers/:id', [controllers.Customers, 'destroy'])
         router.post('customers/:id/image', [controllers.Customers, 'uploadImage'])
+        router.get('customers/:id/image', [controllers.Customers, 'downloadImage'])
         router.delete('customers/:id/image', [controllers.Customers, 'deleteImage'])
         router.post('customers/:id/payments', [controllers.Customers, 'storePayment'])
 
@@ -70,6 +66,7 @@ router
         router.put('suppliers/:id', [controllers.Suppliers, 'update'])
         router.delete('suppliers/:id', [controllers.Suppliers, 'destroy'])
         router.post('suppliers/:id/image', [controllers.Suppliers, 'uploadImage'])
+        router.get('suppliers/:id/image', [controllers.Suppliers, 'downloadImage'])
         router.delete('suppliers/:id/image', [controllers.Suppliers, 'deleteImage'])
         router.get('suppliers/:id/account-statement', [controllers.Suppliers, 'accountStatement'])
         router.post('suppliers/:id/payments', [controllers.Suppliers, 'storePayment'])
@@ -82,6 +79,7 @@ router
         router.post('materials/:id/adjustment', [controllers.Materials, 'ajuste'])
         router.get('materials/:id/price-history', [controllers.Materials, 'historialPrecios'])
         router.post('materials/:id/image', [controllers.Materials, 'uploadImage'])
+        router.get('materials/:id/image', [controllers.Materials, 'downloadImage'])
         router.delete('materials/:id/image', [controllers.Materials, 'deleteImage'])
 
         router.get('purchases/summary', [controllers.Purchases, 'summary'])
@@ -163,6 +161,7 @@ router
         router.put('catalog-products/:id', [CatalogProductsController, 'update'])
         router.delete('catalog-products/:id', [CatalogProductsController, 'destroy'])
         router.post('catalog-products/:id/image', [CatalogProductsController, 'uploadImage'])
+        router.get('catalog-products/:id/image', [CatalogProductsController, 'downloadImage'])
         router.delete('catalog-products/:id/image', [CatalogProductsController, 'deleteImage'])
 
         router.get('formulas', [FormulasController, 'index'])
