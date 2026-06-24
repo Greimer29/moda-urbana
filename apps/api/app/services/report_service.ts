@@ -7,7 +7,7 @@ import {
   creditPurchaseReportStatus,
   creditPurchaseVisibleInReport,
 } from '#utils/credit_purchase_report'
-import { creditSaleReportStatus } from '#utils/credit_sale_report'
+import { creditSaleReportAmountUsd, creditSaleReportStatus } from '#utils/credit_sale_report'
 import CustomerPayment from '#models/customer_payment'
 import Expense from '#models/expense'
 
@@ -172,9 +172,9 @@ export default class ReportService {
         .orderBy('id', 'desc')
 
       for (const order of orders) {
-        const { usd, native, currencyCode } = this.resolveOrderSaleAmount(order, rates)
+        const { usd: grossUsd, native, currencyCode } = this.resolveOrderSaleAmount(order, rates)
 
-        if (usd <= 0) {
+        if (grossUsd <= 0) {
           continue
         }
 
@@ -189,6 +189,8 @@ export default class ReportService {
 
           const creditStatus = creditSaleReportStatus(balanceUsd, creditDueDate)
 
+          const reportUsd = creditSaleReportAmountUsd(balanceUsd)
+
           movements.push(
             this.buildMovement({
               id: Number(order.id),
@@ -201,11 +203,11 @@ export default class ReportService {
 
               account: null,
 
-              native,
+              native: reportUsd > 0 ? reportUsd : grossUsd,
 
               currencyCode,
 
-              usd,
+              usd: reportUsd,
 
               displayCurrency,
 
@@ -229,7 +231,7 @@ export default class ReportService {
             })
           )
         } else {
-          salesUsd += usd
+          salesUsd += grossUsd
 
           movements.push(
             this.buildMovement({
@@ -247,7 +249,7 @@ export default class ReportService {
 
               currencyCode,
 
-              usd,
+              usd: grossUsd,
 
               displayCurrency,
 

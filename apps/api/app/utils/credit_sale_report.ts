@@ -17,3 +17,11 @@ export function creditSaleReportStatus(
 
   return 'settled'
 }
+
+export function creditSaleReportAmountUsd(balanceUsd: number): number {
+  if (balanceUsd > 0) {
+    return balanceUsd
+  }
+
+  return 0
+}
