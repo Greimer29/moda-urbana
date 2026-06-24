@@ -5,6 +5,8 @@ import CatalogProduct from '#models/catalog_product'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import {
+  creditPurchaseCountsTowardPeriodTotal,
+  creditPurchaseReportAmountUsd,
   creditPurchaseVisibleInReport,
   type CreditPurchaseReportContext,
 } from '#utils/credit_purchase_report'
@@ -260,8 +262,33 @@ export default class DashboardService {
         continue
       }
 
-      quantity += 1
-      totalUsd += this.resolvePurchaseTotalUsd(purchase)
+      const balanceUsdAmount = reportContext.isCredit
+        ? creditPurchaseReportAmountUsd(reportContext)
+        : this.resolvePurchaseTotalUsd(purchase)
+
+      const countsTowardTotal = reportContext.isCredit
+        ? creditPurchaseCountsTowardPeriodTotal(reportContext, period)
+        : true
+
+      const contributionUsd = countsTowardTotal ? balanceUsdAmount : 0
+
+      if (contributionUsd > 0) {
+        quantity += 1
+        totalUsd += contributionUsd
+      }
+    }
+
+    const supplierPayments = await db
+      .from('supplier_payments')
+      .where('date', '>=', inicioMes)
+      .where('date', '<=', finMes)
+      .select('amount_usd')
+
+    for (const payment of supplierPayments) {
+      const usd = Number(payment.amount_usd ?? 0)
+      if (usd > 0) {
+        totalUsd += usd
+      }
     }
 
     return {

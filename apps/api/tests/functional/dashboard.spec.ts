@@ -865,4 +865,80 @@ test.group('Dashboard API', (group) => {
     assert.equal(body.data.gananciaDelDia.montoUsd, '18.0000')
     assert.equal(body.data.gananciaDelDia.porcentajeSobreVentas, 36)
   })
+
+  test('GET dashboard purchasesMonth uses credit balance instead of invoice total', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const supplier = await Supplier.create({ name: 'Proveedor crédito dashboard', active: true })
+    const dueInMonth = DateTime.now().endOf('month').minus({ days: 1 })
+
+    await Purchase.create({
+      supplierId: supplier.id,
+      date: DateTime.now().minus({ days: 40 }),
+      invoiceNumber: 'F-CRED-DASH',
+      totalUsd: '100.0000',
+      totalBs: '3600.00',
+      status: 'CONFIRMED',
+      isCredit: true,
+      creditDueDate: dueInMonth,
+      balanceUsd: '35.0000',
+      amountPaidUsd: '65.0000',
+    })
+
+    const response = await client.get('/api/v1/dashboard/summary').loginAs(user)
+
+    response.assertStatus(200)
+    assert.equal(response.body().data.purchasesMonth.quantity, 1)
+    assert.equal(response.body().data.purchasesMonth.totalUsd, '35.00')
+  })
+
+  test('GET dashboard purchasesMonth matches report purchasesUsd for current month', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const supplier = await Supplier.create({ name: 'Proveedor coherencia dashboard', active: true })
+    const mes = DateTime.now().toFormat('yyyy-MM')
+    const mesActual = DateTime.now().toISODate()!
+
+    await Purchase.create({
+      supplierId: supplier.id,
+      date: DateTime.fromISO(mesActual),
+      invoiceNumber: 'F-CASH-DASH',
+      totalUsd: '25.0000',
+      totalBs: '900.00',
+      status: 'CONFIRMED',
+      isCredit: false,
+    })
+
+    await Purchase.create({
+      supplierId: supplier.id,
+      date: DateTime.now().minus({ days: 20 }),
+      invoiceNumber: 'F-CRED-DASH-2',
+      totalUsd: '80.0000',
+      totalBs: '2880.00',
+      status: 'CONFIRMED',
+      isCredit: true,
+      creditDueDate: DateTime.now().endOf('month').minus({ days: 2 }),
+      balanceUsd: '40.0000',
+      amountPaidUsd: '40.0000',
+    })
+
+    const dashboardResponse = await client.get('/api/v1/dashboard/summary').loginAs(user)
+    const reportResponse = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: mes, types: 'purchases', display_currency: 'USD' })
+      .loginAs(user)
+
+    dashboardResponse.assertStatus(200)
+    reportResponse.assertStatus(200)
+
+    const dashboardTotal = dashboardResponse.body().data.purchasesMonth.totalUsd
+    const reportTotal = Number(reportResponse.body().data.summary.purchasesUsd).toFixed(2)
+
+    assert.equal(dashboardTotal, reportTotal)
+    assert.equal(dashboardTotal, '65.00')
+  })
 })
