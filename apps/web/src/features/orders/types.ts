@@ -117,6 +117,7 @@ export type OrderInput = {
   total_price?: number
   notes?: string
   payment_type?: OrderPaymentType
+  lines?: OrderLineInput[]
 }
 
 export type OrderListParams = {

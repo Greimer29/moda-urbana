@@ -10,10 +10,8 @@ import type { Customer } from '@/features/customers/types'
 import { useAuth } from '@/features/auth/hooks/use-auth'
 import {
   useCreateOrderMutation,
-  useCreateOrderLineMutation,
 } from '@/features/orders/hooks/use-orders'
 import {
-  deleteOrderLine,
   getOrder,
   getOrderMaterialAvailability,
   transicionarOrder,
@@ -86,7 +84,6 @@ function VentasCreateView() {
   const [orderDraftNo] = useState(() => String(Math.floor(100000 + Math.random() * 900000)))
 
   const createOrderMutation = useCreateOrderMutation()
-  const createLineMutation = useCreateOrderLineMutation()
   const { data: categories = [] } = useActiveCategoriesQuery()
 
   const {
@@ -249,20 +246,17 @@ function VentasCreateView() {
       payment_type: paymentType,
     }
 
+    const lines = cart.map((item) => ({
+      catalog_product_id: item.product.id,
+      quantity: item.quantity,
+    }))
+
     if (sourceOrderId) {
       const order = await getOrder(sourceOrderId)
-      for (const line of order.lines ?? []) {
-        await deleteOrderLine(sourceOrderId, line.id)
-      }
-      for (const item of cart) {
-        await createLineMutation.mutateAsync({
-          orderId: sourceOrderId,
-          payload: { catalog_product_id: item.product.id, quantity: item.quantity },
-        })
-      }
       await updateOrder(sourceOrderId, {
         ...orderPayload,
         date_order: order.dateOrder,
+        lines,
       })
       return sourceOrderId
     }
@@ -270,14 +264,8 @@ function VentasCreateView() {
     const order = await createOrderMutation.mutateAsync({
       ...orderPayload,
       date_order: today,
+      lines,
     })
-
-    for (const line of cart) {
-      await createLineMutation.mutateAsync({
-        orderId: order.id,
-        payload: { catalog_product_id: line.product.id, quantity: line.quantity },
-      })
-    }
 
     setSourceOrderId(order.id)
     setSourceOrderCode(order.code)

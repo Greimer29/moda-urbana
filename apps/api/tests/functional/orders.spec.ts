@@ -81,6 +81,108 @@ test.group('Orders API', (group) => {
     assert.match(body.data.order.code, /^PED-202605-\d{4}$/)
   })
 
+  test('POST /api/v1/orders creates draft with lines in one transaction', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await seedCustomer()
+    const productA = await CatalogProduct.create({
+      name: 'Producto A',
+      category: 'Uniforme',
+      salePriceUsd: '10.0000',
+      costUsd: '5.0000',
+      active: true,
+    })
+    const productB = await CatalogProduct.create({
+      name: 'Producto B',
+      category: 'Uniforme',
+      salePriceUsd: '20.0000',
+      costUsd: '8.0000',
+      active: true,
+    })
+
+    const response = await client
+      .post('/api/v1/orders')
+      .loginAs(user)
+      .json({
+        customer_id: Number(customer.id),
+        modality: 'CORPORATE',
+        description: 'Venta catálogo',
+        total_quantity: 3,
+        order_date: '2026-05-15',
+        lines: [
+          { catalog_product_id: Number(productA.id), quantity: 2 },
+          { catalog_product_id: Number(productB.id), quantity: 1 },
+        ],
+      })
+
+    response.assertStatus(200)
+
+    const orderId = response.body().data.order.id as number
+    const lines = await OrderLine.query().where('orderId', orderId).orderBy('id', 'asc')
+
+    assert.lengthOf(lines, 2)
+    assert.equal(lines[0].catalogProductId, Number(productA.id))
+    assert.equal(lines[0].quantity, '2.000')
+    assert.equal(lines[1].catalogProductId, Number(productB.id))
+    assert.equal(lines[1].quantity, '1.000')
+  })
+
+  test('PUT /api/v1/orders/:id replaces draft lines atomically', async ({ client, assert }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await seedCustomer()
+    const productA = await CatalogProduct.create({
+      name: 'Producto sync A',
+      category: 'Uniforme',
+      salePriceUsd: '10.0000',
+      costUsd: '5.0000',
+      active: true,
+    })
+    const productB = await CatalogProduct.create({
+      name: 'Producto sync B',
+      category: 'Uniforme',
+      salePriceUsd: '20.0000',
+      costUsd: '8.0000',
+      active: true,
+    })
+    const order = await Order.create({
+      code: 'PED-202605-0297',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Borrador sync',
+      totalQuantity: 2,
+      orderDate: DateTime.fromISO('2026-05-10'),
+      status: 'DRAFT',
+    })
+    await OrderLine.create({
+      orderId: Number(order.id),
+      catalogProductId: Number(productA.id),
+      quantity: '2.000',
+      unitPriceUsd: '10.0000',
+      subtotalUsd: '20.0000',
+    })
+
+    const response = await client
+      .put(`/api/v1/orders/${order.id}`)
+      .loginAs(user)
+      .json({
+        customer_id: Number(customer.id),
+        modality: 'CORPORATE',
+        description: 'Borrador sync actualizado',
+        total_quantity: 1,
+        order_date: '2026-05-10',
+        lines: [{ catalog_product_id: Number(productB.id), quantity: 1 }],
+      })
+
+    response.assertStatus(200)
+
+    const lines = await OrderLine.query().where('orderId', Number(order.id))
+    assert.lengthOf(lines, 1)
+    assert.equal(lines[0].catalogProductId, Number(productB.id))
+    assert.equal(lines[0].quantity, '1.000')
+  })
+
   test('POST /api/v1/orders rejects missing customer', async ({ client }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
 
