@@ -5,7 +5,14 @@ import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-mo
 import { formatAmountNumber } from '@/features/currencies/utils/convert-currency'
 import type { PurchasesHubTab } from '@/features/purchases/constants'
 import type { ExpenseSummary, PurchaseSummary } from '@/features/purchases/types'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
+
+type HubCardQueryState = {
+  isLoading?: boolean
+  isError?: boolean
+  error?: unknown
+}
 
 type PurchasesHubCardsProps = {
   activeTab: PurchasesHubTab
@@ -14,7 +21,9 @@ type PurchasesHubCardsProps = {
   expensesSummary?: ExpenseSummary
   exchangeRate?: string | null
   profitMargin?: string | null
-  isLoading?: boolean
+  purchasesQuery?: HubCardQueryState
+  expensesQuery?: HubCardQueryState
+  configQuery?: HubCardQueryState
 }
 
 export function PurchasesHubCards({
@@ -24,7 +33,9 @@ export function PurchasesHubCards({
   expensesSummary,
   exchangeRate,
   profitMargin,
-  isLoading,
+  purchasesQuery,
+  expensesQuery,
+  configQuery,
 }: PurchasesHubCardsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -49,7 +60,7 @@ export function PurchasesHubCards({
             value: purchasesSummary ? String(purchasesSummary.count) : '—',
           },
         ]}
-        isLoading={isLoading}
+        queryState={purchasesQuery}
       />
 
       <HubCard
@@ -71,7 +82,7 @@ export function PurchasesHubCards({
             value: <DisplayMoneyFromUsd amountUsd={expensesSummary?.weeklySpentUsd ?? '0'} />,
           },
         ]}
-        isLoading={isLoading}
+        queryState={expensesQuery}
       />
 
       <HubCard
@@ -94,7 +105,7 @@ export function PurchasesHubCards({
                 : 'Sin configurar',
           },
         ]}
-        isLoading={isLoading}
+        queryState={configQuery}
       />
     </div>
   )
@@ -106,10 +117,12 @@ type HubCardProps = {
   icon: ReactNode
   title: string
   kpis: Array<{ label: string; value: ReactNode; danger?: boolean }>
-  isLoading?: boolean
+  queryState?: HubCardQueryState
 }
 
-function HubCard({ active, onClick, icon, title, kpis, isLoading }: HubCardProps) {
+function HubCard({ active, onClick, icon, title, kpis, queryState }: HubCardProps) {
+  const isLoading = queryState?.isLoading ?? false
+  const isError = queryState?.isError ?? false
   return (
     <button
       type="button"
@@ -131,6 +144,10 @@ function HubCard({ active, onClick, icon, title, kpis, isLoading }: HubCardProps
         <CardContent className="space-y-2">
           {isLoading ? (
             <p className="text-muted-foreground text-sm">Cargando…</p>
+          ) : isError ? (
+            <p className="text-destructive text-sm whitespace-pre-line">
+              {getApiErrorMessage(queryState?.error)}
+            </p>
           ) : (
             kpis.map((kpi) => (
               <div key={kpi.label} className="flex items-baseline justify-between gap-2 text-sm">

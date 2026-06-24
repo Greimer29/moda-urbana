@@ -75,12 +75,39 @@ export function PurchasesPage() {
     }
   }, [activeTab, highlightProductId, searchParams])
 
-  const { data: purchasesSummary, isLoading: loadingPurchases } = usePurchasesSummaryQuery()
-  const { data: expensesSummary, isLoading: loadingExpenses } = useExpensesSummaryQuery()
-  const { data: exchangeRate, isLoading: loadingRate } = useExchangeRateQuery()
-  const { data: profitMargin, isLoading: loadingMargin } = useProfitMarginQuery()
+  const purchasesQueryState = usePurchasesSummaryQuery()
+  const expensesQueryState = useExpensesSummaryQuery()
+  const exchangeRateQueryState = useExchangeRateQuery()
+  const profitMarginQueryState = useProfitMarginQuery()
 
-  const isLoading = loadingPurchases || loadingExpenses || loadingRate || loadingMargin
+  const {
+    data: purchasesSummary,
+    isLoading: loadingPurchases,
+    isError: purchasesError,
+    error: purchasesQueryError,
+  } = purchasesQueryState
+  const {
+    data: expensesSummary,
+    isLoading: loadingExpenses,
+    isError: expensesError,
+    error: expensesQueryError,
+  } = expensesQueryState
+  const {
+    data: exchangeRate,
+    isLoading: loadingRate,
+    isError: exchangeRateError,
+    error: exchangeRateQueryError,
+  } = exchangeRateQueryState
+  const {
+    data: profitMargin,
+    isLoading: loadingMargin,
+    isError: profitMarginError,
+    error: profitMarginQueryError,
+  } = profitMarginQueryState
+
+  const configLoading = loadingRate || loadingMargin
+  const configError = exchangeRateError || profitMarginError
+  const configQueryError = exchangeRateError ? exchangeRateQueryError : profitMarginQueryError
 
   return (
     <div className="flex flex-col gap-6">
@@ -96,7 +123,21 @@ export function PurchasesPage() {
         expensesSummary={expensesSummary}
         exchangeRate={exchangeRate}
         profitMargin={profitMargin}
-        isLoading={isLoading}
+        purchasesQuery={{
+          isLoading: loadingPurchases,
+          isError: purchasesError,
+          error: purchasesQueryError,
+        }}
+        expensesQuery={{
+          isLoading: loadingExpenses,
+          isError: expensesError,
+          error: expensesQueryError,
+        }}
+        configQuery={{
+          isLoading: configLoading,
+          isError: configError,
+          error: configQueryError,
+        }}
       />
 
       <PurchasesHubPanelTransition
