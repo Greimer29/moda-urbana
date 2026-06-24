@@ -113,6 +113,7 @@ function VentasCreateView() {
   }, [searchInput])
 
   const products = catalogData?.catalog_products ?? []
+  const catalogMeta = catalogData?.meta
   const cartTotal = useMemo(
     () => cart.reduce((sum, line) => sum + line.quantity * Number(line.product.sale_price_usd), 0),
     [cart]
@@ -512,7 +513,11 @@ function VentasCreateView() {
         <Card className="flex h-full min-h-0 flex-col overflow-hidden border-violet-100/80 bg-gradient-to-b from-violet-50/40 to-white xl:col-span-2">
           <CardHeader className="shrink-0">
             <CardTitle className="text-base">Catálogo de productos</CardTitle>
-            <CardDescription>Filtrá y agregá productos a la venta</CardDescription>
+            <CardDescription>
+              {catalogMeta
+                ? `${catalogMeta.total} producto${catalogMeta.total === 1 ? '' : 's'}`
+                : 'Filtrá y agregá productos a la venta'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pt-0">
             <div className="flex shrink-0 flex-wrap gap-3">
@@ -566,6 +571,34 @@ function VentasCreateView() {
                 </div>
               )}
             </div>
+
+            {catalogMeta && catalogMeta.lastPage > 1 ? (
+              <div className="flex shrink-0 items-center justify-between gap-4 border-t pt-3">
+                <p className="text-muted-foreground text-sm">
+                  Página {catalogMeta.currentPage} de {catalogMeta.lastPage}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={catalogMeta.currentPage <= 1 || loadingCatalog}
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={catalogMeta.currentPage >= catalogMeta.lastPage || loadingCatalog}
+                    onClick={() => setPage((current) => current + 1)}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </div>
