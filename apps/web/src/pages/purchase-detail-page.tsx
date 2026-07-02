@@ -25,6 +25,14 @@ import { PurchasePaymentFormDialog } from '@/features/purchases/components/purch
 import { AccountSelect } from '@/features/accounts/components/account-select'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { PrecioBimonetario } from '@/features/purchases/components/bi-currency-price'
+import { PurchaseEntryCurrencyToggle } from '@/features/purchases/components/purchase-entry-currency-toggle'
+import {
+  bsToUsd,
+  buildPurchaseItemPayload,
+  isValidPurchaseRate,
+  type PurchaseEntryCurrency,
+  usdToBs,
+} from '@/features/purchases/utils/purchase-entry-currency'
 import { ESTADO_LABELS, formatFecha } from '@/features/purchases/constants'
 import {
   useCreatePurchaseItemMutation,
@@ -127,6 +135,12 @@ function parseDbItemId(localId: string): number | null {
   return Number.isFinite(id) ? id : null
 }
 
+function formatItemBsDisplay(unitPriceUsd: number, rate: number | null): number {
+  if (!isValidPurchaseRate(rate)) return 0
+  const bs = usdToBs(unitPriceUsd, rate)
+  return Number.isFinite(bs) ? bs : 0
+}
+
 function formatRateInput(value: string | number | null | undefined) {
   if (value === null || value === undefined || value === '') return ''
   const n = Number(value)
@@ -150,7 +164,11 @@ export function PurchaseDetallePage() {
   const [isCredit, setIsCredit] = useState(false)
   const [creditDueDate, setCreditDueDate] = useState('')
   const [hasLocalChanges, setHasLocalChanges] = useState(false)
+  const [entryCurrency, setEntryCurrency] = useState<PurchaseEntryCurrency>('USD')
   const itemSaveTimers = useRef<Map<string, number>>(new Map())
+  const itemBsEntryRef = useRef<Map<string, number>>(new Map())
+  const entryCurrencyRef = useRef<PurchaseEntryCurrency>('USD')
+  const usdRateRef = useRef('')
 
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -185,7 +203,10 @@ export function PurchaseDetallePage() {
   const createItemMutation = useCreatePurchaseItemMutation()
   const updateItemMutation = useUpdatePurchaseItemMutation()
   const deleteItemMutation = useDeletePurchaseItemMutation()
-  const { formatFromUsd } = useFormatMoney()
+  const { formatFromUsd, formatNative } = useFormatMoney()
+
+  entryCurrencyRef.current = entryCurrency
+  usdRateRef.current = usdRate
 
   const isBorrador = purchase?.status === 'DRAFT'
   const supplierNombre = purchase?.supplierId
@@ -212,6 +233,8 @@ export function PurchaseDetallePage() {
     setIsCredit(false)
     setCreditDueDate('')
     setHasLocalChanges(false)
+    setEntryCurrency('USD')
+    itemBsEntryRef.current.clear()
     setSearch('')
     setSearchOpen(false)
   }, [purchaseId])
@@ -291,6 +314,10 @@ export function PurchaseDetallePage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isBorrador, hasLocalChanges])
 
+  useEffect(() => {
+    itemBsEntryRef.current.clear()
+  }, [usdRate])
+
   const rateNum = isBorrador
     ? usdRate
       ? Number(usdRate)
@@ -313,6 +340,16 @@ export function PurchaseDetallePage() {
 
   const markDirty = useCallback(() => setHasLocalChanges(true), [])
 
+  function buildItemPayload(item: LocalPurchaseItem, unitPriceBsEntered?: number) {
+    const rate = usdRateRef.current ? Number(usdRateRef.current) : 0
+    return buildPurchaseItemPayload(
+      item,
+      entryCurrencyRef.current,
+      rate,
+      unitPriceBsEntered
+    )
+  }
+
   function scheduleItemPersist(localId: string, item: LocalPurchaseItem) {
     const itemId = parseDbItemId(localId)
     if (!itemId) return
@@ -322,18 +359,7 @@ export function PurchaseDetallePage() {
 
     const timer = window.setTimeout(() => {
       itemSaveTimers.current.delete(localId)
-      const payload =
-        item.itemType === 'product'
-          ? {
-              catalog_product_id: item.catalogProductId,
-              quantity: item.quantity,
-              unit_price_usd: item.unitPriceUsd,
-            }
-          : {
-              material_id: item.materialId,
-              quantity: item.quantity,
-              unit_price_usd: item.unitPriceUsd,
-            }
+      const payload = buildItemPayload(item, itemBsEntryRef.current.get(localId))
 
       void updateItemMutation
         .mutateAsync({ purchaseId, itemId, payload })
@@ -372,9 +398,16 @@ export function PurchaseDetallePage() {
           )
         }
       } else {
+        const draftItem: LocalPurchaseItem = {
+          localId: 'pending',
+          itemType: 'material',
+          materialId: material.id,
+          quantity: 1,
+          unitPriceUsd: price,
+        }
         const created = await createItemMutation.mutateAsync({
           purchaseId,
-          payload: { material_id: material.id, quantity: 1, unit_price_usd: price },
+          payload: buildItemPayload(draftItem),
         })
         setLocalItems((prev) => [...prev, purchaseItemToLocal(created)])
       }
@@ -415,9 +448,16 @@ export function PurchaseDetallePage() {
           )
         }
       } else {
+        const draftItem: LocalPurchaseItem = {
+          localId: 'pending',
+          itemType: 'product',
+          catalogProductId: product.id,
+          quantity: 1,
+          unitPriceUsd: price,
+        }
         const created = await createItemMutation.mutateAsync({
           purchaseId,
-          payload: { catalog_product_id: product.id, quantity: 1, unit_price_usd: price },
+          payload: buildItemPayload(draftItem),
         })
         setLocalItems((prev) => [...prev, purchaseItemToLocal(created)])
       }
@@ -433,14 +473,32 @@ export function PurchaseDetallePage() {
     localId: string,
     patch: Partial<Pick<LocalPurchaseItem, 'quantity' | 'unitPriceUsd'>>
   ) {
-    setLocalItems((prev) => {
-      const next = prev.map((item) => (item.localId === localId ? { ...item, ...patch } : item))
-      const updated = next.find((item) => item.localId === localId)
-      if (updated) scheduleItemPersist(localId, updated)
-      return next
-    })
+    let persistedItem: LocalPurchaseItem | null = null
+
+    setLocalItems((prev) =>
+      prev.map((item) => {
+        if (item.localId !== localId) return item
+        persistedItem = { ...item, ...patch }
+        return persistedItem
+      })
+    )
+
+    if (persistedItem) scheduleItemPersist(localId, persistedItem)
     markDirty()
   }
+
+  function updateLocalItemPriceUsd(localId: string, unitPriceUsd: number) {
+    itemBsEntryRef.current.delete(localId)
+    updateLocalItem(localId, { unitPriceUsd })
+  }
+
+  function updateLocalItemPriceBs(localId: string, bs: number, rate: number) {
+    itemBsEntryRef.current.set(localId, bs)
+    updateLocalItem(localId, { unitPriceUsd: bsToUsd(bs, rate) })
+  }
+
+  const entryInBs = entryCurrency === 'VES'
+  const canEnterPriceInBs = !entryInBs || isValidPurchaseRate(rateNum)
 
   async function removeLocalItem(localId: string) {
     setActionError(null)
@@ -450,6 +508,7 @@ export function PurchaseDetallePage() {
       window.clearTimeout(existingTimer)
       itemSaveTimers.current.delete(localId)
     }
+    itemBsEntryRef.current.delete(localId)
 
     if (itemId) {
       try {
@@ -724,7 +783,13 @@ export function PurchaseDetallePage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="usd_rate">Tasa Bs/USD</Label>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label htmlFor="usd_rate">Tasa Bs/USD</Label>
+                      <PurchaseEntryCurrencyToggle
+                        value={entryCurrency}
+                        onChange={setEntryCurrency}
+                      />
+                    </div>
                     <DecimalInput
                       id="usd_rate"
                       min="0"
@@ -737,6 +802,15 @@ export function PurchaseDetallePage() {
                         markDirty()
                       }}
                     />
+                    {entryInBs && !isValidPurchaseRate(rateNum) ? (
+                      <p className="text-muted-foreground text-xs">
+                        Cargá la tasa de la factura para ingresar en Bs.
+                      </p>
+                    ) : entryInBs ? (
+                      <p className="text-muted-foreground text-xs">
+                        Al cambiar la tasa, el monto en Bs se recalcula; el USD del ítem no cambia.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               ) : (
@@ -1003,8 +1077,16 @@ export function PurchaseDetallePage() {
                       <th className="px-3 py-2 font-medium">Descripción</th>
                       <th className="px-3 py-2 font-medium">Cantidad</th>
                       <th className="px-3 py-2 font-medium">Unidad</th>
-                      <th className="px-3 py-2 font-medium">Precio unit. ($)</th>
-                      <th className="px-3 py-2 font-medium">Subtotal ($)</th>
+                      <th className="px-3 py-2 font-medium">
+                        {isBorrador && canEditPurchase && entryInBs
+                          ? 'Precio unit. (Bs)'
+                          : 'Precio unit. ($)'}
+                      </th>
+                      <th className="px-3 py-2 font-medium">
+                        {isBorrador && canEditPurchase && entryInBs
+                          ? 'Subtotal (Bs)'
+                          : 'Subtotal ($)'}
+                      </th>
                       {isBorrador && canEditPurchase ? (
                         <th className="px-3 py-2 font-medium text-right">Acciones</th>
                       ) : null}
@@ -1030,19 +1112,42 @@ export function PurchaseDetallePage() {
                             </td>
                             <td className="px-3 py-2">{localItemUnit(item)}</td>
                             <td className="px-3 py-2">
-                              <MoneyInput
-                                min="0"
-                                className="h-8 w-28"
-                                value={item.unitPriceUsd}
-                                onChange={(e) =>
-                                  updateLocalItem(item.localId, {
-                                    unitPriceUsd: parseDecimalInput(e.target.value, 2) ?? 0,
-                                  })
-                                }
-                              />
+                              {entryInBs ? (
+                                <MoneyInput
+                                  min="0"
+                                  className="h-8 w-28"
+                                  disabled={!canEnterPriceInBs}
+                                  value={formatItemBsDisplay(item.unitPriceUsd, rateNum)}
+                                  onChange={(e) => {
+                                    const bs = parseDecimalInput(e.target.value, 2) ?? 0
+                                    if (isValidPurchaseRate(rateNum)) {
+                                      updateLocalItemPriceBs(item.localId, bs, rateNum)
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <MoneyInput
+                                  min="0"
+                                  className="h-8 w-28"
+                                  value={item.unitPriceUsd}
+                                  onChange={(e) =>
+                                    updateLocalItemPriceUsd(
+                                      item.localId,
+                                      parseDecimalInput(e.target.value, 2) ?? 0
+                                    )
+                                  }
+                                />
+                              )}
                             </td>
                             <td className="px-3 py-2 tabular-nums">
-                              {formatFromUsd(item.quantity * item.unitPriceUsd)}
+                              {entryInBs && isValidPurchaseRate(rateNum) ? (
+                                formatNative(
+                                  item.quantity * formatItemBsDisplay(item.unitPriceUsd, rateNum),
+                                  'VES'
+                                )
+                              ) : (
+                                formatFromUsd(item.quantity * item.unitPriceUsd)
+                              )}
                             </td>
                             <td className="px-3 py-2 text-right">
                               <div className="flex items-center justify-end gap-1">

@@ -20,6 +20,7 @@ import type {
   PurchaseListParams,
 } from '@/features/purchases/types'
 import { invalidatePurchasesFinancials, invalidatePurchasesHub } from '@/lib/query-invalidation'
+import { useAuthenticatedQuery } from '@/lib/use-authenticated-query'
 
 export const purchasesQueryKey = ['purchases'] as const
 
@@ -38,7 +39,7 @@ export function usePurchasesSummaryQuery() {
 }
 
 export function usePurchaseQuery(id: number) {
-  return useQuery({
+  return useAuthenticatedQuery({
     queryKey: [...purchasesQueryKey, 'detail', id],
     queryFn: () => getPurchase(id),
     enabled: Number.isFinite(id) && id > 0,

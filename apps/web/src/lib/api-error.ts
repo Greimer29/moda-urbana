@@ -6,6 +6,10 @@ import type {
   VineValidationDetail,
 } from '@/types/auth'
 
+function isDesktopApp(): boolean {
+  return typeof window !== 'undefined' && window.location.port === '51740'
+}
+
 function usesLocalApiProxy(): boolean {
   if (typeof window === 'undefined') {
     return false
@@ -125,6 +129,17 @@ export function getApiError(error: unknown): ApiErrorBody {
       }
 
       return loosePayload
+    }
+
+    if (status === 502) {
+      return {
+        code: 'API_PROXY_ERROR',
+        message: isDesktopApp()
+          ? 'No se pudo conectar con el servidor. Verificá tu internet e intentá reconectar.'
+          : usesLocalApiProxy()
+            ? 'No se pudo conectar con la API. Verificá VITE_API_URL en apps/web/.env y que la API esté online.'
+            : 'No se pudo conectar con la API. Verificá tu conexión e intentá de nuevo.',
+      }
     }
 
     if (status === 403) {

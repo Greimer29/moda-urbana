@@ -120,6 +120,7 @@ export type PurchaseItemInput = {
   catalog_product_id?: number
   quantity: number
   unit_price_usd: number
+  unit_price_bs?: number
 }
 
 export type ConfirmPurchaseInput = Partial<PurchaseInput> & {

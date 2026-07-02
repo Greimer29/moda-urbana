@@ -1,14 +1,16 @@
-import { LogOut } from 'lucide-react'
+import { Loader2, LogOut, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { DisplayCurrencyToggle } from '@/features/currencies/components/display-currency-toggle'
 import { useAuth } from '@/features/auth/hooks/use-auth'
+import { useAppRefresh } from '@/lib/use-app-refresh'
 
 export function AppHeader() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const { refresh, isRefreshing } = useAppRefresh()
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -28,6 +30,20 @@ export function AppHeader() {
         <DisplayCurrencyToggle />
       </div>
       <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          title="Reconectar con el servidor"
+          aria-label="Reconectar con el servidor"
+          disabled={isRefreshing}
+          onClick={() => void refresh()}
+        >
+          {isRefreshing ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <RefreshCw className="size-4" />
+          )}
+        </Button>
         {user ? (
           <p className="hidden text-sm sm:block">
             <span className="text-muted-foreground">Hola, </span>
