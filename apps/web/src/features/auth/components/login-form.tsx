@@ -6,7 +6,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ModaUrbanaIdentity } from '@/features/auth/components/moda-urbana-identity'
+import { BrandIdentity } from '@/features/auth/components/brand-identity'
+import { brand } from '@/lib/brand-config'
 import { useAuth } from '@/features/auth/hooks/use-auth'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
@@ -69,7 +70,7 @@ export function LoginForm() {
 
   return (
     <div className="login-form-enter login-glass-body flex min-h-[550px] w-full max-w-md flex-col rounded-2xl border border-white/15 px-6 py-8 shadow-[0_24px_64px_rgb(0_0_0_/_0.35)] sm:px-8">
-      <ModaUrbanaIdentity />
+      <BrandIdentity />
 
       <form className="flex flex-col gap-5" onSubmit={onSubmit} noValidate>
           <div className="space-y-2">
@@ -153,7 +154,7 @@ export function LoginForm() {
       </form>
 
       <p className="mt-8 text-center text-xs text-neutral-500">
-        © {new Date().getFullYear()} Moda Urbana. Todos los derechos reservados.
+        © {new Date().getFullYear()} {brand.legalName}. Todos los derechos reservados.
       </p>
     </div>
   )

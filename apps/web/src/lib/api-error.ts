@@ -171,6 +171,17 @@ export function getApiError(error: unknown): ApiErrorBody {
     }
   }
 
+  if (
+    axios.isAxiosError(error) &&
+    (error.code === 'ECONNABORTED' || error.message.toLowerCase().includes('timeout'))
+  ) {
+    return {
+      code: 'REQUEST_TIMEOUT',
+      message:
+        'El servidor tardó demasiado en responder. Verificá tu conexión e intentá de nuevo.',
+    }
+  }
+
   if (axios.isAxiosError(error) && (error.code === 'ERR_NETWORK' || error.message === 'Network Error')) {
     if (usesLocalApiProxy()) {
       return {

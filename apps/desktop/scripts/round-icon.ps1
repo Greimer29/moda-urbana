@@ -5,7 +5,6 @@ $ErrorActionPreference = 'Stop'
 $projectDir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $iconPath = Join-Path $projectDir 'resources/icon.png'
 $icoPath = Join-Path $projectDir 'resources/icon.ico'
-$webLogoPath = Join-Path (Join-Path (Join-Path $projectDir '..') 'web') 'public/moda-urbana-logo.png'
 
 Add-Type -AssemblyName System.Drawing
 
@@ -57,11 +56,6 @@ function Set-CircularIconPng {
 
 Write-Host "Aplicando máscara circular a $iconPath"
 Set-CircularIconPng -Path $iconPath
-
-if (Test-Path $webLogoPath) {
-    Write-Host "Copiando logo web desde icono recortado"
-    Copy-Item -Path $iconPath -Destination $webLogoPath -Force
-}
 
 Write-Host "Generando $icoPath"
 $iconResolved = (Resolve-Path $iconPath).Path

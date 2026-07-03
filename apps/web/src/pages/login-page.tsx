@@ -1,12 +1,11 @@
 import { LoginForm } from '@/features/auth/components/login-form'
-
-const LOGIN_BACKGROUND = '/moda-urbana-login-bg.png'
+import { brand } from '@/lib/brand-config'
 
 export function LoginPage() {
   return (
     <div className="relative flex min-h-svh items-center justify-center overflow-hidden p-4">
       <img
-        src={LOGIN_BACKGROUND}
+        src={brand.loginBgUrl}
         alt=""
         aria-hidden
         className="pointer-events-none absolute inset-0 h-full w-full object-cover"

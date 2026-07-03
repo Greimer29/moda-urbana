@@ -26,6 +26,7 @@ import { reportCategoryHref } from '@/features/reports/report-categories'
 import { metricToneStyles, reportUi, type MetricTone } from '@/features/reports/report-ui'
 import type { AccountStatementSummary } from '@/features/reports/types'
 import { formatReportDisplayAmount } from '@/features/reports/utils/format-report-amount'
+import { brand } from '@/lib/brand-config'
 import { cn } from '@/lib/utils'
 
 
@@ -89,10 +90,6 @@ export function ReportKpiGrid({ summary, filterSearch }: ReportKpiGridProps) {
 
 
 
-const HERO_BACKGROUND = '/panel-reportes.png'
-
-
-
 function HeroKpiCard({
   netLabel,
   currency,
@@ -108,7 +105,7 @@ function HeroKpiCard({
     <div className={cn(reportUi.hero, 'sm:col-span-2 xl:col-span-2 xl:row-span-2')}>
 
       <img
-        src={HERO_BACKGROUND}
+        src={brand.reportsPanelUrl}
         alt=""
         aria-hidden
         draggable={false}

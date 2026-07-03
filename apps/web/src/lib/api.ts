@@ -1,8 +1,6 @@
 import axios from 'axios'
 
-const PUBLIC_API_URL = 'https://moda-urbana-production.up.railway.app'
-
-let apiBaseUrl = import.meta.env.VITE_API_URL ?? PUBLIC_API_URL
+let apiBaseUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? ''
 let cachedCsrfToken: string | null = null
 let csrfBootstrapPromise: Promise<string | null> | null = null
 let unauthorizedHandler: (() => void) | null = null
@@ -14,6 +12,7 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
 export const api = axios.create({
   withCredentials: true,
   maxRedirects: 0,
+  timeout: 30_000,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -201,7 +200,10 @@ export function getApiV1BaseUrl(): string {
     return `${window.location.origin}/api/v1`
   }
 
-  const base = apiBaseUrl.replace(/\/$/, '') || PUBLIC_API_URL.replace(/\/$/, '')
+  const base = apiBaseUrl.replace(/\/$/, '')
+  if (!base) {
+    throw new Error('VITE_API_URL no configurada. Ejecutá prepare-brand antes de iniciar la app.')
+  }
   return `${base}/api/v1`
 }
 

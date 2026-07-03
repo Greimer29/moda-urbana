@@ -15,10 +15,20 @@ const PORT = 51740
 const HOST = '127.0.0.1'
 const APP_URL = `http://${HOST}:${PORT}`
 
+type BrandMeta = {
+  slug?: string
+  appName?: string
+  legalName?: string
+  tagline?: string
+  apiUrl?: string
+  productName?: string
+  appId?: string
+}
+
 let server: Server | null = null
 let mainWindow: BrowserWindow | null = null
-const PUBLIC_API_URL = 'https://moda-urbana-production.up.railway.app'
-let runtimeApiUrl = PUBLIC_API_URL
+let brandMeta: BrandMeta = { legalName: 'App', productName: 'App' }
+let runtimeApiUrl = ''
 
 function getWebDistPath(): string {
   if (app.isPackaged) {
@@ -27,35 +37,60 @@ function getWebDistPath(): string {
   return path.join(app.getAppPath(), '..', 'web', 'dist')
 }
 
-function resolveApiUrl(): string {
-  const fromEnv = process.env.MODA_URBANA_API_URL?.trim()
-  if (fromEnv) {
-    return fromEnv.replace(/\/$/, '')
-  }
-
-  const candidates = app.isPackaged
+function getConfigCandidates(fileName: string): string[] {
+  return app.isPackaged
     ? [
-        path.join(path.dirname(process.execPath), 'api-url.json'),
-        path.join(process.resourcesPath, 'api-url.json'),
+        path.join(path.dirname(process.execPath), fileName),
+        path.join(process.resourcesPath, fileName),
       ]
-    : [path.join(app.getAppPath(), 'api-url.json')]
+    : [path.join(app.getAppPath(), fileName)]
+}
 
-  for (const candidate of candidates) {
+function readJsonConfig<T>(fileName: string): T | null {
+  for (const candidate of getConfigCandidates(fileName)) {
     if (!fs.existsSync(candidate)) {
       continue
     }
 
     try {
-      const parsed = JSON.parse(fs.readFileSync(candidate, 'utf8')) as { apiUrl?: string }
-      if (parsed.apiUrl?.trim()) {
-        return parsed.apiUrl.trim().replace(/\/$/, '')
-      }
+      return JSON.parse(fs.readFileSync(candidate, 'utf8')) as T
     } catch {
-      // Ignorar archivo inválido y continuar con el build embebido.
+      // Ignorar archivo inválido y continuar.
     }
   }
 
-  return PUBLIC_API_URL
+  return null
+}
+
+function resolveBrandMeta(): BrandMeta {
+  const fromFile = readJsonConfig<BrandMeta>('brand-meta.json')
+  if (fromFile?.legalName?.trim()) {
+    return {
+      ...fromFile,
+      legalName: fromFile.legalName.trim(),
+      productName: (fromFile.productName ?? fromFile.legalName).trim(),
+    }
+  }
+
+  return { legalName: 'App', productName: 'App' }
+}
+
+function resolveApiUrl(meta: BrandMeta): string {
+  const fromEnv = process.env.APP_API_URL?.trim() || process.env.MODA_URBANA_API_URL?.trim()
+  if (fromEnv) {
+    return fromEnv.replace(/\/$/, '')
+  }
+
+  const fromApiFile = readJsonConfig<{ apiUrl?: string }>('api-url.json')
+  if (fromApiFile?.apiUrl?.trim()) {
+    return fromApiFile.apiUrl.trim().replace(/\/$/, '')
+  }
+
+  if (meta.apiUrl?.trim()) {
+    return meta.apiUrl.trim().replace(/\/$/, '')
+  }
+
+  return ''
 }
 
 function rewriteProxyCookies(raw: string | string[] | undefined): string[] | undefined {
@@ -90,7 +125,19 @@ function proxyApiRequest(req: IncomingMessage, res: ServerResponse): void {
     },
     (proxyRes) => {
       const headers: OutgoingHttpHeaders = { ...proxyRes.headers }
-      headers['set-cookie'] = rewriteProxyCookies(headers['set-cookie'])
+      const rewrittenCookies = rewriteProxyCookies(headers['set-cookie'])
+      if (rewrittenCookies) {
+        headers['set-cookie'] = rewrittenCookies
+      } else {
+        delete headers['set-cookie']
+      }
+
+      for (const [key, value] of Object.entries(headers)) {
+        if (value === undefined) {
+          delete headers[key as keyof OutgoingHttpHeaders]
+        }
+      }
+
       res.writeHead(proxyRes.statusCode ?? 502, headers)
       proxyRes.pipe(res)
     }
@@ -115,7 +162,12 @@ function proxyApiRequest(req: IncomingMessage, res: ServerResponse): void {
 
 function startStaticServer(): Promise<void> {
   const webDist = getWebDistPath()
-  runtimeApiUrl = resolveApiUrl()
+  brandMeta = resolveBrandMeta()
+  runtimeApiUrl = resolveApiUrl(brandMeta)
+
+  if (!runtimeApiUrl) {
+    throw new Error('No hay apiUrl configurada. Ejecutá prepare-brand o colocá api-url.json junto al ejecutable.')
+  }
 
   server = createServer((req: IncomingMessage, res: ServerResponse) => {
     if (req.url === '/runtime-config.json') {
@@ -155,7 +207,7 @@ function createWindow(): void {
     minWidth: 1670,
     minHeight: 940,
     center: true,
-    title: 'Moda Urbana',
+    title: brandMeta.legalName ?? 'App',
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -186,7 +238,7 @@ if (!gotSingleInstanceLock) {
       createWindow()
     } catch (err) {
       dialog.showErrorBox(
-        'Moda Urbana',
+        brandMeta.legalName ?? 'App',
         err instanceof Error ? err.message : 'No se pudo iniciar la aplicación.'
       )
       app.quit()

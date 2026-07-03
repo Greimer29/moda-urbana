@@ -3,12 +3,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
 import { AuthProvider } from '@/features/auth/components/auth-provider'
+import { applyBrandDocumentMeta } from '@/lib/brand-config'
 import { loadRuntimeApiConfig, ensureCsrfToken } from '@/lib/api'
 import { queryClient } from '@/lib/query-client'
 import { router } from '@/routes/router'
 import '@/index.css'
 
 async function bootstrap() {
+  applyBrandDocumentMeta()
   await loadRuntimeApiConfig()
   await ensureCsrfToken()
 

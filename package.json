@@ -10,9 +10,14 @@
     "typecheck": "npx pnpm@9.15.4 -r typecheck",
     "dev:db": "docker compose up -d mysql",
     "dev:api": "npx pnpm@9.15.4 --filter api dev",
-    "dev:web": "npx pnpm@9.15.4 --filter web dev",
+    "brand:moda-urbana": "node scripts/prepare-brand.mjs moda-urbana",
+    "brand:coreva": "node scripts/prepare-brand.mjs coreva",
+    "dev:web": "node scripts/prepare-brand.mjs moda-urbana && npx pnpm@9.15.4 --filter web dev",
+    "dev:web:coreva": "node scripts/prepare-brand.mjs coreva && npx pnpm@9.15.4 --filter web dev",
     "dev:setup": "powershell -ExecutionPolicy Bypass -File scripts/dev-setup.ps1",
-    "build:desktop": "npx pnpm@9.15.4 --filter web build && npx pnpm@9.15.4 --filter desktop dist"
+    "build:desktop": "node scripts/prepare-brand.mjs moda-urbana && npx pnpm@9.15.4 --filter web build && npx pnpm@9.15.4 --filter desktop dist",
+    "build:desktop:moda-urbana": "node scripts/prepare-brand.mjs moda-urbana && npx pnpm@9.15.4 --filter web build && npx pnpm@9.15.4 --filter desktop dist",
+    "build:desktop:coreva": "node scripts/prepare-brand.mjs coreva && npx pnpm@9.15.4 --filter web build && npx pnpm@9.15.4 --filter desktop dist"
   },
   "engines": {
     "node": ">=20.0.0",

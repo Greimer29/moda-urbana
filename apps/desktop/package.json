@@ -9,7 +9,7 @@
     "dev": "pnpm build:main && electron .",
     "predist": "node scripts/pre-dist.cjs",
     "round-icon": "powershell -ExecutionPolicy Bypass -File scripts/round-icon.ps1",
-    "dist": "pnpm build:main && electron-builder --win --config electron-builder.yml",
+    "dist": "pnpm build:main && electron-builder --win --config electron-builder.brand.yml",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

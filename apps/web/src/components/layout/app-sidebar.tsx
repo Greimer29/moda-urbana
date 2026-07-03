@@ -16,6 +16,7 @@ import {
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '@/features/auth/hooks/use-auth'
 import { canAccessNav } from '@/features/permissions/catalog'
+import { brand } from '@/lib/brand-config'
 import { cn } from '@/lib/utils'
 
 type NavLinkItem = {
@@ -200,12 +201,12 @@ export function AppSidebar() {
     <aside className="bg-sidebar text-sidebar-foreground hidden h-svh w-56 shrink-0 flex-col overflow-hidden border-r md:flex">
       <div className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
         <img
-          src="/logo-bn.png"
+          src={brand.logoUrl}
           alt=""
           aria-hidden
           className="size-8 shrink-0 rounded-full object-cover"
         />
-        <span className="text-lg font-semibold tracking-tight">Moda Urbana</span>
+        <span className="text-lg font-semibold tracking-tight">{brand.legalName}</span>
       </div>
       <nav className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
         {visibleEntries.map((entry) => {

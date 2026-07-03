@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useActiveCurrenciesQuery } from '@/features/currencies/hooks/use-currencies'
+import { brand } from '@/lib/brand-config'
 import {
   buildRatesMap,
   currencySymbol,
@@ -16,7 +17,7 @@ import {
   toUsd,
 } from '@/features/currencies/utils/convert-currency'
 
-const STORAGE_KEY = 'moda-urbana-display-currency'
+const STORAGE_KEY = `${brand.slug}-display-currency`
 
 type DisplayCurrencyContextValue = {
   displayCurrency: string
