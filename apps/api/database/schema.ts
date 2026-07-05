@@ -38,6 +38,7 @@ export class AppSettingSchema extends BaseModel {
 export class CatalogProductSchema extends BaseModel {
   static $columns = [
     'active',
+    'brand',
     'category',
     'costUsd',
     'createdAt',
@@ -48,6 +49,8 @@ export class CatalogProductSchema extends BaseModel {
     'minimumStock',
     'name',
     'previousSalePriceUsd',
+    'productModel',
+    'reference',
     'salePriceUsd',
     'saleUnit',
     'stockQuantity',
@@ -56,6 +59,8 @@ export class CatalogProductSchema extends BaseModel {
   $columns = CatalogProductSchema.$columns
   @column()
   declare active: boolean
+  @column()
+  declare brand: string | null
   @column()
   declare category: string
   @column()
@@ -74,6 +79,10 @@ export class CatalogProductSchema extends BaseModel {
   declare minimumStock: string
   @column()
   declare name: string
+  @column({ columnName: 'product_model' })
+  declare productModel: string | null
+  @column()
+  declare reference: string | null
   @column()
   declare previousSalePriceUsd: string | null
   @column()

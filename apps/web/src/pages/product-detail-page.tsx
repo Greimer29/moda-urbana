@@ -191,6 +191,24 @@ export function ProductDetailPage() {
               />
             ) : null}
             <dl className="space-y-2 text-sm">
+              {product.brand ? (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">Marca</dt>
+                  <dd>{product.brand}</dd>
+                </div>
+              ) : null}
+              {product.product_model ? (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">Modelo</dt>
+                  <dd>{product.product_model}</dd>
+                </div>
+              ) : null}
+              {product.reference ? (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">Referencia</dt>
+                  <dd>{product.reference}</dd>
+                </div>
+              ) : null}
               <div className="flex justify-between gap-3">
                 <dt className="text-muted-foreground">Unidad de venta</dt>
                 <dd>{productSaleUnitLabel(product.sale_unit ?? 'UND')}</dd>

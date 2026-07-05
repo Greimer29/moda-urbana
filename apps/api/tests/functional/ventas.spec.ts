@@ -80,6 +80,58 @@ test.group('Ventas API — catálogo y ventas', (group) => {
     await seedAdminUser()
   })
 
+  test('GET catalog products filters by brand, product_model and reference', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+
+    await client.post('/api/v1/catalog-products').loginAs(user).json({
+      name: 'Camisa Oxford',
+      brand: 'Arrow',
+      product_model: 'Classic Fit',
+      reference: 'OX-100',
+      category: 'Camisa',
+      sale_price_usd: 25,
+    })
+
+    await client.post('/api/v1/catalog-products').loginAs(user).json({
+      name: 'Pantalón drill',
+      brand: 'Levis',
+      product_model: '501',
+      reference: 'DR-200',
+      category: 'Pantalón',
+      sale_price_usd: 30,
+    })
+
+    const byBrand = await client
+      .get('/api/v1/catalog-products')
+      .loginAs(user)
+      .qs({ brand: 'Arrow' })
+
+    byBrand.assertStatus(200)
+    assert.lengthOf(byBrand.body().data.catalog_products, 1)
+    assert.equal(byBrand.body().data.catalog_products[0].name, 'Camisa Oxford')
+
+    const byModel = await client
+      .get('/api/v1/catalog-products')
+      .loginAs(user)
+      .qs({ product_model: '501' })
+
+    byModel.assertStatus(200)
+    assert.lengthOf(byModel.body().data.catalog_products, 1)
+    assert.equal(byModel.body().data.catalog_products[0].brand, 'Levis')
+
+    const byReference = await client
+      .get('/api/v1/catalog-products')
+      .loginAs(user)
+      .qs({ reference: 'OX-100' })
+
+    byReference.assertStatus(200)
+    assert.lengthOf(byReference.body().data.catalog_products, 1)
+    assert.equal(byReference.body().data.catalog_products[0].product_model, 'Classic Fit')
+  })
+
   test('PUT catalog product allows sale price below cost', async ({ client, assert }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const material = await seedMaterial()

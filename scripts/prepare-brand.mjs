@@ -11,6 +11,11 @@ const APP_IDS = {
   coreva: 'com.coreva.app',
 }
 
+const DESKTOP_PORTS = {
+  'moda-urbana': 51740,
+  coreva: 51741,
+}
+
 function fail(message) {
   console.error(`prepare-brand: ${message}`)
   process.exit(1)
@@ -91,6 +96,20 @@ nsis:
   createStartMenuShortcut: true
   installerIcon: resources/icon.ico
   uninstallerIcon: resources/icon.ico
+  include: installer.brand.nsh
+`
+}
+
+function generateInstallerNsh(productName, otherExes = []) {
+  const exeName = `${productName}.exe`.replace(/"/g, '')
+  const killLines = [exeName, ...otherExes.map((name) => `${name}.exe`.replace(/"/g, ''))]
+    .map((name) => `  nsExec::ExecToLog 'taskkill /F /IM "${name}" /T'`)
+    .join('\n')
+
+  return `!macro customInit
+${killLines}
+  Sleep 1000
+!macroend
 `
 }
 
@@ -157,17 +176,24 @@ fs.copyFileSync(bgPath, path.join(publicBrandDir, 'login-bg.png'))
 fs.copyFileSync(panelPath, path.join(publicBrandDir, 'panel-reportes.png'))
 
 const webEnvPath = path.join(rootDir, 'apps', 'web', '.env.brand.local')
+const desktopDir = path.join(rootDir, 'apps', 'desktop')
+const desktopPackage = JSON.parse(
+  fs.readFileSync(path.join(desktopDir, 'package.json'), 'utf8')
+)
+const appVersion = desktopPackage.version?.trim() || '0.0.0'
+const buildId = `${appVersion}-${Date.now()}`
 const envLines = [
   `VITE_BRAND_SLUG=${slug}`,
   `VITE_BRAND_APP_NAME=${brand.appName}`,
   `VITE_BRAND_LEGAL_NAME=${brand.legalName}`,
   `VITE_BRAND_TAGLINE=${brand.tagline}`,
   `VITE_API_URL=${brand.apiUrl}`,
+  `VITE_APP_VERSION=${appVersion}`,
+  `VITE_BUILD_ID=${buildId}`,
   '',
 ]
 fs.writeFileSync(webEnvPath, envLines.join('\n'), 'utf8')
 
-const desktopDir = path.join(rootDir, 'apps', 'desktop')
 writeJson(path.join(desktopDir, 'api-url.json'), { apiUrl: brand.apiUrl })
 
 const brandMeta = {
@@ -179,6 +205,9 @@ const brandMeta = {
   productName: brand.legalName,
   appId,
   releaseOutput,
+  desktopPort: DESKTOP_PORTS[slug] ?? 51740,
+  appVersion,
+  buildId,
 }
 writeJson(path.join(desktopDir, 'brand-meta.json'), brandMeta)
 
@@ -192,8 +221,18 @@ fs.writeFileSync(
   'utf8'
 )
 
+fs.writeFileSync(
+  path.join(desktopDir, 'installer.brand.nsh'),
+  generateInstallerNsh(
+    brand.legalName,
+    slug === 'moda-urbana' ? ['Coreva', 'Hebra'] : ['Moda Urbana']
+  ),
+  'utf8'
+)
+
 console.log(`prepare-brand: marca "${slug}" (${brand.legalName})`)
 console.log(`  API: ${brand.apiUrl}`)
+console.log(`  Build: ${buildId}`)
 console.log(`  Release: apps/desktop/${releaseOutput}/`)
 console.log(`  Assets: apps/web/public/brand/`)
 console.log(`  Env: apps/web/.env.brand.local`)

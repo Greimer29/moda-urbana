@@ -4,6 +4,9 @@ import vine from '@vinejs/vine'
 
 const catalogProductFields = {
   name: vine.string().trim().minLength(1).maxLength(150),
+  brand: vine.string().trim().maxLength(80).nullable().optional(),
+  product_model: vine.string().trim().maxLength(100).nullable().optional(),
+  reference: vine.string().trim().maxLength(100).nullable().optional(),
   description: vine.string().trim().optional(),
   category: vine.string().trim().minLength(1).maxLength(100),
   sale_unit: vine.enum(INVENTORY_UNITS).optional(),
@@ -20,6 +23,9 @@ export const createCatalogProductValidator = vine.create({
 
 export const updateCatalogProductValidator = vine.create({
   name: vine.string().trim().minLength(1).maxLength(150).optional(),
+  brand: vine.string().trim().maxLength(80).nullable().optional(),
+  product_model: vine.string().trim().maxLength(100).nullable().optional(),
+  reference: vine.string().trim().maxLength(100).nullable().optional(),
   description: vine.string().trim().optional(),
   category: vine.string().trim().minLength(1).maxLength(100).optional(),
   sale_unit: vine.enum(INVENTORY_UNITS).optional(),
@@ -35,6 +41,9 @@ export const listCatalogProductsValidator = vine.create({
   page: vine.number().min(1).optional(),
   per_page: vine.number().min(1).max(100).optional(),
   search: vine.string().trim().maxLength(150).optional(),
+  brand: vine.string().trim().maxLength(80).optional(),
+  product_model: vine.string().trim().maxLength(100).optional(),
+  reference: vine.string().trim().maxLength(100).optional(),
   category: vine.string().trim().maxLength(100).optional(),
   active: vine.boolean().optional(),
   sort_by: vine.enum(['name', 'most_sold'] as const).optional(),

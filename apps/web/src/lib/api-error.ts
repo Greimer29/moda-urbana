@@ -7,7 +7,7 @@ import type {
 } from '@/types/auth'
 
 function isDesktopApp(): boolean {
-  return typeof window !== 'undefined' && window.location.port === '51740'
+  return typeof window !== 'undefined' && isDesktopEmbeddedOrigin()
 }
 
 function usesLocalApiProxy(): boolean {
@@ -19,7 +19,24 @@ function usesLocalApiProxy(): boolean {
     return true
   }
 
-  return window.location.port === '51740'
+  return isDesktopEmbeddedOrigin()
+}
+
+function isDesktopEmbeddedOrigin(): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  if (window.location.hostname !== '127.0.0.1') {
+    return false
+  }
+
+  const currentPort = window.location.port
+  if (!currentPort) {
+    return false
+  }
+
+  return currentPort !== '5173' && currentPort !== '5174'
 }
 
 function isVineValidationDetail(value: unknown): value is VineValidationDetail {

@@ -19,6 +19,29 @@ export const api = axios.create({
   },
 })
 
+let desktopProxyPort: number | null = null
+
+function isDesktopEmbeddedOrigin(): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  if (window.location.hostname !== '127.0.0.1') {
+    return false
+  }
+
+  const currentPort = window.location.port
+  if (!currentPort) {
+    return false
+  }
+
+  if (desktopProxyPort !== null) {
+    return currentPort === String(desktopProxyPort)
+  }
+
+  return currentPort !== '5173' && currentPort !== '5174'
+}
+
 function usesLocalApiProxy(): boolean {
   if (typeof window === 'undefined') {
     return false
@@ -28,7 +51,7 @@ function usesLocalApiProxy(): boolean {
     return true
   }
 
-  return window.location.port === '51740'
+  return isDesktopEmbeddedOrigin()
 }
 
 function resolveApiBasePath(): string {
@@ -176,7 +199,19 @@ export async function loadRuntimeApiConfig(): Promise<void> {
   try {
     const response = await fetch('/runtime-config.json', { credentials: 'same-origin' })
     if (response.ok) {
-      const config = (await response.json()) as { apiUrl?: string; useLocalApiProxy?: boolean }
+      const config = (await response.json()) as {
+        apiUrl?: string
+        useLocalApiProxy?: boolean
+        desktopPort?: number
+        appVersion?: string
+        buildId?: string
+      }
+      if (typeof config.desktopPort === 'number') {
+        desktopProxyPort = config.desktopPort
+      }
+
+      await ensureDesktopBuildIsCurrent(config)
+
       if (config.apiUrl && !config.useLocalApiProxy && !usesLocalApiProxy()) {
         configureApiBaseUrl(config.apiUrl)
         return
@@ -186,9 +221,49 @@ export async function loadRuntimeApiConfig(): Promise<void> {
     // Web local o build sin runtime-config: continuar con fallbacks.
   }
 
-  if (typeof window !== 'undefined' && window.location.port === '51740') {
+  if (isDesktopEmbeddedOrigin()) {
     configureApiBaseUrl('')
   }
+}
+
+const DESKTOP_BUILD_STORAGE_KEY = 'desktop-build-id'
+
+type DesktopRuntimeConfig = {
+  buildId?: string
+  appVersion?: string
+}
+
+async function ensureDesktopBuildIsCurrent(config: DesktopRuntimeConfig): Promise<void> {
+  if (!isDesktopEmbeddedOrigin() || typeof window === 'undefined') {
+    return
+  }
+
+  const embeddedBuildId = import.meta.env.VITE_BUILD_ID?.trim()
+  const runtimeBuildId = config.buildId?.trim()
+  const buildId = runtimeBuildId || embeddedBuildId
+
+  if (!buildId) {
+    return
+  }
+
+  const previousBuildId = sessionStorage.getItem(DESKTOP_BUILD_STORAGE_KEY)
+  const buildChanged = Boolean(previousBuildId && previousBuildId !== buildId)
+  sessionStorage.setItem(DESKTOP_BUILD_STORAGE_KEY, buildId)
+
+  if (!buildChanged) {
+    return
+  }
+
+  const url = new URL(window.location.href)
+  if (url.searchParams.get('_b') === buildId) {
+    return
+  }
+
+  url.searchParams.set('_b', buildId)
+  window.location.replace(url.toString())
+  await new Promise<void>(() => {
+    // La recarga reemplaza el bundle antes de montar React.
+  })
 }
 
 export function getApiBaseUrl() {

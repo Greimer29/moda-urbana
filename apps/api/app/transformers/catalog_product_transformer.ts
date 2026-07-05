@@ -29,6 +29,9 @@ export function serializeCatalogProduct(
   return {
     id: Number(product.id),
     name: product.name,
+    brand: product.brand,
+    product_model: product.productModel,
+    reference: product.reference,
     description: product.description,
     category: product.category,
     sale_unit: product.saleUnit,

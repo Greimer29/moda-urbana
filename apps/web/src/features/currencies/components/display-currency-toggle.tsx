@@ -9,16 +9,19 @@ type DisplayCurrencyToggleProps = {
 export function DisplayCurrencyToggle({ className, size = 'sm' }: DisplayCurrencyToggleProps) {
   const { currencies, displayCurrency, setDisplayCurrency, isLoading } = useDisplayCurrency()
 
-  if (isLoading && currencies.length === 0) {
-    return null
-  }
-
-  const options = currencies.length > 0 ? currencies : [{ code: 'USD', name: 'USD' }]
+  const options =
+    currencies.length > 0
+      ? currencies
+      : [
+          { code: 'USD', name: 'USD' },
+          { code: 'VES', name: 'VES' },
+        ]
 
   return (
     <div
       className={cn('inline-flex rounded-full bg-muted p-1', className)}
       title="Moneda de visualización"
+      aria-busy={isLoading}
     >
       {options.map((currency) => (
         <button

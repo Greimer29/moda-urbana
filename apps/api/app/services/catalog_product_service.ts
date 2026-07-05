@@ -18,6 +18,9 @@ import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
 
 export type CatalogProductInput = {
   name: string
+  brand?: string | null
+  product_model?: string | null
+  reference?: string | null
   description?: string | null
   category: string
   sale_unit?: InventoryUnit
@@ -35,6 +38,9 @@ export type ListCatalogProductsFilters = {
   page?: number
   perPage?: number
   search?: string
+  brand?: string
+  productModel?: string
+  reference?: string
   category?: string
   active?: boolean
   sortBy?: 'name' | 'most_sold'
@@ -105,8 +111,25 @@ export default class CatalogProductService {
     if (filters.search) {
       const term = `%${filters.search.trim()}%`
       query.where((builder) => {
-        builder.whereILike('name', term).orWhereILike('description', term)
+        builder
+          .whereILike('name', term)
+          .orWhereILike('description', term)
+          .orWhereILike('brand', term)
+          .orWhereILike('product_model', term)
+          .orWhereILike('reference', term)
       })
+    }
+
+    if (filters.brand) {
+      query.whereILike('brand', `%${filters.brand.trim()}%`)
+    }
+
+    if (filters.productModel) {
+      query.whereILike('product_model', `%${filters.productModel.trim()}%`)
+    }
+
+    if (filters.reference) {
+      query.whereILike('reference', `%${filters.reference.trim()}%`)
     }
 
     if (filters.category) {
@@ -167,6 +190,9 @@ export default class CatalogProductService {
       const product = await CatalogProduct.create(
         {
           name: input.name.trim(),
+          brand: this.normalizeOptionalText(input.brand),
+          productModel: this.normalizeOptionalText(input.product_model),
+          reference: this.normalizeOptionalText(input.reference),
           description: input.description?.trim() || null,
           category: input.category.trim(),
           saleUnit: input.sale_unit ?? 'UND',
@@ -220,6 +246,18 @@ export default class CatalogProductService {
 
     if (input.name !== undefined) {
       product.name = input.name.trim()
+    }
+
+    if (input.brand !== undefined) {
+      product.brand = this.normalizeOptionalText(input.brand)
+    }
+
+    if (input.product_model !== undefined) {
+      product.productModel = this.normalizeOptionalText(input.product_model)
+    }
+
+    if (input.reference !== undefined) {
+      product.reference = this.normalizeOptionalText(input.reference)
     }
 
     if (input.description !== undefined) {
@@ -462,6 +500,15 @@ export default class CatalogProductService {
   private async calcularCostoFormulaPersistible(product: CatalogProduct): Promise<string> {
     const costUsd = await this.formulaService.calcularCosto(Number(product.formulaId))
     return costUsd.toFixed(4)
+  }
+
+  private normalizeOptionalText(value: string | null | undefined): string | null {
+    if (value === null || value === undefined) {
+      return null
+    }
+
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : null
   }
 
   private normalizeCostUsd(value: string | null | undefined): string {

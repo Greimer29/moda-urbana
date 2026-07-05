@@ -61,6 +61,9 @@ export function CatalogFormDialog({
 }: CatalogFormDialogProps) {
   const isEditing = product != null
   const [name, setName] = useState('')
+  const [brand, setBrand] = useState('')
+  const [productModel, setProductModel] = useState('')
+  const [reference, setReference] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
   const [saleUnit, setSaleUnit] = useState<ProductSaleUnit>('UND')
@@ -168,6 +171,9 @@ export function CatalogFormDialog({
 
     if (product) {
       setName(product.name)
+      setBrand(product.brand ?? '')
+      setProductModel(product.product_model ?? '')
+      setReference(product.reference ?? '')
       setDescription(product.description ?? '')
       setCategory(product.category)
       setSaleUnit(product.sale_unit ?? 'UND')
@@ -178,6 +184,9 @@ export function CatalogFormDialog({
       setStockQuantity(product.stock_quantity)
     } else {
       setName('')
+      setBrand('')
+      setProductModel('')
+      setReference('')
       setDescription('')
       setCategory(categories[0]?.name ?? '')
       setSaleUnit('UND')
@@ -276,6 +285,9 @@ export function CatalogFormDialog({
 
     const payload = {
       name: name.trim(),
+      brand: brand.trim() || null,
+      product_model: productModel.trim() || null,
+      reference: reference.trim() || null,
       description: description.trim() || undefined,
       category,
       sale_unit: saleUnit,
@@ -397,6 +409,36 @@ export function CatalogFormDialog({
           </div>
 
           <div className="space-y-4 border-t pt-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="catalog-brand">Marca</Label>
+                <Input
+                  id="catalog-brand"
+                  value={brand}
+                  onChange={(e) => setBrand(e.target.value)}
+                  placeholder="Opcional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="catalog-product-model">Modelo</Label>
+                <Input
+                  id="catalog-product-model"
+                  value={productModel}
+                  onChange={(e) => setProductModel(e.target.value)}
+                  placeholder="Opcional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="catalog-reference">Referencia</Label>
+                <Input
+                  id="catalog-reference"
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                  placeholder="Opcional"
+                />
+              </div>
+            </div>
+
             <div
               className={cn(
                 'grid gap-4',

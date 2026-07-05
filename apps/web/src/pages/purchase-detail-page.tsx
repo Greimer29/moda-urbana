@@ -783,12 +783,17 @@ export function PurchaseDetallePage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="usd_rate">Tasa Bs/USD</Label>
-                      <PurchaseEntryCurrencyToggle
-                        value={entryCurrency}
-                        onChange={setEntryCurrency}
-                      />
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Label htmlFor="usd_rate" className="shrink-0">
+                        Tasa Bs/USD
+                      </Label>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-muted-foreground text-xs font-medium">Moneda</span>
+                        <PurchaseEntryCurrencyToggle
+                          value={entryCurrency}
+                          onChange={setEntryCurrency}
+                        />
+                      </div>
                     </div>
                     <DecimalInput
                       id="usd_rate"

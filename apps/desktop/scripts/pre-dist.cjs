@@ -34,6 +34,18 @@ try {
   // App not running.
 }
 
+for (const otherExe of ['Moda Urbana.exe', 'Coreva.exe', 'Hebra.exe']) {
+  if (otherExe === `${productName}.exe`) {
+    continue
+  }
+
+  try {
+    execSync(`taskkill /F /IM "${otherExe}" /T`, { stdio: 'ignore' })
+  } catch {
+    // Other desktop app not running.
+  }
+}
+
 if (fs.existsSync(releaseDir)) {
   fs.rmSync(releaseDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 500 })
 }

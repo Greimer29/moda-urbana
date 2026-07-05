@@ -6,6 +6,9 @@ export type { PaymentMethod, ProductSaleUnit }
 export type CatalogProduct = {
   id: number
   name: string
+  brand: string | null
+  product_model: string | null
+  reference: string | null
   description: string | null
   category: string
   sale_unit: ProductSaleUnit
@@ -62,6 +65,9 @@ export type CatalogFormulaItem = {
 
 export type CatalogProductInput = {
   name: string
+  brand?: string | null
+  product_model?: string | null
+  reference?: string | null
   description?: string
   category: string
   sale_unit?: ProductSaleUnit
@@ -75,6 +81,9 @@ export type CatalogListParams = {
   page?: number
   perPage?: number
   search?: string
+  brand?: string
+  productModel?: string
+  reference?: string
   category?: string
   active?: boolean
   sortBy?: 'name' | 'most_sold'

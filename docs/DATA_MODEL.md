@@ -410,6 +410,14 @@ WHERE fecha >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
 
 ## Producto de catálogo (`CatalogProduct`) — stock
 
+Atributos adicionales de identificación (opcionales, filtrables en listado):
+
+| Campo           | Tipo         | Notas                          |
+|-----------------|--------------|--------------------------------|
+| `brand`         | varchar(80)  | Marca                          |
+| `product_model` | varchar(100) | Modelo                         |
+| `reference`     | varchar(100) | Referencia / código del ítem   |
+
 ### Sin fórmula (`formula_id` NULL)
 
 - El stock se almacena en `stock_quantity` y se actualiza con `product_inventory_movements`:

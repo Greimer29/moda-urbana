@@ -24,7 +24,13 @@ export function ProductosPage() {
   const canEditCatalog = can('catalog.edit')
   const [page, setPage] = useState(1)
   const [searchInput, setSearchInput] = useState('')
+  const [brandInput, setBrandInput] = useState('')
+  const [modelInput, setModelInput] = useState('')
+  const [referenceInput, setReferenceInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [debouncedBrand, setDebouncedBrand] = useState('')
+  const [debouncedModel, setDebouncedModel] = useState('')
+  const [debouncedReference, setDebouncedReference] = useState('')
   const [category, setCategory] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -35,15 +41,21 @@ export function ProductosPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setDebouncedSearch(searchInput.trim())
+      setDebouncedBrand(brandInput.trim())
+      setDebouncedModel(modelInput.trim())
+      setDebouncedReference(referenceInput.trim())
       setPage(1)
     }, 300)
     return () => window.clearTimeout(timer)
-  }, [searchInput])
+  }, [searchInput, brandInput, modelInput, referenceInput])
 
   const { data, isLoading, isError, error } = useCatalogProductsQuery({
     page,
     perPage: PER_PAGE,
     search: debouncedSearch || undefined,
+    brand: debouncedBrand || undefined,
+    productModel: debouncedModel || undefined,
+    reference: debouncedReference || undefined,
     category: category || undefined,
     active: true,
     sortBy: 'name',
@@ -112,6 +124,24 @@ export function ProductosPage() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="max-w-xs"
+            />
+            <Input
+              placeholder="Marca"
+              value={brandInput}
+              onChange={(e) => setBrandInput(e.target.value)}
+              className="max-w-[10rem]"
+            />
+            <Input
+              placeholder="Modelo"
+              value={modelInput}
+              onChange={(e) => setModelInput(e.target.value)}
+              className="max-w-[10rem]"
+            />
+            <Input
+              placeholder="Referencia"
+              value={referenceInput}
+              onChange={(e) => setReferenceInput(e.target.value)}
+              className="max-w-[10rem]"
             />
             <select
               className="border-input flex h-9 rounded-md border bg-white px-3 text-sm"
