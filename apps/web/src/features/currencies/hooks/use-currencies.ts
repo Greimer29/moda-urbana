@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   createCurrency,
   deleteCurrency,
@@ -6,11 +6,12 @@ import {
   updateCurrency,
 } from '@/features/currencies/services/currency-service'
 import type { CurrencyInput, CurrencyUpdateInput } from '@/features/currencies/types'
+import { useAuthenticatedQuery } from '@/lib/use-authenticated-query'
 
 export const currenciesQueryKey = ['currencies'] as const
 
 export function useCurrenciesQuery(activeOnly = false) {
-  return useQuery({
+  return useAuthenticatedQuery({
     queryKey: [...currenciesQueryKey, { activeOnly }],
     queryFn: () => listCurrencies(activeOnly),
   })

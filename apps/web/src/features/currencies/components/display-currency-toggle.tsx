@@ -7,15 +7,38 @@ type DisplayCurrencyToggleProps = {
 }
 
 export function DisplayCurrencyToggle({ className, size = 'sm' }: DisplayCurrencyToggleProps) {
-  const { currencies, displayCurrency, setDisplayCurrency, isLoading } = useDisplayCurrency()
+  const { currencies, displayCurrency, setDisplayCurrency, isLoading, isError } =
+    useDisplayCurrency()
 
-  const options =
-    currencies.length > 0
-      ? currencies
-      : [
-          { code: 'USD', name: 'USD' },
-          { code: 'VES', name: 'VES' },
-        ]
+  if (isLoading && currencies.length === 0) {
+    return (
+      <div
+        className={cn(
+          'inline-flex rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground',
+          className
+        )}
+        aria-busy
+      >
+        Moneda…
+      </div>
+    )
+  }
+
+  if (isError && currencies.length === 0) {
+    return (
+      <div
+        className={cn(
+          'inline-flex rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground',
+          className
+        )}
+        title="No se pudieron cargar las monedas. Usá Reconectar o recargá la página."
+      >
+        Moneda
+      </div>
+    )
+  }
+
+  const options = currencies.length > 0 ? currencies : [{ code: 'USD', name: 'USD' }]
 
   return (
     <div

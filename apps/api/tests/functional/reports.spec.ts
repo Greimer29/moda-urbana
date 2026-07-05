@@ -688,6 +688,57 @@ test.group('Reports API', (group) => {
     assert.equal(filteredBody.data.movements[0].amountUsd, '30.0000')
   })
 
+  test('GET account-statement includes cash purchase without account in purchase month only', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const supplier = await Supplier.create({ name: 'Proveedor contado', active: true })
+
+    await Purchase.create({
+      supplierId: supplier.id,
+      date: DateTime.fromISO('2026-05-18'),
+      invoiceNumber: 'F-CONT-SIN-CTA',
+      totalUsd: '45.0000',
+      totalBs: '1620.00',
+      status: 'CONFIRMED',
+      isCredit: false,
+      accountId: null,
+    })
+
+    const previousMonth = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: '2026-05', types: 'purchases', display_currency: 'USD' })
+      .loginAs(user)
+
+    previousMonth.assertStatus(200)
+    const previousBody = previousMonth.body() as {
+      data: {
+        movements: Array<{ type: string; amountUsd: string; account: null | { id: number } }>
+        summary: { purchasesUsd: string }
+      }
+    }
+
+    assert.equal(previousBody.data.summary.purchasesUsd, '45.0000')
+    assert.lengthOf(previousBody.data.movements, 1)
+    assert.equal(previousBody.data.movements[0].type, 'purchase')
+    assert.equal(previousBody.data.movements[0].amountUsd, '45.0000')
+    assert.isNull(previousBody.data.movements[0].account)
+
+    const currentMonth = await client
+      .get('/api/v1/reports/account-statement')
+      .qs({ month: '2026-06', types: 'purchases', display_currency: 'USD' })
+      .loginAs(user)
+
+    currentMonth.assertStatus(200)
+    const currentBody = currentMonth.body() as {
+      data: { movements: unknown[]; summary: { purchasesUsd: string } }
+    }
+
+    assert.equal(currentBody.data.summary.purchasesUsd, '0.0000')
+    assert.isEmpty(currentBody.data.movements)
+  })
+
   test('GET account-statement includes supplier payments in purchases', async ({
     client,
     assert,

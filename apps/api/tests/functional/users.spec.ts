@@ -184,6 +184,55 @@ test.group('Users API', (group) => {
     })
   })
 
+  test('operator with vendedor permissions can list active currencies but not create them', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await User.findByOrFail('email', TEST_EMAIL)
+
+    await client
+      .post('/api/v1/users')
+      .loginAs(admin)
+      .json({
+        name: 'Vendedor Test',
+        email: 'vendedor@hebra.local',
+        password: 'password123',
+        role: 'OPERATOR',
+        permissions: [
+          'dashboard.view',
+          'ventas.view',
+          'ventas.confirm',
+          'ventas.credit',
+          'ventas.returns',
+          'customers.view',
+          'customers.edit',
+        ],
+      })
+
+    const vendor = await User.findByOrFail('email', 'vendedor@hebra.local')
+
+    const listResponse = await client
+      .get('/api/v1/currencies')
+      .qs({ active: true })
+      .loginAs(vendor)
+
+    listResponse.assertStatus(200)
+    const listBody = listResponse.body() as {
+      data: { currencies: Array<{ code: string; isActive: boolean }> }
+    }
+    assert.isAbove(listBody.data.currencies.length, 0)
+    assert.isTrue(listBody.data.currencies.every((currency) => currency.isActive))
+
+    const createResponse = await client.post('/api/v1/currencies').loginAs(vendor).json({
+      code: 'EUR',
+      name: 'Euro',
+      rate_per_usd: '1.1000',
+      is_active: true,
+    })
+
+    createResponse.assertStatus(403)
+  })
+
   test('GET /api/v1/users lists users for admin', async ({ client, assert }) => {
     const admin = await User.findByOrFail('email', TEST_EMAIL)
 

@@ -94,6 +94,7 @@ type ReportMovementsTableProps = {
   title?: string
   subtitle?: string
   categorySlug?: ReportMovementCategorySlug
+  showPeriodHint?: boolean
 }
 
 export function ReportMovementsTable({
@@ -101,6 +102,7 @@ export function ReportMovementsTable({
   title = 'Historial de movimientos',
   subtitle,
   categorySlug,
+  showPeriodHint = false,
 }: ReportMovementsTableProps) {
   const { displayCurrency, formatFromUsd, formatNative } = useDisplayCurrency()
 
@@ -136,9 +138,26 @@ export function ReportMovementsTable({
       </div>
 
       {movements.length === 0 ? (
-        <p className={`${reportUi.body} px-5 py-12 text-center`}>
-          No hay movimientos para los filtros seleccionados.
-        </p>
+        <div className={`${reportUi.body} space-y-2 px-5 py-12 text-center`}>
+          <p>No hay movimientos para los filtros seleccionados.</p>
+          {categorySlug === 'compras' || showPeriodHint ? (
+            <p className={`${reportUi.muted} mx-auto max-w-lg text-sm`}>
+              {categorySlug === 'compras' ? (
+                <>
+                  Las compras al contado aparecen según su fecha de compra. Si registraste una compra
+                  en otro mes, usá <strong className="font-medium text-neutral-700">Mes anterior</strong>{' '}
+                  o elegí el mes en el selector. Solo se incluyen compras confirmadas; las a crédito
+                  se muestran por fecha de vencimiento.
+                </>
+              ) : (
+                <>
+                  Los movimientos se filtran por el período seleccionado arriba. Si falta una compra
+                  u otro egreso de un mes anterior, cambiá el mes antes de buscar.
+                </>
+              )}
+            </p>
+          ) : null}
+        </div>
       ) : (
         <div className="scrollbar-subtle overflow-x-auto">
           <table className="w-full text-sm">

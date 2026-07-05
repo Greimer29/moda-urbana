@@ -1,21 +1,18 @@
 import { BarChart3, CalendarDays } from 'lucide-react'
+import { useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AccountStatementPanel } from '@/features/reports/components/account-statement-panel'
-import { currentMonthIso } from '@/features/reports/constants'
+import { parsePeriodFromSearchParams, periodLabelFromState } from '@/features/reports/report-period'
 import { reportUi } from '@/features/reports/report-ui'
 import { cn } from '@/lib/utils'
 
-function currentPeriodLabel() {
-  const [year, month] = currentMonthIso().split('-')
-  const date = new Date(Number(year), Number(month) - 1, 1)
-  return date.toLocaleDateString('es-VE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
 export function ReportsPage() {
+  const [searchParams] = useSearchParams()
+  const periodLabel = useMemo(
+    () => periodLabelFromState(parsePeriodFromSearchParams(searchParams)),
+    [searchParams]
+  )
+
   return (
     <div
       className={cn(
@@ -37,7 +34,7 @@ export function ReportsPage() {
 
         <div className={cn(reportUi.panel, 'flex items-center gap-2 px-4 py-2.5 shadow-none')}>
           <CalendarDays className="size-4 text-neutral-500" />
-          <span className="text-sm capitalize text-neutral-700">{currentPeriodLabel()}</span>
+          <span className="text-sm capitalize text-neutral-700">{periodLabel}</span>
         </div>
       </header>
 

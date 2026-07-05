@@ -11,7 +11,6 @@ export function AppHeader() {
   const navigate = useNavigate()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const { refresh, isRefreshing } = useAppRefresh()
-  const appVersion = import.meta.env.VITE_APP_VERSION
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -27,19 +26,15 @@ export function AppHeader() {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b px-4 md:px-6">
       <div className="flex min-w-0 items-center gap-3">
-        <p className="text-muted-foreground shrink-0 text-sm">Gestión Moda Urbana</p>
-        {appVersion ? (
-          <span className="text-muted-foreground shrink-0 text-xs">v{appVersion}</span>
-        ) : null}
         <DisplayCurrencyToggle className="shrink-0" />
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <Button
-          variant="outline"
-          size="sm"
-          className="shrink-0"
-          title="Reconectar con el servidor"
-          aria-label="Reconectar con el servidor"
+          variant="ghost"
+          size="icon"
+          className="size-8 shrink-0"
+          title="Reconectar"
+          aria-label="Reconectar"
           disabled={isRefreshing}
           onClick={() => void refresh()}
         >
@@ -48,7 +43,6 @@ export function AppHeader() {
           ) : (
             <RefreshCw className="size-4" />
           )}
-          Reconectar
         </Button>
         {user ? (
           <p className="hidden text-sm sm:block">

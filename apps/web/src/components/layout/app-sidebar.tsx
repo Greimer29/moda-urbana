@@ -178,6 +178,8 @@ function SidebarNavGroup({
 
 export function AppSidebar() {
   const { user } = useAuth()
+  const appVersion = import.meta.env.VITE_APP_VERSION
+  const copyrightYear = new Date().getFullYear()
 
   const visibleEntries = navEntries.filter((entry) => {
     if (entry.type === 'link') {
@@ -217,6 +219,12 @@ export function AppSidebar() {
           return <SidebarNavGroup key={entry.id} entry={entry} />
         })}
       </nav>
+      <footer className="text-sidebar-foreground/60 shrink-0 border-t px-4 py-3 text-xs leading-relaxed">
+        <p>
+          © {copyrightYear} Gestión {brand.legalName}
+        </p>
+        {appVersion ? <p className="mt-0.5 tabular-nums">v{appVersion}</p> : null}
+      </footer>
     </aside>
   )
 }

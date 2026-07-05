@@ -25,6 +25,7 @@ type DisplayCurrencyContextValue = {
   currencies: Array<{ code: string; name: string; ratePerUsd: string; isActive: boolean }>
   rates: Record<string, number>
   isLoading: boolean
+  isError: boolean
   toUsdAmount: (amount: number, currencyCode: string) => number
   fromUsdAmount: (amountUsd: number, targetCurrency?: string) => number
   formatInDisplay: (amount: number, sourceCurrency: string) => string
@@ -36,7 +37,7 @@ type DisplayCurrencyContextValue = {
 const DisplayCurrencyContext = createContext<DisplayCurrencyContextValue | null>(null)
 
 export function DisplayCurrencyProvider({ children }: { children: ReactNode }) {
-  const { data: currencies = [], isLoading } = useActiveCurrenciesQuery()
+  const { data: currencies = [], isLoading, isError } = useActiveCurrenciesQuery()
   const rates = useMemo(() => buildRatesMap(currencies), [currencies])
 
   const [displayCurrency, setDisplayCurrencyState] = useState(() => {
@@ -93,6 +94,7 @@ export function DisplayCurrencyProvider({ children }: { children: ReactNode }) {
       currencies,
       rates,
       isLoading,
+      isError,
       toUsdAmount,
       fromUsdAmount,
       formatInDisplay,
@@ -106,6 +108,7 @@ export function DisplayCurrencyProvider({ children }: { children: ReactNode }) {
       currencies,
       rates,
       isLoading,
+      isError,
       toUsdAmount,
       fromUsdAmount,
       formatInDisplay,

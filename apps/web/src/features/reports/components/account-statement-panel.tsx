@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useDisplayCurrency } from '@/features/currencies/context/display-currency-context'
 import { ReportMovementsTable } from '@/features/reports/components/report-movements-table'
 import { ReportBreakdownChart } from '@/features/reports/components/report-breakdown-chart'
@@ -7,7 +8,10 @@ import { ReportFiltersToolbar } from '@/features/reports/components/report-filte
 import { ReportFlowChart } from '@/features/reports/components/report-flow-chart'
 import { ReportKpiGrid } from '@/features/reports/components/report-kpi-grid'
 import { formatFecha } from '@/features/reports/constants'
-import { defaultReportPeriodState } from '@/features/reports/report-period'
+import {
+  applyPeriodToSearchParams,
+  parsePeriodFromSearchParams,
+} from '@/features/reports/report-period'
 import { buildReportSearchParams } from '@/features/reports/report-search-params'
 import { reportUi } from '@/features/reports/report-ui'
 import { useAccountStatementQuery } from '@/features/reports/hooks/use-reports'
@@ -15,15 +19,52 @@ import { getApiErrorMessage } from '@/lib/api-error'
 
 export function AccountStatementPanel() {
   const { displayCurrency } = useDisplayCurrency()
-  const [period, setPeriod] = useState(defaultReportPeriodState)
-  const [accountId, setAccountId] = useState<number | null>(null)
-  const [unassignedOnly, setUnassignedOnly] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const period = useMemo(() => parsePeriodFromSearchParams(searchParams), [searchParams])
+  const accountId = useMemo(() => {
+    if (searchParams.get('unassigned') === '1') return null
+    const raw = searchParams.get('account_id')
+    return raw ? Number(raw) : null
+  }, [searchParams])
+  const unassignedOnly = searchParams.get('unassigned') === '1'
   const [types, setTypes] = useState({
     sales: true,
     purchases: true,
     expenses: true,
     machine_expenses: true,
   })
+
+  const syncSearchParams = useCallback(
+    (next: {
+      period?: typeof period
+      accountId?: number | null
+      unassignedOnly?: boolean
+    }) => {
+      const params = applyPeriodToSearchParams(
+        new URLSearchParams(searchParams),
+        next.period ?? period
+      )
+
+      params.delete('account_id')
+      params.delete('unassigned')
+
+      const nextUnassigned = next.unassignedOnly ?? unassignedOnly
+      const nextAccountId = next.accountId !== undefined ? next.accountId : accountId
+
+      if (nextUnassigned) {
+        params.set('unassigned', '1')
+      } else if (nextAccountId != null) {
+        params.set('account_id', String(nextAccountId))
+      }
+
+      if (displayCurrency) {
+        params.set('display_currency', displayCurrency)
+      }
+
+      setSearchParams(params, { replace: true })
+    },
+    [searchParams, period, unassignedOnly, accountId, displayCurrency, setSearchParams]
+  )
 
   const queryParams = useMemo(() => {
     const selectedTypes = (
@@ -76,9 +117,11 @@ export function AccountStatementPanel() {
         accountId={accountId}
         unassignedOnly={unassignedOnly}
         types={types}
-        onPeriodChange={setPeriod}
-        onAccountIdChange={setAccountId}
-        onUnassignedOnlyChange={setUnassignedOnly}
+        onPeriodChange={(nextPeriod) => syncSearchParams({ period: nextPeriod })}
+        onAccountIdChange={(value) => syncSearchParams({ accountId: value, unassignedOnly: false })}
+        onUnassignedOnlyChange={(value) =>
+          syncSearchParams({ unassignedOnly: value, accountId: value ? null : accountId })
+        }
         onTypesChange={setTypes}
       />
 
@@ -127,6 +170,7 @@ export function AccountStatementPanel() {
           <ReportMovementsTable
             movements={data.movements}
             subtitle={`${data.movements.length} registro${data.movements.length === 1 ? '' : 's'} en el período`}
+            showPeriodHint={data.movements.length === 0}
           />
         </>
       )}

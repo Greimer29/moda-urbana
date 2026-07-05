@@ -3,7 +3,7 @@ import type { PermissionKey } from '#permissions/catalog'
 type RouteRule = {
   method: string
   pattern: RegExp
-  permission: PermissionKey
+  permission: PermissionKey | 'auth_only'
 }
 
 const ROUTE_RULES: RouteRule[] = [
@@ -86,7 +86,7 @@ const ROUTE_RULES: RouteRule[] = [
   { method: 'PUT', pattern: /^\/accounts(\/|$)/, permission: 'settings.edit' },
   { method: 'DELETE', pattern: /^\/accounts(\/|$)/, permission: 'settings.edit' },
 
-  { method: 'GET', pattern: /^\/currencies(\/|$)/, permission: 'settings.view' },
+  { method: 'GET', pattern: /^\/currencies(\/|$)/, permission: 'auth_only' },
   { method: 'POST', pattern: /^\/currencies(\/|$)/, permission: 'settings.edit' },
   { method: 'PUT', pattern: /^\/currencies(\/|$)/, permission: 'settings.edit' },
   { method: 'DELETE', pattern: /^\/currencies(\/|$)/, permission: 'settings.edit' },

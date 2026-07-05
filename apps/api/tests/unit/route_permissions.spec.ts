@@ -150,5 +150,6 @@ test.group('route_permissions', () => {
   test('auth session routes only require authentication', ({ assert }) => {
     assert.equal(resolveRoutePermission('GET', '/api/v1/auth/me'), 'auth_only')
     assert.equal(resolveRoutePermission('POST', '/api/v1/auth/logout'), 'auth_only')
+    assert.equal(resolveRoutePermission('GET', '/api/v1/currencies'), 'auth_only')
   })
 })
