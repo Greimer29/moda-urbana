@@ -20,6 +20,7 @@ export default await Env.create(new URL('../', import.meta.url), {
 
   FRONTEND_URL: Env.schema.string({ format: 'url', tld: false }),
   DESKTOP_APP_ORIGIN: Env.schema.string.optional(),
+  CAPACITOR_APP_ORIGIN: Env.schema.string.optional(),
 
   ADMIN_EMAIL: Env.schema.string({ format: 'email' }),
   ADMIN_PASSWORD: Env.schema.string(),

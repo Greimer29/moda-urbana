@@ -24,9 +24,14 @@ function expandLocalhostTwin(origin: string): string[] {
 function frontendOrigins(): string[] {
   const origins = new Set<string>([env.get('FRONTEND_URL')])
   const desktopOrigin = env.get('DESKTOP_APP_ORIGIN')
+  const capacitorOrigin = env.get('CAPACITOR_APP_ORIGIN') ?? 'https://localhost'
 
   if (desktopOrigin) {
     origins.add(desktopOrigin)
+  }
+
+  if (capacitorOrigin) {
+    origins.add(capacitorOrigin)
   }
 
   // Solo en desarrollo: evita errores CORS al alternar localhost / 127.0.0.1.
