@@ -1,8 +1,11 @@
 import FormulaNoEncontradaException from '#exceptions/formula_no_encontrada_exception'
 import ProductoCatalogoEnPedidosActivosException from '#exceptions/producto_catalogo_en_pedidos_activos_exception'
 import ProductoCatalogoNoEncontradoException from '#exceptions/producto_catalogo_no_encontrado_exception'
+import ProductoCatalogoStockFormulaException from '#exceptions/producto_catalogo_stock_formula_exception'
+import ProductoTallaDuplicadaException from '#exceptions/producto_talla_duplicada_exception'
 import ArchivoImagenNoDisponibleException from '#exceptions/archivo_imagen_no_disponible_exception'
 import CatalogProduct from '#models/catalog_product'
+import CatalogProductSize from '#models/catalog_product_size'
 import Formula from '#models/formula'
 import OrderLine from '#models/order_line'
 import CategoryService from '#services/category_service'
@@ -15,6 +18,12 @@ import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import db from '@adonisjs/lucid/services/db'
 import { randomUUID } from 'node:crypto'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+
+export type CatalogProductSizeInput = {
+  size: string
+  stock_quantity: number
+}
 
 export type CatalogProductInput = {
   name: string
@@ -30,6 +39,7 @@ export type CatalogProductInput = {
   stock_quantity?: number
   minimum_stock?: number
   active?: boolean
+  sizes?: CatalogProductSizeInput[]
 }
 
 export type CatalogProductUpdateInput = Partial<CatalogProductInput>
@@ -41,6 +51,7 @@ export type ListCatalogProductsFilters = {
   brand?: string
   productModel?: string
   reference?: string
+  size?: string
   category?: string
   active?: boolean
   sortBy?: 'name' | 'most_sold'
@@ -106,7 +117,9 @@ export default class CatalogProductService {
     const sortBy = filters.sortBy ?? 'name'
     const sortDir = filters.sortDir ?? 'asc'
 
-    const query = CatalogProduct.query()
+    const query = CatalogProduct.query().preload('sizes', (sizesQuery) =>
+      sizesQuery.orderBy('size', 'asc')
+    )
 
     if (filters.search) {
       const term = `%${filters.search.trim()}%`
@@ -130,6 +143,13 @@ export default class CatalogProductService {
 
     if (filters.reference) {
       query.whereILike('reference', `%${filters.reference.trim()}%`)
+    }
+
+    if (filters.size) {
+      const sizeTerm = filters.size.trim()
+      query.whereHas('sizes', (sizesQuery) => {
+        sizesQuery.whereILike('size', sizeTerm).where('stock_quantity', '>', 0)
+      })
     }
 
     if (filters.category) {
@@ -165,6 +185,7 @@ export default class CatalogProductService {
       .preload('formula', (q) =>
         q.preload('materials', (mq) => mq.preload('material').orderBy('id', 'asc'))
       )
+      .preload('sizes', (q) => q.orderBy('size', 'asc'))
       .first()
 
     if (!product) {
@@ -186,6 +207,12 @@ export default class CatalogProductService {
 
     await this.categoryService.assertCategoriaActiva(input.category)
 
+    const normalizedSizes = input.sizes ? this.normalizeSizesInput(input.sizes) : null
+    const hasSizes = Boolean(normalizedSizes && normalizedSizes.length > 0)
+    const stockFromSizes = hasSizes
+      ? normalizedSizes!.reduce((sum, item) => sum + item.stock_quantity, 0)
+      : null
+
     return db.transaction(async (trx) => {
       const product = await CatalogProduct.create(
         {
@@ -200,7 +227,9 @@ export default class CatalogProductService {
           salePriceUsd: input.sale_price_usd.toFixed(4),
           previousSalePriceUsd: null,
           costUsd: costUsd.toFixed(4),
-          stockQuantity: (input.formula_id ? 0 : (input.stock_quantity ?? 0)).toFixed(3),
+          stockQuantity: (
+            input.formula_id ? 0 : (stockFromSizes ?? input.stock_quantity ?? 0)
+          ).toFixed(3),
           minimumStock: (input.minimum_stock ?? 0).toFixed(3),
           active: input.active ?? true,
         },
@@ -209,6 +238,11 @@ export default class CatalogProductService {
 
       await this.productCodeService.assertCatalogProductCodeAvailable(Number(product.id))
 
+      if (hasSizes && !input.formula_id) {
+        await this.replaceSizesEnTrx(product, normalizedSizes!, trx)
+      }
+
+      await product.load('sizes', (q) => q.orderBy('size', 'asc'))
       return product
     })
   }
@@ -273,7 +307,7 @@ export default class CatalogProductService {
       product.saleUnit = input.sale_unit
     }
 
-    if (input.stock_quantity !== undefined && !product.formulaId) {
+    if (input.stock_quantity !== undefined && !product.formulaId && input.sizes === undefined) {
       product.stockQuantity = input.stock_quantity.toFixed(3)
     }
 
@@ -297,8 +331,46 @@ export default class CatalogProductService {
       costWarnings.push(warning)
     }
 
-    await product.save()
+    await db.transaction(async (trx) => {
+      product.useTransaction(trx)
+      await product.save()
+
+      if (input.sizes !== undefined && !product.formulaId) {
+        const normalizedSizes = this.normalizeSizesInput(input.sizes)
+        await this.replaceSizesEnTrx(product, normalizedSizes, trx)
+        if (normalizedSizes.length > 0) {
+          const total = normalizedSizes.reduce((sum, item) => sum + item.stock_quantity, 0)
+          product.stockQuantity = total.toFixed(3)
+        } else if (input.stock_quantity !== undefined) {
+          product.stockQuantity = input.stock_quantity.toFixed(3)
+        }
+        await product.save()
+      }
+
+      await product.load('sizes', (q) => q.orderBy('size', 'asc'))
+    })
+
     return { product, costWarnings }
+  }
+
+  async reemplazarTallas(id: number, sizes: CatalogProductSizeInput[]): Promise<CatalogProduct> {
+    const product = await this.obtener(id)
+
+    if (product.formulaId) {
+      throw new ProductoCatalogoStockFormulaException()
+    }
+
+    const normalizedSizes = this.normalizeSizesInput(sizes)
+
+    return db.transaction(async (trx) => {
+      product.useTransaction(trx)
+      await this.replaceSizesEnTrx(product, normalizedSizes, trx)
+      const total = normalizedSizes.reduce((sum, item) => sum + item.stock_quantity, 0)
+      product.stockQuantity = total.toFixed(3)
+      await product.save()
+      await product.load('sizes', (q) => q.orderBy('size', 'asc'))
+      return product
+    })
   }
 
   async eliminar(id: number): Promise<{ id: number; modo: 'soft' | 'hard' }> {
@@ -549,6 +621,52 @@ export default class CatalogProductService {
 
     if (activo) {
       throw new ProductoCatalogoEnPedidosActivosException()
+    }
+  }
+
+  private normalizeSizesInput(sizes: CatalogProductSizeInput[]): CatalogProductSizeInput[] {
+    const seen = new Set<string>()
+    const normalized: CatalogProductSizeInput[] = []
+
+    for (const item of sizes) {
+      const size = item.size.trim()
+      if (!size) {
+        continue
+      }
+
+      const key = size.toLowerCase()
+      if (seen.has(key)) {
+        throw new ProductoTallaDuplicadaException(size)
+      }
+      seen.add(key)
+
+      normalized.push({
+        size,
+        stock_quantity: Math.max(0, Number(item.stock_quantity) || 0),
+      })
+    }
+
+    return normalized
+  }
+
+  private async replaceSizesEnTrx(
+    product: CatalogProduct,
+    sizes: CatalogProductSizeInput[],
+    trx: TransactionClientContract
+  ) {
+    await CatalogProductSize.query({ client: trx })
+      .where('catalogProductId', Number(product.id))
+      .delete()
+
+    for (const item of sizes) {
+      await CatalogProductSize.create(
+        {
+          catalogProductId: Number(product.id),
+          size: item.size,
+          stockQuantity: item.stock_quantity.toFixed(4),
+        },
+        { client: trx }
+      )
     }
   }
 }

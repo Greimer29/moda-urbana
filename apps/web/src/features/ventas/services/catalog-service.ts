@@ -17,6 +17,7 @@ export async function listCatalogProducts(params: CatalogListParams = {}) {
       brand: params.brand || undefined,
       product_model: params.productModel || undefined,
       reference: params.reference || undefined,
+      size: params.size || undefined,
       category: params.category,
       active: params.active,
       sort_by: params.sortBy,

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { isNativePlatform } from '@/lib/capacitor'
 
 let apiBaseUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? ''
 let cachedCsrfToken: string | null = null
@@ -44,6 +45,11 @@ function isDesktopEmbeddedOrigin(): boolean {
 
 function usesLocalApiProxy(): boolean {
   if (typeof window === 'undefined') {
+    return false
+  }
+
+  // Capacitor habla directo a Railway (sin proxy Vite/Electron).
+  if (isNativePlatform()) {
     return false
   }
 
@@ -196,6 +202,14 @@ export function configureApiBaseUrl(url: string) {
 }
 
 export async function loadRuntimeApiConfig(): Promise<void> {
+  if (isNativePlatform()) {
+    const fromEnv = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? ''
+    if (fromEnv) {
+      configureApiBaseUrl(fromEnv)
+    }
+    return
+  }
+
   try {
     const response = await fetch('/runtime-config.json', { credentials: 'same-origin' })
     if (response.ok) {

@@ -51,7 +51,7 @@ El objetivo del proyecto es construir un **ecosistema digital modular** que digi
 | Auth                                    | Sesiones de AdonisJS + cookies httpOnly                             | NO JWT en localStorage                                          |
 | Storage de archivos                     | Local en volumen Railway en Mes 1, S3-compatible (R2) cuando crezca | Adonis Drive abstrae esto                                       |
 | PWA (Mes 2)                             | **Vite PWA plugin**                                                 | Permite instalación en móvil y desktop                          |
-| Build móvil nativo (Mes 2 si se decide) | **Capacitor** + Android Studio                                      | Mismo código React, APK Android                                 |
+| Build móvil nativo                      | **Capacitor** + Android Studio (`apps/mobile`)                      | APK Android; ver `docs/ANDROID_CAPACITOR.md`                    |
 | Containerización                        | **Docker** + docker-compose para desarrollo local                   |                                                                 |
 | Despliegue                              | **Railway**                                                         | Mes 1: **api + mysql** en Railway; **web en local** (deploy web pendiente de decisión PWA/nativo) |
 | CI/CD                                   | **GitHub Actions**                                                  | Lint + tests + build en cada PR                                 |

@@ -159,6 +159,7 @@ router
         router.post('catalog-products/:id/adjustment', [CatalogProductsController, 'ajuste'])
         router.post('catalog-products', [CatalogProductsController, 'store'])
         router.put('catalog-products/:id', [CatalogProductsController, 'update'])
+        router.put('catalog-products/:id/sizes', [CatalogProductsController, 'replaceSizes'])
         router.delete('catalog-products/:id', [CatalogProductsController, 'destroy'])
         router.post('catalog-products/:id/image', [CatalogProductsController, 'uploadImage'])
         router.get('catalog-products/:id/image', [CatalogProductsController, 'downloadImage'])

@@ -17,7 +17,9 @@
     "dev:setup": "powershell -ExecutionPolicy Bypass -File scripts/dev-setup.ps1",
     "build:desktop": "node scripts/prepare-brand.mjs moda-urbana && npx pnpm@9.15.4 --filter web build && npx pnpm@9.15.4 --filter desktop dist",
     "build:desktop:moda-urbana": "node scripts/prepare-brand.mjs moda-urbana && npx pnpm@9.15.4 --filter web build && npx pnpm@9.15.4 --filter desktop dist",
-    "build:desktop:coreva": "node scripts/prepare-brand.mjs coreva && npx pnpm@9.15.4 --filter web build && npx pnpm@9.15.4 --filter desktop dist"
+    "build:desktop:coreva": "node scripts/prepare-brand.mjs coreva && npx pnpm@9.15.4 --filter web build && npx pnpm@9.15.4 --filter desktop dist",
+    "build:android:moda-urbana": "node scripts/prepare-brand.mjs moda-urbana && npx pnpm@9.15.4 --filter web build && npx pnpm@9.15.4 --filter mobile build:debug",
+    "build:android:moda-urbana:release": "node scripts/prepare-brand.mjs moda-urbana && npx pnpm@9.15.4 --filter web build && npx pnpm@9.15.4 --filter mobile build:release"
   },
   "engines": {
     "node": ">=20.0.0",

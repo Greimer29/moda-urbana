@@ -6,11 +6,11 @@ import { DisplayCurrencyProvider } from '@/features/currencies/context/display-c
 export function AppLayout() {
   return (
     <DisplayCurrencyProvider>
-      <div className="flex h-svh w-full overflow-hidden">
+      <div className="flex h-svh w-full overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <AppSidebar />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <AppHeader />
-          <main className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
+          <main className="min-h-0 flex-1 overflow-y-auto p-3 md:p-6">
             <RoutePermissionOutlet />
           </main>
         </div>

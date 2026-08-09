@@ -1,10 +1,19 @@
 import { PublicImage } from '@/components/public-image'
 import type { ProductSaleUnit } from '@/features/ventas/constants'
 import type { BillingMethod } from '@/features/ventas/constants'
-import type { ReactNode } from 'react'
-import { LayoutGrid, Package, Trash2, X } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { LayoutGrid, MessageSquare, Package, SlidersHorizontal, StickyNote, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DecimalInput } from '@/components/decimal-input'
+import { DecimalInput, MoneyInput } from '@/components/decimal-input'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { DisplayMoney, DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { useFormatMoney } from '@/features/currencies/context/display-currency-context'
 import { VentasBillingMethodToggle } from '@/features/ventas/components/ventas-billing-method-toggle'
@@ -18,10 +27,12 @@ export type VentasCartLine = {
   code: string
   quantity: number
   unitPriceUsd: number
+  listPriceUsd?: number
   saleUnit?: ProductSaleUnit
   imageUrl?: string | null
   imageTone?: 'orange' | 'violet' | 'amber' | 'sky'
   metaLabel?: string
+  notes?: string | null
 }
 
 type VentasOrderCartProps = {
@@ -33,6 +44,10 @@ type VentasOrderCartProps = {
   onClear: () => void
   onRemoveLine: (key: string) => void
   onUpdateQuantity?: (key: string, quantity: number) => void
+  onUpdateUnitPrice?: (key: string, unitPriceUsd: number) => void
+  onUpdateLineNotes?: (key: string, notes: string) => void
+  onEditOrderNotes?: () => void
+  orderNotes?: string | null
   emptyMessage?: string
   children?: ReactNode
   className?: string
@@ -54,7 +69,248 @@ function lineSubtotal(line: VentasCartLine) {
 
 function CartLineSubtotal({ line }: { line: VentasCartLine }) {
   const { formatFromUsd } = useFormatMoney()
-  return <span className="text-sm font-bold">{formatFromUsd(lineSubtotal(line))}</span>
+  return <span className="text-sm font-bold tabular-nums">{formatFromUsd(lineSubtotal(line))}</span>
+}
+
+function CartLineCard({
+  line,
+  onRemove,
+  onUpdateQuantity,
+  onUpdateUnitPrice,
+  onUpdateLineNotes,
+}: {
+  line: VentasCartLine
+  onRemove: () => void
+  onUpdateQuantity?: (quantity: number) => void
+  onUpdateUnitPrice?: (unitPriceUsd: number) => void
+  onUpdateLineNotes?: (notes: string) => void
+}) {
+  const { formatFromUsd } = useFormatMoney()
+  const [priceOpen, setPriceOpen] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
+  const [draftPrice, setDraftPrice] = useState(String(line.unitPriceUsd))
+  const [draftNotes, setDraftNotes] = useState(line.notes ?? '')
+
+  const listPrice = line.listPriceUsd ?? line.unitPriceUsd
+  const hasDiscount = listPrice > line.unitPriceUsd + 0.0001
+  const hasNotes = Boolean(line.notes?.trim())
+  const unit = line.saleUnit ?? 'UND'
+  const decimals = inventoryQuantityDecimals(unit)
+  const isIntegerUnit = decimals === 0
+
+  function openPriceModal() {
+    setDraftPrice(String(line.unitPriceUsd))
+    setPriceOpen(true)
+  }
+
+  function openNotesModal() {
+    setDraftNotes(line.notes ?? '')
+    setNotesOpen(true)
+  }
+
+  function applyPrice() {
+    const parsed = parseDecimalInput(draftPrice, 4) ?? 0
+    onUpdateUnitPrice?.(Math.max(0, parsed))
+    setPriceOpen(false)
+  }
+
+  function applyPercentOff(pct: number) {
+    const next = Math.max(0, Number((listPrice * (1 - pct / 100)).toFixed(4)))
+    setDraftPrice(String(next))
+  }
+
+  function applyNotes() {
+    onUpdateLineNotes?.(draftNotes.trim())
+    setNotesOpen(false)
+  }
+
+  return (
+    <>
+      <div className="relative rounded-xl border bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground absolute top-2 right-2 size-7 rounded-full"
+          onClick={onRemove}
+          aria-label={`Quitar ${line.name}`}
+        >
+          <X className="size-3.5" />
+        </Button>
+
+        <div className="flex gap-3 pr-6">
+          <div
+            className={cn(
+              'flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl',
+              line.imageUrl ? 'bg-muted' : IMAGE_TONE_CLASS[line.imageTone ?? 'violet']
+            )}
+          >
+            {line.imageUrl ? (
+              <PublicImage
+                src={line.imageUrl}
+                alt={line.name}
+                className="size-full object-cover"
+                showFallbackIcon
+                fallbackClassName="size-full"
+              />
+            ) : (
+              <Package className="text-muted-foreground/70 size-7" />
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 pr-2 text-sm leading-snug font-semibold">{line.name}</p>
+            <p className="text-muted-foreground mt-0.5 text-xs">Código: {line.code}</p>
+            {line.metaLabel ? (
+              <p className="text-muted-foreground mt-0.5 text-xs">{line.metaLabel}</p>
+            ) : null}
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {onUpdateQuantity ? (
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span>Cantidad:</span>
+                  <DecimalInput
+                    min={isIntegerUnit ? 1 : 0.01}
+                    step={isIntegerUnit ? 1 : 0.01}
+                    decimals={decimals}
+                    className={cn('h-7 px-2 text-xs', isIntegerUnit ? 'w-12' : 'w-16')}
+                    value={line.quantity}
+                    onChange={(e) =>
+                      onUpdateQuantity(parseDecimalInput(e.target.value, decimals) ?? 0)
+                    }
+                  />
+                </div>
+              ) : (
+                <span className="text-xs text-slate-500">Cantidad: {line.quantity}</span>
+              )}
+
+              {onUpdateUnitPrice ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    'size-7',
+                    hasDiscount ? 'text-violet-700' : 'text-muted-foreground'
+                  )}
+                  title="Precio y descuento"
+                  aria-label="Precio y descuento"
+                  onClick={openPriceModal}
+                >
+                  <SlidersHorizontal className="size-3.5" />
+                </Button>
+              ) : null}
+
+              {onUpdateLineNotes ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={cn('size-7', hasNotes ? 'text-violet-700' : 'text-muted-foreground')}
+                  title="Nota de línea"
+                  aria-label="Nota de línea"
+                  onClick={openNotesModal}
+                >
+                  <MessageSquare className="size-3.5" />
+                </Button>
+              ) : null}
+            </div>
+
+            <div className="mt-2 flex items-end justify-between gap-2">
+              <div className="min-w-0">
+                {hasDiscount ? (
+                  <p className="text-muted-foreground text-[11px] line-through">
+                    {formatFromUsd(listPrice)} c/u
+                  </p>
+                ) : null}
+                {hasNotes ? (
+                  <p className="text-muted-foreground line-clamp-1 text-[11px]">{line.notes}</p>
+                ) : null}
+              </div>
+              <CartLineSubtotal line={line} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={priceOpen} onOpenChange={setPriceOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Precio de venta</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-muted-foreground text-sm">{line.name}</p>
+            <div className="space-y-1.5">
+              <Label htmlFor={`cart-price-${line.key}`}>Precio unitario</Label>
+              <MoneyInput
+                id={`cart-price-${line.key}`}
+                min={0}
+                value={draftPrice}
+                onChange={(e) => setDraftPrice(e.target.value)}
+              />
+              <p className="text-muted-foreground text-xs">
+                Precio de lista: {formatFromUsd(listPrice)}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[5, 10, 20].map((pct) => (
+                <Button
+                  key={pct}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyPercentOff(pct)}
+                >
+                  -{pct}%
+                </Button>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setDraftPrice(String(listPrice))}
+              >
+                Precio lista
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPriceOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={applyPrice}>
+              Aplicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={notesOpen} onOpenChange={setNotesOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Nota del producto</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-sm">{line.name}</p>
+            <Textarea
+              rows={4}
+              value={draftNotes}
+              onChange={(e) => setDraftNotes(e.target.value)}
+              placeholder="Observación de esta línea…"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setNotesOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={applyNotes}>
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
 }
 
 export function VentasOrderCart({
@@ -66,6 +322,10 @@ export function VentasOrderCart({
   onClear,
   onRemoveLine,
   onUpdateQuantity,
+  onUpdateUnitPrice,
+  onUpdateLineNotes,
+  onEditOrderNotes,
+  orderNotes,
   emptyMessage = 'El carrito está vacío.',
   children,
   className,
@@ -92,18 +352,31 @@ export function VentasOrderCart({
         )}
 
         <div className="flex items-center justify-end gap-1">
+          {onEditOrderNotes ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={cn('size-8', orderNotes ? 'text-violet-700' : 'text-muted-foreground')}
+              title={orderNotes ? 'Editar nota de factura' : 'Nota de factura'}
+              aria-label="Nota de factura"
+              onClick={onEditOrderNotes}
+            >
+              <StickyNote className="size-4" />
+            </Button>
+          ) : null}
           {headerAction}
           <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="text-destructive hover:text-destructive size-8"
-          disabled={lines.length === 0}
-          onClick={onClear}
-          aria-label="Vaciar carrito"
-        >
-          <Trash2 className="size-4" />
-        </Button>
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive size-8"
+            disabled={lines.length === 0}
+            onClick={onClear}
+            aria-label="Vaciar carrito"
+          >
+            <Trash2 className="size-4" />
+          </Button>
         </div>
       </div>
 
@@ -112,83 +385,22 @@ export function VentasOrderCart({
           <p className="text-muted-foreground py-6 text-center text-sm">{emptyMessage}</p>
         ) : (
           lines.map((line) => (
-            <div
+            <CartLineCard
               key={line.key}
-              className="relative rounded-xl border bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-            >
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground absolute top-2 right-2 size-7 rounded-full"
-                onClick={() => onRemoveLine(line.key)}
-                aria-label={`Quitar ${line.name}`}
-              >
-                <X className="size-3.5" />
-              </Button>
-
-              <div className="flex gap-3 pr-8">
-                <div
-                  className={cn(
-                    'flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl',
-                    line.imageUrl ? 'bg-muted' : IMAGE_TONE_CLASS[line.imageTone ?? 'violet']
-                  )}
-                >
-                   {line.imageUrl ? (
-                    <PublicImage
-                      src={line.imageUrl}
-                      alt={line.name}
-                      className="size-full object-cover"
-                      showFallbackIcon
-                      fallbackClassName="size-full"
-                    />
-                  ) : (
-                    <Package className="text-muted-foreground/70 size-7" />
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="line-clamp-2 text-sm leading-snug font-semibold">{line.name}</p>
-                  <p className="text-muted-foreground text-xs">Código: {line.code}</p>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    {line.metaLabel ? <span>{line.metaLabel}</span> : null}
-                    {onUpdateQuantity ? (
-                      <div className="flex items-center gap-1">
-                        <span>Cantidad:</span>
-                        {(() => {
-                          const unit = line.saleUnit ?? 'UND'
-                          const decimals = inventoryQuantityDecimals(unit)
-                          const isIntegerUnit = decimals === 0
-                          return (
-                            <DecimalInput
-                              min={isIntegerUnit ? 1 : 0.01}
-                              step={isIntegerUnit ? 1 : 0.01}
-                              decimals={decimals}
-                              className={cn(
-                                'h-7 px-2 text-xs',
-                                isIntegerUnit ? 'w-12' : 'w-16'
-                              )}
-                              value={line.quantity}
-                              onChange={(e) =>
-                                onUpdateQuantity(
-                                  line.key,
-                                  parseDecimalInput(e.target.value, decimals) ?? 0
-                                )
-                              }
-                            />
-                          )
-                        })()}
-                      </div>
-                    ) : (
-                      <span>Cantidad: {line.quantity}</span>
-                    )}
-                  </div>
-                  <p className="pt-1 text-right tabular-nums">
-                    <CartLineSubtotal line={line} />
-                  </p>
-                </div>
-              </div>
-            </div>
+              line={line}
+              onRemove={() => onRemoveLine(line.key)}
+              onUpdateQuantity={
+                onUpdateQuantity ? (quantity) => onUpdateQuantity(line.key, quantity) : undefined
+              }
+              onUpdateUnitPrice={
+                onUpdateUnitPrice
+                  ? (unitPriceUsd) => onUpdateUnitPrice(line.key, unitPriceUsd)
+                  : undefined
+              }
+              onUpdateLineNotes={
+                onUpdateLineNotes ? (notes) => onUpdateLineNotes(line.key, notes) : undefined
+              }
+            />
           ))
         )}
       </div>

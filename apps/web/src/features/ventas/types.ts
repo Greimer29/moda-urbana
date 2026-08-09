@@ -3,6 +3,13 @@ import type { PaginationMeta } from '@/features/orders/types'
 
 export type { PaymentMethod, ProductSaleUnit }
 
+export type CatalogProductSize = {
+  id: number
+  catalog_product_id: number
+  size: string
+  stock_quantity: string
+}
+
 export type CatalogProduct = {
   id: number
   name: string
@@ -21,6 +28,8 @@ export type CatalogProduct = {
   stock_source?: 'manual' | 'formula'
   minimum_stock?: string
   active: boolean
+  has_sizes?: boolean
+  sizes?: CatalogProductSize[]
   sold_qty?: number
   created_at: string
   updated_at: string
@@ -75,6 +84,7 @@ export type CatalogProductInput = {
   cost_usd?: number
   formula_id?: number | null
   stock_quantity?: number
+  sizes?: { size: string; stock_quantity: number }[]
 }
 
 export type CatalogListParams = {
@@ -84,6 +94,7 @@ export type CatalogListParams = {
   brand?: string
   productModel?: string
   reference?: string
+  size?: string
   category?: string
   active?: boolean
   sortBy?: 'name' | 'most_sold'
@@ -185,6 +196,9 @@ export type OrderLine = {
   id: number
   order_id: number
   catalog_product_id: number
+  catalog_product_size_id?: number | null
+  size?: string | null
+  notes?: string | null
   quantity: string
   unit_price_usd: string
   subtotal_usd: string

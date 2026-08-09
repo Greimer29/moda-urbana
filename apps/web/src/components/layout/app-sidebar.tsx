@@ -114,12 +114,24 @@ function linkClassName(isActive: boolean) {
   )
 }
 
-function SidebarLinkWithMatch({ item, nested = false }: { item: NavLinkItem; nested?: boolean }) {
+function SidebarLinkWithMatch({
+  item,
+  nested = false,
+  onNavigate,
+}: {
+  item: NavLinkItem
+  nested?: boolean
+  onNavigate?: () => void
+}) {
   const { pathname } = useLocation()
   const isActive = item.match ? item.match(pathname) : pathname === item.to
 
   return (
-    <NavLink to={item.to} className={cn(linkClassName(isActive), nested && 'pl-9')}>
+    <NavLink
+      to={item.to}
+      onClick={onNavigate}
+      className={cn(linkClassName(isActive), nested && 'pl-9', 'min-h-11')}
+    >
       <item.icon className="size-4 shrink-0" />
       {item.label}
     </NavLink>
@@ -128,8 +140,10 @@ function SidebarLinkWithMatch({ item, nested = false }: { item: NavLinkItem; nes
 
 function SidebarNavGroup({
   entry,
+  onNavigate,
 }: {
   entry: Extract<NavEntry, { type: 'group' }>
+  onNavigate?: () => void
 }) {
   const { pathname } = useLocation()
   const isSectionActive = entry.items.some((item) =>
@@ -150,7 +164,7 @@ function SidebarNavGroup({
         onClick={() => setExpanded((value) => !value)}
         aria-expanded={expanded}
         className={cn(
-          'flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-colors',
+          'flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-colors',
           isSectionActive
             ? 'text-sidebar-accent-foreground'
             : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground'
@@ -168,7 +182,7 @@ function SidebarNavGroup({
       {expanded ? (
         <div className="space-y-0.5">
           {entry.items.map((item) => (
-            <SidebarLinkWithMatch key={item.to} item={item} nested />
+            <SidebarLinkWithMatch key={item.to} item={item} nested onNavigate={onNavigate} />
           ))}
         </div>
       ) : null}
@@ -176,10 +190,14 @@ function SidebarNavGroup({
   )
 }
 
-export function AppSidebar() {
+export function SidebarNavContent({
+  onNavigate,
+  className,
+}: {
+  onNavigate?: () => void
+  className?: string
+}) {
   const { user } = useAuth()
-  const appVersion = import.meta.env.VITE_APP_VERSION
-  const copyrightYear = new Date().getFullYear()
 
   const visibleEntries = navEntries.filter((entry) => {
     if (entry.type === 'link') {
@@ -200,6 +218,23 @@ export function AppSidebar() {
   })
 
   return (
+    <nav className={cn('scrollbar-subtle flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3', className)}>
+      {visibleEntries.map((entry) => {
+        if (entry.type === 'link') {
+          return <SidebarLinkWithMatch key={entry.item.to} item={entry.item} onNavigate={onNavigate} />
+        }
+
+        return <SidebarNavGroup key={entry.id} entry={entry} onNavigate={onNavigate} />
+      })}
+    </nav>
+  )
+}
+
+export function AppSidebar() {
+  const appVersion = import.meta.env.VITE_APP_VERSION
+  const copyrightYear = new Date().getFullYear()
+
+  return (
     <aside className="bg-sidebar text-sidebar-foreground hidden h-svh w-56 shrink-0 flex-col overflow-hidden border-r md:flex">
       <div className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
         <img
@@ -210,15 +245,7 @@ export function AppSidebar() {
         />
         <span className="text-lg font-semibold tracking-tight">{brand.legalName}</span>
       </div>
-      <nav className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
-        {visibleEntries.map((entry) => {
-          if (entry.type === 'link') {
-            return <SidebarLinkWithMatch key={entry.item.to} item={entry.item} />
-          }
-
-          return <SidebarNavGroup key={entry.id} entry={entry} />
-        })}
-      </nav>
+      <SidebarNavContent />
       <footer className="text-sidebar-foreground/60 shrink-0 border-t px-4 py-3 text-xs leading-relaxed">
         <p>
           © {copyrightYear} Gestión {brand.legalName}

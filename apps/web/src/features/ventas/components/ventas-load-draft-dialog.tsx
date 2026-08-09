@@ -27,7 +27,16 @@ export type LoadedDraft = {
   customerCreditDays: number | null
   guestName: string | null
   paymentType: 'CASH' | 'CREDIT'
-  cart: { product: CatalogProduct; quantity: number }[]
+  notes?: string | null
+  cart: {
+    key: string
+    product: CatalogProduct
+    quantity: number
+    sizeId: number | null
+    size: string | null
+    unitPriceUsd: number
+    notes: string
+  }[]
 }
 
 type VentasLoadDraftDialogProps = {
@@ -76,9 +85,15 @@ export function VentasLoadDraftDialog({ open, onOpenChange, onLoaded }: VentasLo
       const cart: LoadedDraft['cart'] = []
       for (const line of lines) {
         const product = await getCatalogProduct(line.catalog_product_id)
+        const sizeId = line.catalog_product_size_id ?? null
         cart.push({
+          key: `${product.id}:${sizeId ?? 'nosize'}`,
           product,
           quantity: Number(line.quantity),
+          sizeId,
+          size: line.size ?? null,
+          unitPriceUsd: Number(line.unit_price_usd),
+          notes: line.notes ?? '',
         })
       }
 
@@ -90,6 +105,7 @@ export function VentasLoadDraftDialog({ open, onOpenChange, onLoaded }: VentasLo
         customerCreditDays: detail.customer?.creditDays ?? null,
         guestName: detail.guestName,
         paymentType: detail.paymentType === 'CREDIT' ? 'CREDIT' : 'CASH',
+        notes: detail.notes,
         cart,
       })
       onOpenChange(false)

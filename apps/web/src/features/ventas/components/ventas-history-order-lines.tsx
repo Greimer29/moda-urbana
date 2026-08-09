@@ -35,6 +35,7 @@ export function VentasHistoryOrderLines({ orderId }: VentasHistoryOrderLinesProp
                 <tr className="border-b text-left">
                   <th className="px-3 py-2 font-medium">Código</th>
                   <th className="px-3 py-2 font-medium">Producto</th>
+                  <th className="px-3 py-2 font-medium">Talla</th>
                   <th className="px-3 py-2 text-right font-medium">Cantidad</th>
                   <th className="px-3 py-2 text-right font-medium">Precio</th>
                   <th className="px-3 py-2 text-right font-medium">Subtotal</th>
@@ -51,8 +52,12 @@ export function VentasHistoryOrderLines({ orderId }: VentasHistoryOrderLinesProp
                         {catalogProductCode(line.catalog_product_id)}
                       </td>
                       <td className="px-3 py-2">
-                        {line.catalog_product?.name ?? `Producto #${line.catalog_product_id}`}
+                        <div>{line.catalog_product?.name ?? `Producto #${line.catalog_product_id}`}</div>
+                        {line.notes ? (
+                          <p className="text-muted-foreground mt-0.5 text-xs">{line.notes}</p>
+                        ) : null}
                       </td>
+                      <td className="px-3 py-2 tabular-nums">{line.size ?? '—'}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{netQty}</td>
                       <td className="px-3 py-2 text-right">
                         <DisplayMoneyFromUsd amountUsd={line.unit_price_usd} size="sm" />
@@ -65,6 +70,11 @@ export function VentasHistoryOrderLines({ orderId }: VentasHistoryOrderLinesProp
                 })}
               </tbody>
             </table>
+            {order?.notes ? (
+              <p className="text-muted-foreground border-t px-3 py-2 text-xs">
+                Nota factura: {order.notes}
+              </p>
+            ) : null}
           </div>
         )}
       </td>

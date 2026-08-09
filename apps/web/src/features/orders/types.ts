@@ -66,6 +66,9 @@ export type OrderLine = {
   id: number
   order_id: number
   catalog_product_id: number
+  catalog_product_size_id?: number | null
+  size?: string | null
+  notes?: string | null
   quantity: string
   unit_price_usd: string
   subtotal_usd: string
@@ -169,7 +172,11 @@ export type OrderMaterialResponse = {
 
 export type OrderLineInput = {
   catalog_product_id: number
+  catalog_product_size_id?: number
+  size?: string
   quantity: number
+  unit_price_usd?: number
+  notes?: string | null
 }
 
 export type OrderLineResponse = {

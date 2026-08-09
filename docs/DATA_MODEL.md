@@ -418,6 +418,36 @@ Atributos adicionales de identificación (opcionales, filtrables en listado):
 | `product_model` | varchar(100) | Modelo                         |
 | `reference`     | varchar(100) | Referencia / código del ítem   |
 
+### Tallas (`CatalogProductSize`)
+
+Tabla `catalog_product_sizes`: stock por talla de un producto terminado (p. ej. zapatería).
+
+| Campo                 | Tipo           | Notas                                      |
+|-----------------------|----------------|--------------------------------------------|
+| `catalog_product_id`  | FK             | cascade al borrar producto                 |
+| `size`                | varchar(20)    | texto libre (`"38"`, `"12"`, `"M"`)        |
+| `stock_quantity`      | decimal(15,4)  | ≥ 0                                        |
+| unique                | (product, size)|                                            |
+
+Reglas:
+
+- Si el producto **no tiene filas** de talla, el stock se comporta como hoy (`catalog_products.stock_quantity`).
+- Si **tiene tallas**, `stock_quantity` del producto = suma de tallas; la venta **exige** `catalog_product_size_id` (o `size`); el descuento de stock va a esa talla y se registra `SALE_OUT` en `product_inventory_movements` (nota con talla).
+- Listado de catálogo admite filtro `size` (productos con esa talla y stock > 0).
+
+### Líneas de pedido — precio y notas
+
+En `order_lines` (además de cantidad/precio):
+
+| Campo                      | Notas |
+|----------------------------|-------|
+| `catalog_product_size_id`  | FK nullable a la talla vendida |
+| `size`                     | snapshot de la talla al vender |
+| `notes`                    | nota por línea (nullable) |
+| `unit_price_usd`           | puede enviarse desde el cliente en DRAFT (descuento al vender); el precio de catálogo no cambia |
+
+`orders.notes` ya existía; la UI de Ventas lo expone como nota de factura.
+
 ### Sin fórmula (`formula_id` NULL)
 
 - El stock se almacena en `stock_quantity` y se actualiza con `product_inventory_movements`:

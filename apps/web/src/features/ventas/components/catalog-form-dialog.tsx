@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Pencil, Plus } from 'lucide-react'
+import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { CircularImageField } from '@/components/circular-image-field'
 import { DecimalInput, MoneyInput } from '@/components/decimal-input'
 import { Button } from '@/components/ui/button'
@@ -72,6 +72,8 @@ export function CatalogFormDialog({
   const [marginPercent, setMarginPercent] = useState('')
   const [formulaId, setFormulaId] = useState<number | ''>('')
   const [stockQuantity, setStockQuantity] = useState('0')
+  const [sizeRows, setSizeRows] = useState<{ size: string; stock: string }[]>([])
+  const [useSizes, setUseSizes] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [costWarning, setCostWarning] = useState<string | null>(null)
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
@@ -182,6 +184,19 @@ export function CatalogFormDialog({
       setMarginPercent(formatMarginValue(Number(product.cost_usd), product.sale_price_usd))
       setFormulaId(product.formula_id ?? '')
       setStockQuantity(product.stock_quantity)
+      const existingSizes = product.sizes ?? []
+      if (existingSizes.length > 0) {
+        setUseSizes(true)
+        setSizeRows(
+          existingSizes.map((item) => ({
+            size: item.size,
+            stock: String(Number(item.stock_quantity)),
+          }))
+        )
+      } else {
+        setUseSizes(false)
+        setSizeRows([])
+      }
     } else {
       setName('')
       setBrand('')
@@ -195,8 +210,27 @@ export function CatalogFormDialog({
       setMarginPercent('')
       setFormulaId('')
       setStockQuantity('0')
+      setUseSizes(false)
+      setSizeRows([])
     }
   }, [open, product, categories])
+
+  useEffect(() => {
+    if (!open || !liveProduct?.sizes) {
+      return
+    }
+    if (liveProduct.sizes.length === 0) {
+      return
+    }
+    setUseSizes(true)
+    setSizeRows(
+      liveProduct.sizes.map((item) => ({
+        size: item.size,
+        stock: String(Number(item.stock_quantity)),
+      }))
+    )
+    setStockQuantity(liveProduct.stock_quantity)
+  }, [open, liveProduct])
 
   useEffect(() => {
     if (!hasFormula || !formulaMaterials) {
@@ -283,6 +317,27 @@ export function CatalogFormDialog({
     setError(null)
     setCostWarning(null)
 
+    const normalizedSizes = useSizes
+      ? sizeRows
+          .map((row) => ({
+            size: row.size.trim(),
+            stock_quantity: Number(row.stock) || 0,
+          }))
+          .filter((row) => row.size.length > 0)
+      : []
+
+    if (useSizes && !hasFormula) {
+      if (normalizedSizes.length === 0) {
+        setError('Agregá al menos una talla o desactivá tallas.')
+        return
+      }
+      const unique = new Set(normalizedSizes.map((row) => row.size.toLowerCase()))
+      if (unique.size !== normalizedSizes.length) {
+        setError('Hay tallas duplicadas.')
+        return
+      }
+    }
+
     const payload = {
       name: name.trim(),
       brand: brand.trim() || null,
@@ -297,7 +352,12 @@ export function CatalogFormDialog({
         : {
             cost_usd: Number(costPrice),
             formula_id: null,
-            stock_quantity: purchaseFlow && !isEditing ? 0 : Number(stockQuantity),
+            ...(useSizes
+              ? { sizes: normalizedSizes }
+              : {
+                  stock_quantity: purchaseFlow && !isEditing ? 0 : Number(stockQuantity),
+                  sizes: [],
+                }),
           }),
     }
 
@@ -337,7 +397,7 @@ export function CatalogFormDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="flex max-h-[100dvh] w-full max-w-none flex-col overflow-y-auto rounded-none sm:max-h-[90vh] sm:max-w-lg sm:rounded-lg">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar producto' : 'Nuevo producto'}</DialogTitle>
         </DialogHeader>
@@ -458,9 +518,101 @@ export function CatalogFormDialog({
                     </p>
                   </div>
                 ) : null
+              ) : useSizes ? (
+                <div className="space-y-2 sm:col-span-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Tallas y stock</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        setUseSizes(false)
+                        setSizeRows([])
+                      }}
+                    >
+                      Sin tallas
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {sizeRows.map((row, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Input
+                          className="h-8 w-24"
+                          placeholder="Talla"
+                          value={row.size}
+                          onChange={(e) =>
+                            setSizeRows((prev) =>
+                              prev.map((item, i) =>
+                                i === index ? { ...item, size: e.target.value } : item
+                              )
+                            )
+                          }
+                        />
+                        <DecimalInput
+                          className="h-8 flex-1"
+                          min={0}
+                          decimals={2}
+                          placeholder="Stock"
+                          value={row.stock}
+                          onChange={(e) =>
+                            setSizeRows((prev) =>
+                              prev.map((item, i) =>
+                                i === index ? { ...item, stock: e.target.value } : item
+                              )
+                            )
+                          }
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 shrink-0"
+                          aria-label="Quitar talla"
+                          onClick={() =>
+                            setSizeRows((prev) => prev.filter((_, i) => i !== index))
+                          }
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => setSizeRows((prev) => [...prev, { size: '', stock: '0' }])}
+                    >
+                      <Plus className="mr-1 size-3.5" />
+                      Agregar talla
+                    </Button>
+                    <p className="text-muted-foreground text-xs">
+                      Stock total:{' '}
+                      {sizeRows
+                        .reduce((sum, row) => sum + (Number(row.stock) || 0), 0)
+                        .toLocaleString('es-VE')}
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-2">
-                  <Label htmlFor="catalog-stock">Stock inicial</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="catalog-stock">Stock inicial</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        setUseSizes(true)
+                        setSizeRows([{ size: '', stock: stockQuantity || '0' }])
+                      }}
+                    >
+                      Usar tallas
+                    </Button>
+                  </div>
                   <DecimalInput
                     id="catalog-stock"
                     min={0}

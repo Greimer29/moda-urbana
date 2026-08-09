@@ -116,6 +116,26 @@ Cada solicitud nueva pasa por estos pasos:
 - **Justificación de la decisión:** el dueño aceptó explícitamente estrategia con pérdida de datos para estandarizar naming.
 - **Estado:** Implementado (producción saneada; ver `RAILWAY_DEPLOY.md`, sección "Normalización de tablas ES -> EN").
 
+### 009 — Publicación Play Store e iOS
+
+- **Fecha:** 2026-08-09
+- **Origen:** dueño (tras APK Capacitor interno)
+- **Descripción:** Firmar AAB para Google Play, cuenta de desarrollador, y eventualmente build iOS/App Store. El APK sideload Capacitor ya cubre uso interno.
+- **Evaluación:** no bloquea operación diaria; requiere cuentas, firma y compliance de tiendas.
+- **Decisión:** `BACKLOG_LARGO`
+- **Justificación de la decisión:** v1 Android es APK interno (`docs/ANDROID_CAPACITOR.md`); tiendas se evalúan cuando el dueño lo priorice.
+- **Estado:** Pendiente
+
+### 010 — Compras con talla (ítems de compra por size)
+
+- **Fecha:** 2026-08-09
+- **Origen:** dueño (feature zapatería; plan tallas/descuentos/notas)
+- **Descripción:** Al confirmar compras, poder indicar talla por ítem de producto terminado para cargar stock en `catalog_product_sizes` (hoy el stock por talla se ajusta en el formulario de producto).
+- **Evaluación:** no bloquea venta por talla (MVP cubierto con alta/ajuste en producto); mejora operación de reposición.
+- **Decisión:** `PROXIMO_CICLO` / diferido del PR de tallas.
+- **Justificación de la decisión:** alcance v1 acordado: tallas + descuento al vender + notas; compras-por-talla queda fuera para no alargar el PR.
+- **Estado:** Pendiente
+
 ---
 
 ## Plantilla para nuevos items

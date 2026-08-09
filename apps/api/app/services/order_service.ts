@@ -21,9 +21,12 @@ import CatalogProductStockService from '#services/catalog_product_stock_service'
 import ProductInventoryService from '#services/product_inventory_service'
 import ProductInventoryMovement from '#models/product_inventory_movement'
 import ProductoCatalogoNoEncontradoException from '#exceptions/producto_catalogo_no_encontrado_exception'
+import ProductoTallaNoEncontradaException from '#exceptions/producto_talla_no_encontrada_exception'
+import ProductoTallaRequeridaException from '#exceptions/producto_talla_requerida_exception'
 import PedidoLineaNoEncontradaException from '#exceptions/pedido_linea_no_encontrada_exception'
 import DevolucionCantidadInvalidaException from '#exceptions/devolucion_cantidad_invalida_exception'
 import OrderCodigoService from '#services/order_code_service'
+import CatalogProductSize from '#models/catalog_product_size'
 import {
   evaluarConsumoVsStock,
   formatCantidadMovimiento,
@@ -68,11 +71,17 @@ export type OrderInput = {
 
 export type OrderLineInput = {
   catalog_product_id: number
+  catalog_product_size_id?: number
+  size?: string
   quantity: number
+  unit_price_usd?: number
+  notes?: string | null
 }
 
 export type OrderLineUpdateInput = {
   quantity: number
+  unit_price_usd?: number
+  notes?: string | null
 }
 
 export type OrderBudget = {
@@ -306,6 +315,12 @@ export default class OrderService {
       }
 
       line.quantity = input.quantity.toFixed(3)
+      if (input.unit_price_usd !== undefined) {
+        line.unitPriceUsd = input.unit_price_usd.toFixed(4)
+      }
+      if (input.notes !== undefined) {
+        line.notes = input.notes?.trim() || null
+      }
       line.subtotalUsd = (input.quantity * Number(line.unitPriceUsd)).toFixed(4)
       line.useTransaction(trx)
       await line.save()
@@ -685,7 +700,7 @@ export default class OrderService {
 
         await this.revertirStockProductoParcial(
           Number(order.id),
-          Number(line.catalogProductId),
+          line,
           request.quantity,
           trx,
           note
@@ -1145,26 +1160,76 @@ export default class OrderService {
   ): Promise<OrderLine> {
     const product = await CatalogProduct.query({ client: trx })
       .where('id', input.catalog_product_id)
+      .preload('sizes')
       .first()
 
     if (!product) {
       throw new ProductoCatalogoNoEncontradoException()
     }
 
-    const unitPrice = product.salePriceUsd
+    const resolvedSize = await this.resolveLineSize(product, input, trx)
+    const unitPrice =
+      input.unit_price_usd !== undefined
+        ? input.unit_price_usd.toFixed(4)
+        : product.salePriceUsd
     const subtotal = (input.quantity * Number(unitPrice)).toFixed(4)
 
     return OrderLine.create(
       {
         orderId: Number(order.id),
         catalogProductId: input.catalog_product_id,
+        catalogProductSizeId: resolvedSize?.id ?? null,
+        size: resolvedSize?.size ?? null,
         quantity: input.quantity.toFixed(3),
         returnedQuantity: '0.000',
         unitPriceUsd: unitPrice,
         subtotalUsd: subtotal,
+        notes: input.notes?.trim() || null,
       },
       { client: trx }
     )
+  }
+
+  private async resolveLineSize(
+    product: CatalogProduct,
+    input: OrderLineInput,
+    trx: TransactionClientContract
+  ): Promise<{ id: number; size: string } | null> {
+    const sizes =
+      product.sizes ??
+      (await CatalogProductSize.query({ client: trx }).where(
+        'catalogProductId',
+        Number(product.id)
+      ))
+
+    if (!sizes || sizes.length === 0) {
+      return null
+    }
+
+    let sizeRow: CatalogProductSize | null = null
+
+    if (input.catalog_product_size_id) {
+      sizeRow =
+        sizes.find((item) => Number(item.id) === input.catalog_product_size_id) ??
+        (await CatalogProductSize.query({ client: trx })
+          .where('id', input.catalog_product_size_id)
+          .where('catalogProductId', Number(product.id))
+          .first())
+    } else if (input.size?.trim()) {
+      const wanted = input.size.trim().toLowerCase()
+      sizeRow =
+        sizes.find((item) => item.size.trim().toLowerCase() === wanted) ??
+        (await CatalogProductSize.query({ client: trx })
+          .where('catalogProductId', Number(product.id))
+          .whereILike('size', input.size.trim())
+          .first())
+    }
+
+    if (!sizeRow) {
+      throw new ProductoTallaRequeridaException()
+    }
+
+    return { id: Number(sizeRow.id), size: sizeRow.size }
   }
 
   private async reemplazarLineasEnTrx(
@@ -1255,6 +1320,9 @@ export default class OrderService {
       faltante: number
     }[] = []
 
+    const demandBySize = new Map<number, { qty: number; name: string; sizeLabel: string }>()
+    const demandByProduct = new Map<number, { qty: number; name: string }>()
+
     for (const line of order.orderLines ?? []) {
       if (!line.catalogProductId) {
         continue
@@ -1264,8 +1332,78 @@ export default class OrderService {
         line.catalogProduct ??
         (await CatalogProduct.query({ client: trx })
           .where('id', Number(line.catalogProductId))
+          .preload('sizes')
           .preload('formula', (f) => f.preload('materials', (fm) => fm.preload('material')))
           .first())
+
+      if (!product) {
+        continue
+      }
+
+      const qty = Number(line.quantity)
+      const sizes =
+        product.sizes ??
+        (await CatalogProductSize.query({ client: trx }).where(
+          'catalogProductId',
+          Number(product.id)
+        ))
+
+      if (sizes.length > 0) {
+        if (!line.catalogProductSizeId) {
+          throw new ProductoTallaRequeridaException()
+        }
+
+        const sizeId = Number(line.catalogProductSizeId)
+        const existing = demandBySize.get(sizeId)
+        const sizeLabel = line.size ?? String(sizeId)
+        if (existing) {
+          existing.qty += qty
+        } else {
+          demandBySize.set(sizeId, {
+            qty,
+            name: product.name,
+            sizeLabel,
+          })
+        }
+        continue
+      }
+
+      const productId = Number(product.id)
+      const existingProduct = demandByProduct.get(productId)
+      if (existingProduct) {
+        existingProduct.qty += qty
+      } else {
+        demandByProduct.set(productId, { qty, name: product.name })
+      }
+    }
+
+    for (const [sizeId, demand] of demandBySize) {
+      const sizeRow = await CatalogProductSize.query({ client: trx })
+        .where('id', sizeId)
+        .forUpdate()
+        .first()
+
+      if (!sizeRow) {
+        throw new ProductoTallaNoEncontradaException()
+      }
+
+      const disponible = Number(sizeRow.stockQuantity)
+      if (demand.qty > disponible) {
+        faltantes.push({
+          material_id: Number(sizeRow.catalogProductId),
+          name: `${demand.name} (talla ${demand.sizeLabel})`,
+          stock_actual: disponible,
+          consumo_proyectado: demand.qty,
+          faltante: demand.qty - disponible,
+        })
+      }
+    }
+
+    for (const [productId, demand] of demandByProduct) {
+      const product = await CatalogProduct.query({ client: trx })
+        .where('id', productId)
+        .preload('formula', (f) => f.preload('materials', (fm) => fm.preload('material')))
+        .first()
 
       if (!product) {
         continue
@@ -1276,15 +1414,14 @@ export default class OrderService {
           trx,
           excludeOrderId: Number(order.id),
         })
-      const qty = Number(line.quantity)
 
-      if (qty > disponible) {
+      if (demand.qty > disponible) {
         faltantes.push({
-          material_id: Number(product.id),
-          name: product.name,
+          material_id: productId,
+          name: demand.name,
           stock_actual: disponible,
-          consumo_proyectado: qty,
-          faltante: qty - disponible,
+          consumo_proyectado: demand.qty,
+          faltante: demand.qty - disponible,
         })
       }
     }
@@ -1329,6 +1466,25 @@ export default class OrderService {
         continue
       }
 
+      if (line.catalogProductSizeId) {
+        const sizeRow = await CatalogProductSize.query({ client: trx })
+          .where('id', Number(line.catalogProductSizeId))
+          .forUpdate()
+          .first()
+
+        if (!sizeRow) {
+          throw new ProductoTallaNoEncontradaException()
+        }
+
+        const sizeStock = Number(sizeRow.stockQuantity)
+        const toDeductSize = Math.min(qty, sizeStock)
+        if (toDeductSize > 0) {
+          sizeRow.stockQuantity = (sizeStock - toDeductSize).toFixed(4)
+          sizeRow.useTransaction(trx)
+          await sizeRow.save()
+        }
+      }
+
       const stockActual = Number(product.stockQuantity)
       const toDeduct = Math.min(qty, stockActual)
 
@@ -1336,13 +1492,14 @@ export default class OrderService {
         continue
       }
 
+      const sizeNote = line.size ? ` talla ${line.size}` : ''
       await this.productInventoryService.registrarMovimiento(
         {
           catalogProductId: Number(line.catalogProductId),
           type: 'SALE_OUT',
           quantity: -toDeduct,
           orderId: Number(order.id),
-          note: `Venta ${order.code}`,
+          note: `Venta ${order.code}${sizeNote}`,
         },
         trx
       )
@@ -1378,6 +1535,30 @@ export default class OrderService {
   }
 
   private async revertirStockProductos(order: Order, trx: TransactionClientContract, note: string) {
+    const lines =
+      order.orderLines ??
+      (await OrderLine.query({ client: trx }).where('orderId', Number(order.id)))
+
+    for (const line of lines) {
+      if (!line.catalogProductSizeId) {
+        continue
+      }
+      const sizeRow = await CatalogProductSize.query({ client: trx })
+        .where('id', Number(line.catalogProductSizeId))
+        .forUpdate()
+        .first()
+      if (!sizeRow) {
+        continue
+      }
+      const qty = Number(line.quantity) - Number(line.returnedQuantity ?? 0)
+      if (qty <= 0) {
+        continue
+      }
+      sizeRow.stockQuantity = (Number(sizeRow.stockQuantity) + qty).toFixed(4)
+      sizeRow.useTransaction(trx)
+      await sizeRow.save()
+    }
+
     const salidas = await ProductInventoryMovement.query({ client: trx })
       .where('orderId', Number(order.id))
       .where('type', 'SALE_OUT')
@@ -1418,11 +1599,12 @@ export default class OrderService {
 
   private async revertirStockProductoParcial(
     orderId: number,
-    catalogProductId: number,
+    line: OrderLine,
     quantity: number,
     trx: TransactionClientContract,
     note: string
   ) {
+    const catalogProductId = Number(line.catalogProductId)
     const salidas = await ProductInventoryMovement.query({ client: trx })
       .where('orderId', orderId)
       .where('catalogProductId', catalogProductId)
@@ -1446,6 +1628,19 @@ export default class OrderService {
     const toReverse = Math.min(quantity, Math.max(0, soldTotal - reversedTotal))
     if (toReverse <= 0) {
       return
+    }
+
+    if (line.catalogProductSizeId) {
+      const sizeRow = await CatalogProductSize.query({ client: trx })
+        .where('id', Number(line.catalogProductSizeId))
+        .forUpdate()
+        .first()
+
+      if (sizeRow) {
+        sizeRow.stockQuantity = (Number(sizeRow.stockQuantity) + toReverse).toFixed(4)
+        sizeRow.useTransaction(trx)
+        await sizeRow.save()
+      }
     }
 
     await this.productInventoryService.registrarMovimiento(

@@ -3,8 +3,16 @@ import { FileText, FolderOpen, Loader2, Plus, Search } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { CustomerFormDialog } from '@/features/customers/components/customer-form-dialog'
 import type { Customer } from '@/features/customers/types'
 import { useAuth } from '@/features/auth/hooks/use-auth'
@@ -34,7 +42,7 @@ import { useActiveCategoriesQuery } from '@/features/categories/hooks/use-catego
 import { catalogImageUrl } from '@/features/ventas/constants'
 import type { BillingMethod } from '@/features/ventas/constants'
 import { useCatalogProductsQuery } from '@/features/ventas/hooks/use-catalog'
-import type { CatalogProduct } from '@/features/ventas/types'
+import type { CatalogProduct, CatalogProductSize } from '@/features/ventas/types'
 import { cartHasStockIssues } from '@/features/ventas/utils/product-stock'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { normalizeInventoryQuantity } from '@/lib/inventory-units'
@@ -42,8 +50,17 @@ import { cn } from '@/lib/utils'
 import { formatDraftMaterialNotice } from '@/lib/material-availability'
 
 type CartLine = {
+  key: string
   product: CatalogProduct
   quantity: number
+  sizeId: number | null
+  size: string | null
+  unitPriceUsd: number
+  notes: string
+}
+
+function cartLineKey(productId: number, sizeId: number | null) {
+  return `${productId}:${sizeId ?? 'nosize'}`
 }
 
 const CATALOG_PER_PAGE = 30
@@ -64,6 +81,9 @@ function VentasCreateView() {
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [category, setCategory] = useState('')
+  const [brandFilter, setBrandFilter] = useState('')
+  const [modelFilter, setModelFilter] = useState('')
+  const [sizeFilter, setSizeFilter] = useState('')
   const [page, setPage] = useState(1)
   const [customerId, setCustomerId] = useState<number | ''>('')
   const [clientName, setClientName] = useState('')
@@ -71,6 +91,9 @@ function VentasCreateView() {
   const [paymentType, setPaymentType] = useState<'CASH' | 'CREDIT'>('CASH')
   const [billingMethod, setBillingMethod] = useState<BillingMethod>('FAST')
   const [cart, setCart] = useState<CartLine[]>([])
+  const [orderNotes, setOrderNotes] = useState('')
+  const [orderNotesOpen, setOrderNotesOpen] = useState(false)
+  const [sizePickerProduct, setSizePickerProduct] = useState<CatalogProduct | null>(null)
   const [sourceOrderId, setSourceOrderId] = useState<number | null>(null)
   const [sourceOrderCode, setSourceOrderCode] = useState<string | null>(null)
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false)
@@ -96,6 +119,9 @@ function VentasCreateView() {
     perPage: CATALOG_PER_PAGE,
     search: debouncedSearch || undefined,
     category: category || undefined,
+    brand: brandFilter || undefined,
+    productModel: modelFilter || undefined,
+    size: sizeFilter || undefined,
     active: true,
     sortBy: 'most_sold',
     sortDir: 'desc',
@@ -111,8 +137,32 @@ function VentasCreateView() {
 
   const products = catalogData?.catalog_products ?? []
   const catalogMeta = catalogData?.meta
+  const brandOptions = useMemo(() => {
+    const values = new Set<string>()
+    for (const product of products) {
+      if (product.brand?.trim()) values.add(product.brand.trim())
+    }
+    return [...values].sort((a, b) => a.localeCompare(b, 'es'))
+  }, [products])
+  const modelOptions = useMemo(() => {
+    const values = new Set<string>()
+    for (const product of products) {
+      if (product.product_model?.trim()) values.add(product.product_model.trim())
+    }
+    return [...values].sort((a, b) => a.localeCompare(b, 'es'))
+  }, [products])
+  const sizeOptions = useMemo(() => {
+    const values = new Set<string>()
+    for (const product of products) {
+      for (const size of product.sizes ?? []) {
+        if (size.size.trim()) values.add(size.size.trim())
+      }
+    }
+    return [...values].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
+  }, [products])
+
   const cartTotal = useMemo(
-    () => cart.reduce((sum, line) => sum + line.quantity * Number(line.product.sale_price_usd), 0),
+    () => cart.reduce((sum, line) => sum + line.quantity * line.unitPriceUsd, 0),
     [cart]
   )
   const stockBlocked = cartHasStockIssues(cart)
@@ -120,14 +170,17 @@ function VentasCreateView() {
   const cartLines = useMemo<VentasCartLine[]>(
     () =>
       cart.map((line) => ({
-        key: String(line.product.id),
+        key: line.key,
         name: line.product.name,
         code: catalogProductCode(line.product.id),
         quantity: line.quantity,
-        unitPriceUsd: Number(line.product.sale_price_usd),
+        unitPriceUsd: line.unitPriceUsd,
+        listPriceUsd: Number(line.product.sale_price_usd),
         saleUnit: line.product.sale_unit ?? 'UND',
         imageUrl: line.product.image_path ? catalogImageUrl(line.product.id) : null,
         imageTone: catalogImageTone(line.product.id),
+        metaLabel: line.size ? `Talla ${line.size}` : undefined,
+        notes: line.notes || null,
       })),
     [cart]
   )
@@ -136,17 +189,39 @@ function VentasCreateView() {
     ? `Borrador ${sourceOrderCode}`
     : `Venta N° ${orderDraftNo}`
 
-  function addToCart(product: CatalogProduct) {
+  function pushCartLine(product: CatalogProduct, size: CatalogProductSize | null) {
     setSuccessMessage(null)
+    const sizeId = size?.id ?? null
+    const key = cartLineKey(product.id, sizeId)
     setCart((prev) => {
-      const existing = prev.find((line) => line.product.id === product.id)
+      const existing = prev.find((line) => line.key === key)
       if (existing) {
         return prev.map((line) =>
-          line.product.id === product.id ? { ...line, quantity: line.quantity + 1 } : line
+          line.key === key ? { ...line, quantity: line.quantity + 1 } : line
         )
       }
-      return [...prev, { product, quantity: 1 }]
+      return [
+        ...prev,
+        {
+          key,
+          product,
+          quantity: 1,
+          sizeId,
+          size: size?.size ?? null,
+          unitPriceUsd: Number(product.sale_price_usd),
+          notes: '',
+        },
+      ]
     })
+  }
+
+  function addToCart(product: CatalogProduct) {
+    const hasSizes = Boolean(product.has_sizes || (product.sizes && product.sizes.length > 0))
+    if (hasSizes) {
+      setSizePickerProduct(product)
+      return
+    }
+    pushCartLine(product, null)
   }
 
   function openEditProduct(product: CatalogProduct) {
@@ -154,22 +229,38 @@ function VentasCreateView() {
     setEditProductOpen(true)
   }
 
-  function updateCartQty(productId: number, quantity: number) {
+  function removeCartLine(key: string) {
     setSuccessMessage(null)
-    const line = cart.find((item) => item.product.id === productId)
-    const unit = line?.product.sale_unit ?? 'UND'
-    const normalized = normalizeInventoryQuantity(quantity, unit)
+    setCart((prev) => prev.filter((item) => item.key !== key))
+  }
 
-    if (normalized <= 0) {
-      setCart((prev) => prev.filter((item) => item.product.id !== productId))
+  function updateCartQty(key: string, quantity: number) {
+    setSuccessMessage(null)
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      removeCartLine(key)
       return
     }
 
+    const line = cart.find((item) => item.key === key)
+    const unit = line?.product.sale_unit ?? 'UND'
+    const normalized = normalizeInventoryQuantity(quantity, unit)
+
+    setCart((prev) =>
+      prev.map((item) => (item.key === key ? { ...item, quantity: normalized } : item))
+    )
+  }
+
+  function updateCartUnitPrice(key: string, unitPriceUsd: number) {
+    setSuccessMessage(null)
     setCart((prev) =>
       prev.map((item) =>
-        item.product.id === productId ? { ...item, quantity: normalized } : item
+        item.key === key ? { ...item, unitPriceUsd: Math.max(0, unitPriceUsd) } : item
       )
     )
+  }
+
+  function updateCartLineNotes(key: string, notes: string) {
+    setCart((prev) => prev.map((item) => (item.key === key ? { ...item, notes } : item)))
   }
 
   function linkRegisteredCustomer(
@@ -205,6 +296,7 @@ function VentasCreateView() {
 
   function handleLoadedDraft(draft: LoadedDraft) {
     setCart(draft.cart)
+    setOrderNotes(draft.notes ?? '')
     if (draft.customerId) {
       linkRegisteredCustomer({
         id: draft.customerId,
@@ -244,11 +336,16 @@ function VentasCreateView() {
       quantity_total: totalQty,
       total_price: cartTotal,
       payment_type: paymentType,
+      notes: orderNotes.trim() || undefined,
     }
 
     const lines = cart.map((item) => ({
       catalog_product_id: item.product.id,
+      catalog_product_size_id: item.sizeId ?? undefined,
+      size: item.size ?? undefined,
       quantity: item.quantity,
+      unit_price_usd: item.unitPriceUsd,
+      notes: item.notes.trim() || null,
     }))
 
     if (sourceOrderId) {
@@ -357,10 +454,15 @@ function VentasCreateView() {
             totalUsd={cartTotal}
             onClear={() => {
               setCart([])
+              setOrderNotes('')
               resetLoadedDraft()
             }}
-            onRemoveLine={(key) => updateCartQty(Number(key), 0)}
-            onUpdateQuantity={(key, qty) => updateCartQty(Number(key), qty)}
+            onRemoveLine={removeCartLine}
+            onUpdateQuantity={(key, qty) => updateCartQty(key, qty)}
+            onUpdateUnitPrice={updateCartUnitPrice}
+            onUpdateLineNotes={updateCartLineNotes}
+            onEditOrderNotes={() => setOrderNotesOpen(true)}
+            orderNotes={orderNotes}
             emptyMessage="Agregá productos desde el catálogo."
             billingMethod={billingMethod}
             onBillingMethodChange={setBillingMethod}
@@ -530,6 +632,51 @@ function VentasCreateView() {
                   </option>
                 ))}
               </select>
+              <Input
+                placeholder="Marca"
+                value={brandFilter}
+                list="ventas-brand-options"
+                onChange={(e) => {
+                  setBrandFilter(e.target.value)
+                  setPage(1)
+                }}
+                className="w-32 bg-white"
+              />
+              <datalist id="ventas-brand-options">
+                {brandOptions.map((brand) => (
+                  <option key={brand} value={brand} />
+                ))}
+              </datalist>
+              <Input
+                placeholder="Modelo"
+                value={modelFilter}
+                list="ventas-model-options"
+                onChange={(e) => {
+                  setModelFilter(e.target.value)
+                  setPage(1)
+                }}
+                className="w-32 bg-white"
+              />
+              <datalist id="ventas-model-options">
+                {modelOptions.map((model) => (
+                  <option key={model} value={model} />
+                ))}
+              </datalist>
+              <Input
+                placeholder="Talla"
+                value={sizeFilter}
+                list="ventas-size-options"
+                onChange={(e) => {
+                  setSizeFilter(e.target.value)
+                  setPage(1)
+                }}
+                className="w-24 bg-white"
+              />
+              <datalist id="ventas-size-options">
+                {sizeOptions.map((size) => (
+                  <option key={size} value={size} />
+                ))}
+              </datalist>
             </div>
 
             <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto pr-1">
@@ -618,6 +765,70 @@ function VentasCreateView() {
           product={editProduct}
         />
       ) : null}
+
+      <Dialog
+        open={sizePickerProduct != null}
+        onOpenChange={(open) => {
+          if (!open) setSizePickerProduct(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Elegir talla</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm">{sizePickerProduct?.name}</p>
+          <div className="grid grid-cols-3 gap-2">
+            {(sizePickerProduct?.sizes ?? [])
+              .filter((size) => Number(size.stock_quantity) > 0)
+              .map((size) => (
+                <Button
+                  key={size.id}
+                  type="button"
+                  variant="outline"
+                  className="h-auto flex-col gap-0.5 py-2"
+                  onClick={() => {
+                    if (sizePickerProduct) {
+                      pushCartLine(sizePickerProduct, size)
+                    }
+                    setSizePickerProduct(null)
+                  }}
+                >
+                  <span className="font-semibold">{size.size}</span>
+                  <span className="text-muted-foreground text-[10px]">
+                    Stock {Number(size.stock_quantity)}
+                  </span>
+                </Button>
+              ))}
+          </div>
+          {(sizePickerProduct?.sizes ?? []).every((size) => Number(size.stock_quantity) <= 0) ? (
+            <p className="text-destructive text-sm">No hay tallas con stock.</p>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setSizePickerProduct(null)}>
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={orderNotesOpen} onOpenChange={setOrderNotesOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nota de factura</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            rows={4}
+            value={orderNotes}
+            onChange={(e) => setOrderNotes(e.target.value)}
+            placeholder="Observaciones para la factura…"
+          />
+          <DialogFooter>
+            <Button type="button" onClick={() => setOrderNotesOpen(false)}>
+              Listo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

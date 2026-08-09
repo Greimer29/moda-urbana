@@ -1,0 +1,17 @@
+{
+  "appId": "com.modaurbana.app",
+  "appName": "Moda Urbana",
+  "webDir": "../web/dist",
+  "server": {
+    "androidScheme": "https",
+    "hostname": "localhost"
+  },
+  "plugins": {
+    "Camera": {
+      "permissions": [
+        "camera",
+        "photos"
+      ]
+    }
+  }
+}

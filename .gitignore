@@ -11,6 +11,17 @@ tmp/
 apps/desktop/release*/
 *.blockmap
 
+# Capacitor / Android build artifacts (keep android/ source)
+apps/mobile/android/.gradle/
+apps/mobile/android/**/build/
+apps/mobile/android/local.properties
+apps/mobile/android/captures/
+apps/mobile/android/.idea/
+*.apk
+*.aab
+*.keystore
+*.jks
+
 # Local scratch / npm lockfiles (monorepo uses pnpm)
 package-lock.json
 tmp-*.json
@@ -19,6 +30,8 @@ tmp-*.json
 apps/web/public/brand/
 apps/desktop/brand-meta.json
 apps/desktop/electron-builder.brand.yml
+apps/mobile/capacitor.brand.json
+apps/mobile/resources/icon.png
 
 # Environment
 .env

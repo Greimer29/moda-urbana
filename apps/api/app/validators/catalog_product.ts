@@ -2,6 +2,11 @@ import { INVENTORY_UNITS } from '#constants/inventory_units'
 import { INVENTORY_ADJUSTMENT_MODES } from '#constants/inventory_adjustment'
 import vine from '@vinejs/vine'
 
+const catalogProductSizeFields = vine.object({
+  size: vine.string().trim().minLength(1).maxLength(20),
+  stock_quantity: vine.number().min(0),
+})
+
 const catalogProductFields = {
   name: vine.string().trim().minLength(1).maxLength(150),
   brand: vine.string().trim().maxLength(80).nullable().optional(),
@@ -15,6 +20,7 @@ const catalogProductFields = {
   formula_id: vine.number().min(1).nullable().optional(),
   stock_quantity: vine.number().min(0).optional(),
   minimum_stock: vine.number().min(0).optional(),
+  sizes: vine.array(catalogProductSizeFields).optional(),
 }
 
 export const createCatalogProductValidator = vine.create({
@@ -35,6 +41,7 @@ export const updateCatalogProductValidator = vine.create({
   stock_quantity: vine.number().min(0).optional(),
   minimum_stock: vine.number().min(0).optional(),
   active: vine.boolean().optional(),
+  sizes: vine.array(catalogProductSizeFields).optional(),
 })
 
 export const listCatalogProductsValidator = vine.create({
@@ -44,10 +51,15 @@ export const listCatalogProductsValidator = vine.create({
   brand: vine.string().trim().maxLength(80).optional(),
   product_model: vine.string().trim().maxLength(100).optional(),
   reference: vine.string().trim().maxLength(100).optional(),
+  size: vine.string().trim().maxLength(20).optional(),
   category: vine.string().trim().maxLength(100).optional(),
   active: vine.boolean().optional(),
   sort_by: vine.enum(['name', 'most_sold'] as const).optional(),
   sort_dir: vine.enum(['asc', 'desc'] as const).optional(),
+})
+
+export const replaceCatalogProductSizesValidator = vine.create({
+  sizes: vine.array(catalogProductSizeFields),
 })
 
 export const applyCatalogProfitMarginValidator = vine.create({

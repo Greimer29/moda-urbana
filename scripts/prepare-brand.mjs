@@ -211,6 +211,36 @@ const brandMeta = {
 }
 writeJson(path.join(desktopDir, 'brand-meta.json'), brandMeta)
 
+const mobileDir = path.join(rootDir, 'apps', 'mobile')
+if (fs.existsSync(mobileDir)) {
+  writeJson(path.join(mobileDir, 'capacitor.brand.json'), {
+    slug,
+    appId,
+    appName: brand.legalName,
+    apiUrl: brand.apiUrl,
+    appVersion,
+    buildId,
+  })
+
+  const capConfigPath = path.join(mobileDir, 'capacitor.config.json')
+  if (fs.existsSync(capConfigPath)) {
+    const capConfig = JSON.parse(fs.readFileSync(capConfigPath, 'utf8'))
+    capConfig.appId = appId
+    capConfig.appName = brand.legalName
+    capConfig.webDir = '../web/dist'
+    capConfig.server = {
+      ...(capConfig.server ?? {}),
+      androidScheme: 'https',
+      hostname: 'localhost',
+    }
+    writeJson(capConfigPath, capConfig)
+  }
+
+  const mobileResources = path.join(mobileDir, 'resources')
+  ensureDir(mobileResources)
+  fs.copyFileSync(iconPath, path.join(mobileResources, 'icon.png'))
+}
+
 const resourcesDir = path.join(desktopDir, 'resources')
 ensureDir(resourcesDir)
 fs.copyFileSync(iconPath, path.join(resourcesDir, 'icon.png'))
@@ -236,6 +266,9 @@ console.log(`  Build: ${buildId}`)
 console.log(`  Release: apps/desktop/${releaseOutput}/`)
 console.log(`  Assets: apps/web/public/brand/`)
 console.log(`  Env: apps/web/.env.brand.local`)
+if (fs.existsSync(mobileDir)) {
+  console.log(`  Mobile: apps/mobile/capacitor.brand.json`)
+}
 
 runRoundIcon(desktopDir)
 console.log('prepare-brand: listo.')

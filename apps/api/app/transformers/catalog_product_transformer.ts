@@ -1,6 +1,16 @@
 import type CatalogProduct from '#models/catalog_product'
+import type CatalogProductSize from '#models/catalog_product_size'
 import type ProductInventoryMovement from '#models/product_inventory_movement'
 import { serializeFormulaDetail } from '#transformers/formula_transformer'
+
+export function serializeCatalogProductSize(size: CatalogProductSize) {
+  return {
+    id: Number(size.id),
+    catalog_product_id: Number(size.catalogProductId),
+    size: size.size,
+    stock_quantity: size.stockQuantity,
+  }
+}
 
 export function serializeProductMovimiento(movimiento: ProductInventoryMovement) {
   return {
@@ -25,6 +35,8 @@ export function serializeCatalogProduct(
 ) {
   const stockQuantity = extras?.stock?.quantity ?? product.stockQuantity
   const stockSource = extras?.stock?.source ?? (product.formulaId ? 'formula' : 'manual')
+  const sizes = Array.isArray(product.sizes) ? product.sizes : []
+  const hasSizes = sizes.length > 0
 
   return {
     id: Number(product.id),
@@ -44,6 +56,8 @@ export function serializeCatalogProduct(
     stock_source: stockSource,
     minimum_stock: product.minimumStock,
     active: product.active,
+    has_sizes: hasSizes,
+    sizes: sizes.map(serializeCatalogProductSize),
     sold_qty: extras?.soldQty,
     created_at: product.createdAt.toISO(),
     updated_at: product.updatedAt.toISO(),
