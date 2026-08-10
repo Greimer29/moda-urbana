@@ -15,7 +15,10 @@ import {
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { DisplayMoney, DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
-import { useFormatMoney } from '@/features/currencies/context/display-currency-context'
+import {
+  useDisplayCurrency,
+  useFormatMoney,
+} from '@/features/currencies/context/display-currency-context'
 import { VentasBillingMethodToggle } from '@/features/ventas/components/ventas-billing-method-toggle'
 import { inventoryQuantityDecimals } from '@/lib/inventory-units'
 import { cn } from '@/lib/utils'
@@ -86,9 +89,10 @@ function CartLineCard({
   onUpdateLineNotes?: (notes: string) => void
 }) {
   const { formatFromUsd } = useFormatMoney()
+  const { displayCurrency, fromUsdAmount, toUsdAmount, symbol } = useDisplayCurrency()
   const [priceOpen, setPriceOpen] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
-  const [draftPrice, setDraftPrice] = useState(String(line.unitPriceUsd))
+  const [draftPrice, setDraftPrice] = useState('')
   const [draftNotes, setDraftNotes] = useState(line.notes ?? '')
 
   const listPrice = line.listPriceUsd ?? line.unitPriceUsd
@@ -97,9 +101,15 @@ function CartLineCard({
   const unit = line.saleUnit ?? 'UND'
   const decimals = inventoryQuantityDecimals(unit)
   const isIntegerUnit = decimals === 0
+  const priceDecimals = displayCurrency === 'USD' ? 4 : 6
+
+  function formatDraftFromUsd(amountUsd: number) {
+    const converted = fromUsdAmount(amountUsd, displayCurrency)
+    return Number(converted.toFixed(priceDecimals)).toString()
+  }
 
   function openPriceModal() {
-    setDraftPrice(String(line.unitPriceUsd))
+    setDraftPrice(formatDraftFromUsd(line.unitPriceUsd))
     setPriceOpen(true)
   }
 
@@ -109,14 +119,15 @@ function CartLineCard({
   }
 
   function applyPrice() {
-    const parsed = parseDecimalInput(draftPrice, 4) ?? 0
-    onUpdateUnitPrice?.(Math.max(0, parsed))
+    const parsedDisplay = parseDecimalInput(draftPrice, priceDecimals) ?? 0
+    const usd = toUsdAmount(Math.max(0, parsedDisplay), displayCurrency)
+    onUpdateUnitPrice?.(Math.max(0, Number(usd.toFixed(4))))
     setPriceOpen(false)
   }
 
   function applyPercentOff(pct: number) {
-    const next = Math.max(0, Number((listPrice * (1 - pct / 100)).toFixed(4)))
-    setDraftPrice(String(next))
+    const discountedUsd = Math.max(0, listPrice * (1 - pct / 100))
+    setDraftPrice(formatDraftFromUsd(discountedUsd))
   }
 
   function applyNotes() {
@@ -241,16 +252,28 @@ function CartLineCard({
           <div className="space-y-3">
             <p className="text-muted-foreground text-sm">{line.name}</p>
             <div className="space-y-1.5">
-              <Label htmlFor={`cart-price-${line.key}`}>Precio unitario</Label>
+              <Label htmlFor={`cart-price-${line.key}`}>
+                Precio unitario ({symbol(displayCurrency)})
+              </Label>
               <MoneyInput
                 id={`cart-price-${line.key}`}
                 min={0}
+                decimals={priceDecimals}
                 value={draftPrice}
                 onChange={(e) => setDraftPrice(e.target.value)}
               />
               <p className="text-muted-foreground text-xs">
                 Precio de lista: {formatFromUsd(listPrice)}
               </p>
+              {displayCurrency !== 'USD' ? (
+                <p className="text-muted-foreground text-xs">
+                  Equiv. USD: {symbol('USD')}{' '}
+                  {toUsdAmount(
+                    parseDecimalInput(draftPrice, priceDecimals) ?? 0,
+                    displayCurrency
+                  ).toFixed(4)}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
               {[5, 10, 20].map((pct) => (
@@ -268,7 +291,7 @@ function CartLineCard({
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => setDraftPrice(String(listPrice))}
+                onClick={() => setDraftPrice(formatDraftFromUsd(listPrice))}
               >
                 Precio lista
               </Button>
