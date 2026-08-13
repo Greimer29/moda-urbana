@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { ChevronDown, DollarSign, Package, Pencil, Tag, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
@@ -95,7 +95,7 @@ export function CatalogProductCard({
     }, SIZES_PANEL_MS)
   }
 
-  function toggleSizesPanel(e: MouseEvent) {
+  function toggleSizesPanel(e: ReactMouseEvent) {
     e.stopPropagation()
     e.preventDefault()
     if (!hasSizes) return
@@ -106,7 +106,7 @@ export function CatalogProductCard({
   useEffect(() => {
     if (!sizesMounted) return
 
-    function onPointerDown(event: MouseEvent) {
+    function onPointerDown(event: globalThis.MouseEvent) {
       const target = event.target as Node
       if (sizesPanelRef.current?.contains(target)) return
       closeSizesPanel()
