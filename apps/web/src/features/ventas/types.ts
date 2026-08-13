@@ -97,7 +97,7 @@ export type CatalogListParams = {
   size?: string
   category?: string
   active?: boolean
-  sortBy?: 'name' | 'most_sold'
+  sortBy?: 'name' | 'most_sold' | 'id' | 'sale_price'
   sortDir?: 'asc' | 'desc'
 }
 

@@ -14,9 +14,15 @@ import {
   useDeleteCatalogProductMutation,
 } from '@/features/ventas/hooks/use-catalog'
 import type { CatalogProduct } from '@/features/ventas/types'
+import {
+  CATALOG_SORT_OPTIONS,
+  catalogSortValue,
+  parseCatalogSortValue,
+} from '@/features/ventas/utils/catalog-sort'
 import { getApiErrorMessage } from '@/lib/api-error'
 
 const PER_PAGE = 30
+const DEFAULT_SORT = { sortBy: 'name' as const, sortDir: 'asc' as const }
 
 export function ProductosPage() {
   const navigate = useNavigate()
@@ -32,11 +38,13 @@ export function ProductosPage() {
   const [debouncedModel, setDebouncedModel] = useState('')
   const [debouncedReference, setDebouncedReference] = useState('')
   const [category, setCategory] = useState('')
+  const [sortValue, setSortValue] = useState(catalogSortValue(DEFAULT_SORT.sortBy, DEFAULT_SORT.sortDir))
   const [dialogOpen, setDialogOpen] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const deleteMutation = useDeleteCatalogProductMutation()
   const { data: categories = [] } = useActiveCategoriesQuery()
+  const { sortBy, sortDir } = parseCatalogSortValue(sortValue, DEFAULT_SORT)
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -58,8 +66,8 @@ export function ProductosPage() {
     reference: debouncedReference || undefined,
     category: category || undefined,
     active: true,
-    sortBy: 'name',
-    sortDir: 'asc',
+    sortBy,
+    sortDir,
   })
 
   const products = data?.catalog_products ?? []
@@ -155,6 +163,21 @@ export function ProductosPage() {
               {categories.map((c) => (
                 <option key={c.id} value={c.name}>
                   {c.name}
+                </option>
+              ))}
+            </select>
+            <select
+              className="border-input flex h-9 rounded-md border bg-white px-3 text-sm"
+              value={sortValue}
+              onChange={(e) => {
+                setSortValue(e.target.value)
+                setPage(1)
+              }}
+              aria-label="Ordenar productos"
+            >
+              {CATALOG_SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>

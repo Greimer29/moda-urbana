@@ -2,7 +2,7 @@ import { PublicImage } from '@/components/public-image'
 import type { ProductSaleUnit } from '@/features/ventas/constants'
 import type { BillingMethod } from '@/features/ventas/constants'
 import { useState, type ReactNode } from 'react'
-import { LayoutGrid, MessageSquare, Package, SlidersHorizontal, StickyNote, Trash2, X } from 'lucide-react'
+import { MessageSquare, Package, SlidersHorizontal, StickyNote, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DecimalInput, MoneyInput } from '@/components/decimal-input'
 import {
@@ -458,30 +458,4 @@ export function catalogProductCode(productId: number) {
 export function catalogImageTone(productId: number): VentasCartLine['imageTone'] {
   const tones: NonNullable<VentasCartLine['imageTone']>[] = ['orange', 'violet', 'amber', 'sky']
   return tones[productId % tones.length]
-}
-
-export function CatalogCardActionButton({
-  onClick,
-  label = 'Agregar al carrito',
-  compact = false,
-}: {
-  onClick: () => void
-  label?: string
-  compact?: boolean
-}) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className={cn(
-        'text-muted-foreground hover:text-foreground shrink-0',
-        compact ? 'size-6' : 'size-8'
-      )}
-      onClick={onClick}
-      aria-label={label}
-    >
-      <LayoutGrid className={compact ? 'size-3.5' : 'size-4'} />
-    </Button>
-  )
 }

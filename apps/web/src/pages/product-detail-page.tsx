@@ -14,6 +14,7 @@ import { PublicImage } from '@/components/public-image'
 import { PRODUCT_MOVIMIENTO_LABELS } from '@/features/ventas/product-inventory-constants'
 import { productSaleUnitAbrev } from '@/features/ventas/constants'
 import { useCatalogProductQuery, useDeleteCatalogProductMutation } from '@/features/ventas/hooks/use-catalog'
+import { productHasSizes } from '@/features/ventas/utils/product-sizes'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { detailPageErrorMessage } from '@/lib/detail-page-messages'
 import { parsePositiveIntRouteParam } from '@/lib/route-id'
@@ -106,6 +107,8 @@ export function ProductDetailPage() {
   const isFormulaStock = product.stock_source === 'formula' || Boolean(product.formula_id)
   const saleBelowCost = isBelowCost(product.sale_price_usd, product.cost_usd)
   const profitMargin = calcProfitMarginPercent(product.sale_price_usd, product.cost_usd)
+  const hasSizes = productHasSizes(product)
+  const saleUnitAbrev = productSaleUnitAbrev(product.sale_unit ?? 'UND')
 
   async function confirmDelete() {
     if (!product) return
@@ -220,6 +223,32 @@ export function ProductDetailPage() {
                   {productSaleUnitLabel(product.sale_unit ?? 'UND').toLowerCase()}
                 </dd>
               </div>
+              {hasSizes ? (
+                <div className="space-y-1.5 border-t pt-2">
+                  <p className="text-muted-foreground text-xs font-medium">Stock por talla</p>
+                  <ul className="space-y-1">
+                    {(product.sizes ?? []).map((item) => {
+                      const qty = Number(item.stock_quantity)
+                      return (
+                        <li
+                          key={item.id}
+                          className="flex items-center justify-between gap-3 text-sm"
+                        >
+                          <span>Talla {item.size}</span>
+                          <span
+                            className={cn(
+                              'tabular-nums',
+                              qty <= 0 && 'text-muted-foreground'
+                            )}
+                          >
+                            {qty.toLocaleString('es-VE')} {saleUnitAbrev}
+                          </span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              ) : null}
               {isFormulaStock ? (
                 <p className="text-muted-foreground text-xs">
                   Calculado según los materiales de la fórmula.

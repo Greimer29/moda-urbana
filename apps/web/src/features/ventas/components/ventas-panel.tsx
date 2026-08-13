@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileText, FolderOpen, Loader2, Plus, Search } from 'lucide-react'
+import { FileText, FolderOpen, Loader2, Plus, Search, ShoppingCart, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -43,6 +43,11 @@ import { catalogImageUrl } from '@/features/ventas/constants'
 import type { BillingMethod } from '@/features/ventas/constants'
 import { useCatalogProductsQuery } from '@/features/ventas/hooks/use-catalog'
 import type { CatalogProduct, CatalogProductSize } from '@/features/ventas/types'
+import {
+  CATALOG_SORT_OPTIONS,
+  catalogSortValue,
+  parseCatalogSortValue,
+} from '@/features/ventas/utils/catalog-sort'
 import { cartHasStockIssues } from '@/features/ventas/utils/product-stock'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { normalizeInventoryQuantity } from '@/lib/inventory-units'
@@ -64,6 +69,7 @@ function cartLineKey(productId: number, sizeId: number | null) {
 }
 
 const CATALOG_PER_PAGE = 30
+const DEFAULT_SORT = { sortBy: 'most_sold' as const, sortDir: 'desc' as const }
 
 export function VentasPanel() {
   return (
@@ -84,6 +90,9 @@ function VentasCreateView() {
   const [brandFilter, setBrandFilter] = useState('')
   const [modelFilter, setModelFilter] = useState('')
   const [sizeFilter, setSizeFilter] = useState('')
+  const [sortValue, setSortValue] = useState(
+    catalogSortValue(DEFAULT_SORT.sortBy, DEFAULT_SORT.sortDir)
+  )
   const [page, setPage] = useState(1)
   const [customerId, setCustomerId] = useState<number | ''>('')
   const [clientName, setClientName] = useState('')
@@ -91,6 +100,7 @@ function VentasCreateView() {
   const [paymentType, setPaymentType] = useState<'CASH' | 'CREDIT'>('CASH')
   const [billingMethod, setBillingMethod] = useState<BillingMethod>('FAST')
   const [cart, setCart] = useState<CartLine[]>([])
+  const [cartOpen, setCartOpen] = useState(false)
   const [orderNotes, setOrderNotes] = useState('')
   const [orderNotesOpen, setOrderNotesOpen] = useState(false)
   const [sizePickerProduct, setSizePickerProduct] = useState<CatalogProduct | null>(null)
@@ -108,6 +118,7 @@ function VentasCreateView() {
 
   const createOrderMutation = useCreateOrderMutation()
   const { data: categories = [] } = useActiveCategoriesQuery()
+  const { sortBy, sortDir } = parseCatalogSortValue(sortValue, DEFAULT_SORT)
 
   const {
     data: catalogData,
@@ -123,8 +134,8 @@ function VentasCreateView() {
     productModel: modelFilter || undefined,
     size: sizeFilter || undefined,
     active: true,
-    sortBy: 'most_sold',
-    sortDir: 'desc',
+    sortBy,
+    sortDir,
   })
 
   useEffect(() => {
@@ -134,6 +145,25 @@ function VentasCreateView() {
     }, 300)
     return () => window.clearTimeout(timer)
   }, [searchInput])
+
+  useEffect(() => {
+    if (!cartOpen) return
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setCartOpen(false)
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [cartOpen])
 
   const products = catalogData?.catalog_products ?? []
   const catalogMeta = catalogData?.meta
@@ -163,6 +193,10 @@ function VentasCreateView() {
 
   const cartTotal = useMemo(
     () => cart.reduce((sum, line) => sum + line.quantity * line.unitPriceUsd, 0),
+    [cart]
+  )
+  const cartItemCount = useMemo(
+    () => cart.reduce((sum, line) => sum + line.quantity, 0),
     [cart]
   )
   const stockBlocked = cartHasStockIssues(cart)
@@ -423,6 +457,7 @@ function VentasCreateView() {
       if (availability.has_recipe && !availability.sufficient) {
         const notice = formatDraftMaterialNotice(availability.missing)
         setActionError(notice)
+        setCartOpen(false)
         void navigate(`/ventas/${orderId}`, {
           state: { paymentType },
         })
@@ -434,6 +469,7 @@ function VentasCreateView() {
         payment_type: paymentType,
       })
 
+      setCartOpen(false)
       void navigate(`/ventas/${orderId}`)
     } catch (submitError) {
       setActionError(getApiErrorMessage(submitError))
@@ -442,172 +478,198 @@ function VentasCreateView() {
     }
   }
 
+  function renderBillingCart(className?: string) {
+    return (
+      <VentasOrderCart
+        className={cn('h-full min-h-0 w-full', className)}
+        orderLabel={orderLabel}
+        lines={cartLines}
+        subtotalUsd={cartTotal}
+        totalUsd={cartTotal}
+        onClear={() => {
+          setCart([])
+          setOrderNotes('')
+          resetLoadedDraft()
+        }}
+        onRemoveLine={removeCartLine}
+        onUpdateQuantity={(key, qty) => updateCartQty(key, qty)}
+        onUpdateUnitPrice={updateCartUnitPrice}
+        onUpdateLineNotes={updateCartLineNotes}
+        onEditOrderNotes={() => setOrderNotesOpen(true)}
+        orderNotes={orderNotes}
+        emptyMessage="Agregá productos desde el catálogo."
+        billingMethod={billingMethod}
+        onBillingMethodChange={setBillingMethod}
+        headerAction={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            title="Cargar factura"
+            aria-label="Cargar factura"
+            onClick={() => setLoadDraftOpen(true)}
+          >
+            <FolderOpen className="size-4" />
+          </Button>
+        }
+      >
+        <div className="space-y-3 pt-1">
+          <div className="space-y-2">
+            <Label className="text-xs">Cliente</Label>
+            <div className="flex gap-2">
+              <Input
+                className="min-w-0 flex-1"
+                placeholder="Nombre del cliente"
+                value={clientName}
+                onChange={(e) => handleClientNameChange(e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                title="Registrar cliente"
+                aria-label="Registrar cliente"
+                onClick={() => setCustomerDialogOpen(true)}
+              >
+                <Plus className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                title="Buscar cliente registrado"
+                aria-label="Buscar cliente registrado"
+                onClick={() => setCustomerPickOpen(true)}
+              >
+                <Search className="size-4" />
+              </Button>
+            </div>
+            {customerId ? (
+              <p className="text-muted-foreground text-xs">Cliente registrado vinculado</p>
+            ) : null}
+          </div>
+
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-2">
+              <Label className="text-xs">Forma de pago</Label>
+              <div className="bg-muted inline-flex rounded-lg p-1">
+                <button
+                  type="button"
+                  className={cn(
+                    'rounded-md px-3 py-1.5 text-xs font-medium',
+                    paymentType === 'CASH' ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                  )}
+                  onClick={() => setPaymentType('CASH')}
+                >
+                  Contado
+                </button>
+                <button
+                  type="button"
+                  disabled={!customerId || !canCreditSale}
+                  className={cn(
+                    'rounded-md px-3 py-1.5 text-xs font-medium',
+                    paymentType === 'CREDIT'
+                      ? 'bg-background shadow-sm'
+                      : 'text-muted-foreground',
+                    (!customerId || !canCreditSale) && 'cursor-not-allowed opacity-50'
+                  )}
+                  onClick={() => setPaymentType('CREDIT')}
+                >
+                  Crédito
+                </button>
+              </div>
+              {paymentType === 'CREDIT' && customerId ? (
+                <p className="text-muted-foreground text-xs">
+                  Plazo: {customerCreditDays ?? 0} días
+                </p>
+              ) : null}
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground shrink-0"
+              title="Generar presupuesto"
+              aria-label="Generar presupuesto"
+              disabled={isSubmitting || cart.length === 0}
+              onClick={() => void saveBudget()}
+            >
+              {isSubmitting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <FileText className="size-4" />
+              )}
+            </Button>
+          </div>
+
+          {stockBlocked ? (
+            <p className="text-destructive text-xs">
+              Hay productos sin stock o por debajo del mínimo en el carrito.
+            </p>
+          ) : null}
+
+          {successMessage ? (
+            <p className="text-emerald-700 text-sm">{successMessage}</p>
+          ) : null}
+          {actionError ? (
+            <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p>
+          ) : null}
+
+          {canConfirmSale ? (
+            <Button
+              className="w-full"
+              disabled={isSubmitting || cart.length === 0 || stockBlocked}
+              onClick={() => void confirmOrder()}
+            >
+              {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
+              {billingMethod === 'FAST' ? 'Confirmar venta' : 'Confirmar pedido'}
+            </Button>
+          ) : (
+            <p className="text-muted-foreground text-center text-sm">
+              No tenés permiso para confirmar ventas.
+            </p>
+          )}
+        </div>
+      </VentasOrderCart>
+    )
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="grid min-h-0 flex-1 items-stretch gap-6 xl:grid-cols-3">
-        <div className="flex min-h-0 xl:col-span-1">
-          <VentasOrderCart
-            className="h-full min-h-0 w-full"
-            orderLabel={orderLabel}
-            lines={cartLines}
-            subtotalUsd={cartTotal}
-            totalUsd={cartTotal}
-            onClear={() => {
-              setCart([])
-              setOrderNotes('')
-              resetLoadedDraft()
-            }}
-            onRemoveLine={removeCartLine}
-            onUpdateQuantity={(key, qty) => updateCartQty(key, qty)}
-            onUpdateUnitPrice={updateCartUnitPrice}
-            onUpdateLineNotes={updateCartLineNotes}
-            onEditOrderNotes={() => setOrderNotesOpen(true)}
-            orderNotes={orderNotes}
-            emptyMessage="Agregá productos desde el catálogo."
-            billingMethod={billingMethod}
-            onBillingMethodChange={setBillingMethod}
-            headerAction={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                title="Cargar factura"
-                aria-label="Cargar factura"
-                onClick={() => setLoadDraftOpen(true)}
-              >
-                <FolderOpen className="size-4" />
-              </Button>
-            }
-          >
-            <div className="space-y-3 pt-1">
-              <div className="space-y-2">
-                <Label className="text-xs">Cliente</Label>
-                <div className="flex gap-2">
-                  <Input
-                    className="min-w-0 flex-1"
-                    placeholder="Nombre del cliente"
-                    value={clientName}
-                    onChange={(e) => handleClientNameChange(e.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0"
-                    title="Registrar cliente"
-                    aria-label="Registrar cliente"
-                    onClick={() => setCustomerDialogOpen(true)}
-                  >
-                    <Plus className="size-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0"
-                    title="Buscar cliente registrado"
-                    aria-label="Buscar cliente registrado"
-                    onClick={() => setCustomerPickOpen(true)}
-                  >
-                    <Search className="size-4" />
-                  </Button>
-                </div>
-                {customerId ? (
-                  <p className="text-muted-foreground text-xs">Cliente registrado vinculado</p>
-                ) : null}
-              </div>
-
-              <div className="flex items-start justify-between gap-2">
-                <div className="space-y-2">
-                  <Label className="text-xs">Forma de pago</Label>
-                  <div className="bg-muted inline-flex rounded-lg p-1">
-                    <button
-                      type="button"
-                      className={cn(
-                        'rounded-md px-3 py-1.5 text-xs font-medium',
-                        paymentType === 'CASH' ? 'bg-background shadow-sm' : 'text-muted-foreground'
-                      )}
-                      onClick={() => setPaymentType('CASH')}
-                    >
-                      Contado
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!customerId || !canCreditSale}
-                      className={cn(
-                        'rounded-md px-3 py-1.5 text-xs font-medium',
-                        paymentType === 'CREDIT'
-                          ? 'bg-background shadow-sm'
-                          : 'text-muted-foreground',
-                        (!customerId || !canCreditSale) && 'cursor-not-allowed opacity-50'
-                      )}
-                      onClick={() => setPaymentType('CREDIT')}
-                    >
-                      Crédito
-                    </button>
-                  </div>
-                  {paymentType === 'CREDIT' && customerId ? (
-                    <p className="text-muted-foreground text-xs">
-                      Plazo: {customerCreditDays ?? 0} días
-                    </p>
-                  ) : null}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-foreground shrink-0"
-                  title="Generar presupuesto"
-                  aria-label="Generar presupuesto"
-                  disabled={isSubmitting || cart.length === 0}
-                  onClick={() => void saveBudget()}
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <FileText className="size-4" />
-                  )}
-                </Button>
-              </div>
-
-              {stockBlocked ? (
-                <p className="text-destructive text-xs">
-                  Hay productos sin stock o por debajo del mínimo en el carrito.
-                </p>
-              ) : null}
-
-              {successMessage ? (
-                <p className="text-emerald-700 text-sm">{successMessage}</p>
-              ) : null}
-              {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
-
-              {canConfirmSale ? (
-                <Button
-                  className="w-full"
-                  disabled={isSubmitting || cart.length === 0 || stockBlocked}
-                  onClick={() => void confirmOrder()}
-                >
-                  {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {billingMethod === 'FAST' ? 'Confirmar venta' : 'Confirmar pedido'}
-                </Button>
-              ) : (
-                <p className="text-muted-foreground text-center text-sm">
-                  No tenés permiso para confirmar ventas.
-                </p>
-              )}
-            </div>
-          </VentasOrderCart>
-        </div>
+        <div className="hidden min-h-0 xl:col-span-1 xl:flex">{renderBillingCart()}</div>
 
         <Card className="flex h-full min-h-0 flex-col overflow-hidden border-violet-100/80 bg-gradient-to-b from-violet-50/40 to-white xl:col-span-2">
           <CardHeader className="shrink-0">
-            <CardTitle className="text-base">Catálogo de productos</CardTitle>
-            <CardDescription>
-              {catalogMeta
-                ? `${catalogMeta.total} producto${catalogMeta.total === 1 ? '' : 's'}`
-                : 'Filtrá y agregá productos a la venta'}
-            </CardDescription>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1.5">
+                <CardTitle className="text-base">Catálogo de productos</CardTitle>
+                <CardDescription>
+                  {catalogMeta
+                    ? `${catalogMeta.total} producto${catalogMeta.total === 1 ? '' : 's'}`
+                    : 'Filtrá y agregá productos a la venta'}
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="relative shrink-0 xl:hidden"
+                title="Abrir carrito"
+                aria-label="Abrir carrito"
+                onClick={() => setCartOpen(true)}
+              >
+                <ShoppingCart className="size-4" />
+                {cartItemCount > 0 ? (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-semibold text-white">
+                    {cartItemCount > 99 ? '99+' : cartItemCount}
+                  </span>
+                ) : null}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pt-0">
             <div className="flex shrink-0 flex-wrap gap-3">
@@ -677,6 +739,21 @@ function VentasCreateView() {
                   <option key={size} value={size} />
                 ))}
               </datalist>
+              <select
+                className="border-input flex h-9 rounded-md border bg-white px-3 text-sm"
+                value={sortValue}
+                onChange={(e) => {
+                  setSortValue(e.target.value)
+                  setPage(1)
+                }}
+                aria-label="Ordenar productos"
+              >
+                {CATALOG_SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto pr-1">
@@ -693,7 +770,7 @@ function VentasCreateView() {
                   No hay productos en el catálogo.
                 </p>
               ) : (
-                <div className="grid grid-cols-4 gap-3 pb-1">
+                <div className="grid grid-cols-2 gap-3 pb-1 sm:grid-cols-3 xl:grid-cols-4">
                   {products.map((product) => (
                     <CatalogProductCard
                       key={product.id}
@@ -736,6 +813,39 @@ function VentasCreateView() {
             ) : null}
           </CardContent>
         </Card>
+      </div>
+
+      <div
+        className={cn(
+          'fixed inset-0 z-40 bg-black/40 transition-opacity duration-300 xl:hidden',
+          cartOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        )}
+        aria-hidden={!cartOpen}
+        onClick={() => setCartOpen(false)}
+      />
+      <div
+        className={cn(
+          'fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col gap-2 bg-white p-3 shadow-xl transition-transform duration-300 xl:hidden',
+          cartOpen ? 'translate-x-0' : 'pointer-events-none translate-x-full'
+        )}
+        role="dialog"
+        aria-modal={cartOpen}
+        aria-label="Facturación"
+      >
+        <div className="flex shrink-0 justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            title="Cerrar carrito"
+            aria-label="Cerrar carrito"
+            onClick={() => setCartOpen(false)}
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+        <div className="min-h-0 flex-1">{renderBillingCart()}</div>
       </div>
 
       <CustomerFormDialog

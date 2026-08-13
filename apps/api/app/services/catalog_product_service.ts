@@ -54,7 +54,7 @@ export type ListCatalogProductsFilters = {
   size?: string
   category?: string
   active?: boolean
-  sortBy?: 'name' | 'most_sold'
+  sortBy?: 'name' | 'most_sold' | 'id' | 'sale_price'
   sortDir?: 'asc' | 'desc'
 }
 
@@ -162,11 +162,16 @@ export default class CatalogProductService {
 
     if (sortBy === 'most_sold') {
       query.orderByRaw(`${MOST_SOLD_SQL} ${sortDir === 'desc' ? 'DESC' : 'ASC'}`)
+      query.orderBy('id', 'desc')
+    } else if (sortBy === 'id') {
+      query.orderBy('id', sortDir)
+    } else if (sortBy === 'sale_price') {
+      query.orderBy('sale_price_usd', sortDir)
+      query.orderBy('id', 'desc')
     } else {
       query.orderBy('name', sortDir)
+      query.orderBy('id', 'desc')
     }
-
-    query.orderBy('id', 'desc')
 
     return query.paginate(page, perPage)
   }
