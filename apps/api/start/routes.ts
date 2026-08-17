@@ -119,6 +119,11 @@ router
         router.delete('categories/:id', [CategoriesController, 'destroy'])
 
         router.get('reports/account-statement', [ReportsController, 'accountStatement'])
+        router.get('reports/inventory', [ReportsController, 'inventory'])
+        router.get('reports/inventory/:catalogProductId/movements', [
+          ReportsController,
+          'inventoryMovements',
+        ])
 
         router.get('settings/exchange-rate', [SettingsController, 'getExchangeRate'])
         router.put('settings/exchange-rate', [SettingsController, 'updateExchangeRate'])

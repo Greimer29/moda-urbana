@@ -11,7 +11,7 @@ export const MOVEMENT_TYPE_LABELS = {
   machine_expense: 'Gasto máquina',
 } as const
 
-export type ReportsHubTab = 'estado-cuenta'
+export type ReportsHubTab = 'financiero' | 'inventario'
 
 export function formatMoney(value: string | number | null | undefined, currency = 'USD') {
   if (value === null || value === undefined || value === '') return '—'

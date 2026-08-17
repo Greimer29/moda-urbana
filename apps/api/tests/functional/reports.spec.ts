@@ -1,10 +1,13 @@
 import User from '#models/user'
 import Account from '#models/account'
 import CatalogProduct from '#models/catalog_product'
+import CatalogProductSize from '#models/catalog_product_size'
 import Customer from '#models/customer'
 import CustomerPayment from '#models/customer_payment'
+import Formula from '#models/formula'
 import Order from '#models/order'
 import OrderLine from '#models/order_line'
+import ProductInventoryMovement from '#models/product_inventory_movement'
 import Purchase from '#models/purchase'
 import Supplier from '#models/supplier'
 import SupplierPayment from '#models/supplier_payment'
@@ -18,6 +21,7 @@ const TEST_PASSWORD = 'password123'
 
 async function resetDatabase() {
   await db.from('inventory_movements').delete()
+  await db.from('product_inventory_movements').delete()
   await db.from('purchase_items').delete()
   await db.from('purchases').delete()
   await db.from('expenses').delete()
@@ -29,6 +33,7 @@ async function resetDatabase() {
   await db.from('orders').delete()
   await db.from('formula_materials').delete()
   await db.from('formulas').delete()
+  await db.from('catalog_product_sizes').delete()
   await db.from('catalog_products').delete()
   await db.from('materials').delete()
   await db.from('machines').delete()
@@ -881,5 +886,177 @@ test.group('Reports API', (group) => {
     assert.equal(body.data.movements[0].amountUsd, '50.0000')
     assert.equal(body.data.movements[0].isCreditSale, true)
     assert.equal(body.data.movements[0].isIncome, false)
+  })
+})
+
+test.group('Inventory Reports API', (group) => {
+  group.setup(async () => {
+    await testUtils.db().migrate()
+  })
+
+  group.each.setup(async () => {
+    await resetDatabase()
+    await seedAdminUser()
+  })
+
+  test('GET /api/v1/reports/inventory returns size breakdown rows', async ({ client, assert }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const product = await CatalogProduct.create({
+      name: 'Zapato Reporte',
+      brand: 'Nike',
+      productModel: 'Air',
+      category: 'Calzado',
+      saleUnit: 'PAR',
+      salePriceUsd: '60.0000',
+      costUsd: '25.0000',
+      stockQuantity: '3.000',
+      minimumStock: '1.000',
+      active: true,
+    })
+    await CatalogProductSize.createMany([
+      {
+        catalogProductId: Number(product.id),
+        size: '40',
+        stockQuantity: '1.0000',
+      },
+      {
+        catalogProductId: Number(product.id),
+        size: '41',
+        stockQuantity: '2.0000',
+      },
+    ])
+
+    const response = await client.get('/api/v1/reports/inventory').loginAs(user)
+
+    response.assertStatus(200)
+    const rows = response.body().data.rows as Array<{
+      product_id: number
+      size: string | null
+      quantity: string
+      description: string
+    }>
+
+    assert.lengthOf(rows, 2)
+    assert.equal(rows[0].size, '40')
+    assert.equal(rows[0].quantity, '1.000')
+    assert.equal(rows[1].size, '41')
+    assert.equal(rows[1].quantity, '2.000')
+    assert.equal(rows[0].description, 'Zapato Reporte')
+  })
+
+  test('GET /api/v1/reports/inventory filters low stock and hide zero', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const low = await CatalogProduct.create({
+      name: 'Bajo Stock',
+      category: 'Calzado',
+      saleUnit: 'UND',
+      salePriceUsd: '10.0000',
+      costUsd: '5.0000',
+      stockQuantity: '1.000',
+      minimumStock: '5.000',
+      active: true,
+    })
+    await CatalogProduct.create({
+      name: 'Sin Stock',
+      category: 'Calzado',
+      saleUnit: 'UND',
+      salePriceUsd: '10.0000',
+      costUsd: '5.0000',
+      stockQuantity: '0.000',
+      minimumStock: '0.000',
+      active: true,
+    })
+
+    const lowStockResponse = await client
+      .get('/api/v1/reports/inventory')
+      .qs({ low_stock: true })
+      .loginAs(user)
+    lowStockResponse.assertStatus(200)
+    const lowRows = lowStockResponse.body().data.rows
+    assert.lengthOf(lowRows, 1)
+    assert.equal(lowRows[0].product_id, Number(low.id))
+
+    const hideZeroResponse = await client
+      .get('/api/v1/reports/inventory')
+      .qs({ hide_zero: true })
+      .loginAs(user)
+    hideZeroResponse.assertStatus(200)
+    const hideRows = hideZeroResponse.body().data.rows
+    assert.isTrue(hideRows.every((row: { quantity: string }) => Number(row.quantity) > 0))
+  })
+
+  test('GET /api/v1/reports/inventory/:id/movements returns filtered movements', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const product = await CatalogProduct.create({
+      name: 'Producto Movimientos',
+      category: 'Calzado',
+      saleUnit: 'UND',
+      salePriceUsd: '20.0000',
+      costUsd: '10.0000',
+      stockQuantity: '5.000',
+      minimumStock: '0.000',
+      active: true,
+    })
+
+    await ProductInventoryMovement.createMany([
+      {
+        catalogProductId: Number(product.id),
+        type: 'MANUAL_CARGO',
+        quantity: '5.000',
+        note: 'Carga inicial',
+      },
+      {
+        catalogProductId: Number(product.id),
+        type: 'SALE_OUT',
+        quantity: '-2.000',
+        note: 'Venta demo',
+      },
+    ])
+
+    const response = await client
+      .get(`/api/v1/reports/inventory/${product.id}/movements`)
+      .qs({ types: 'MANUAL_CARGO' })
+      .loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body().data
+    assert.equal(body.product.product_id, Number(product.id))
+    assert.lengthOf(body.movements, 1)
+    assert.equal(body.movements[0].type, 'MANUAL_CARGO')
+    assert.equal(body.movements[0].note, 'Carga inicial')
+  })
+
+  test('GET /api/v1/reports/inventory/:id/movements marks formula products unavailable', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const formula = await Formula.create({ name: 'Formula Reporte', active: true })
+    const product = await CatalogProduct.create({
+      name: 'Producto Formula',
+      category: 'Calzado',
+      saleUnit: 'UND',
+      salePriceUsd: '20.0000',
+      costUsd: '10.0000',
+      stockQuantity: '0.000',
+      minimumStock: '0.000',
+      formulaId: Number(formula.id),
+      active: true,
+    })
+
+    const response = await client
+      .get(`/api/v1/reports/inventory/${product.id}/movements`)
+      .loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body().data
+    assert.isTrue(body.product.movements_unavailable)
+    assert.lengthOf(body.movements, 0)
   })
 })

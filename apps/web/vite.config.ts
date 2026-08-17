@@ -35,6 +35,9 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    optimizeDeps: {
+      include: ['exceljs'],
+    },
     server: {
       port: 5174,
       strictPort: true,
