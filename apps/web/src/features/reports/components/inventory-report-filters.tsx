@@ -4,17 +4,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { InventoryReportFilterState } from '@/features/reports/inventory-report-search-params'
-import { ReportPeriodFilters } from '@/features/reports/components/report-period-filters'
-import type { ReportPeriodState } from '@/features/reports/report-period'
 import { reportUi } from '@/features/reports/report-ui'
 import { cn } from '@/lib/utils'
 
 type InventoryReportFiltersProps = {
   filters: InventoryReportFilterState
-  period: ReportPeriodState
   categories: Array<{ id: number; name: string }>
   onFiltersChange: (value: InventoryReportFilterState) => void
-  onPeriodChange: (value: ReportPeriodState) => void
 }
 
 const SORT_OPTIONS: Array<{
@@ -33,12 +29,10 @@ const SORT_OPTIONS: Array<{
 
 export function InventoryReportFilters({
   filters,
-  period,
   categories,
   onFiltersChange,
-  onPeriodChange,
 }: InventoryReportFiltersProps) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
   const sortValue = `${filters.sortBy}:${filters.sortDir}`
 
   function updateFilters(partial: Partial<InventoryReportFilterState>) {
@@ -48,7 +42,7 @@ export function InventoryReportFilters({
   return (
     <div className={cn(reportUi.panel, 'p-5 md:p-6')}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <ReportPeriodFilters value={period} onChange={onPeriodChange} />
+        <p className={reportUi.muted}>Stock actual de todo el catálogo registrado</p>
 
         <Button
           type="button"
@@ -139,15 +133,7 @@ export function InventoryReportFilters({
                 checked={filters.hideZero}
                 onChange={(event) => updateFilters({ hideZero: event.target.checked })}
               />
-              Ocultar sin stock
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm text-neutral-700">
-              <input
-                type="checkbox"
-                checked={filters.movementPeriodEnabled}
-                onChange={(event) => updateFilters({ movementPeriodEnabled: event.target.checked })}
-              />
-              Solo productos con movimientos en el período
+              Ocultar tallas sin stock
             </label>
           </div>
         </div>

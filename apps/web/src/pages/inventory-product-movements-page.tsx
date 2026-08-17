@@ -348,9 +348,7 @@ export function InventoryProductMovementsPage() {
         </>
       )}
 
-      <p className={reportUi.muted}>
-        {inventoryFilterSummary(filters, periodLabelFromState(period))}
-      </p>
+      <p className={reportUi.muted}>{inventoryFilterSummary(filters)}</p>
     </div>
   )
 }

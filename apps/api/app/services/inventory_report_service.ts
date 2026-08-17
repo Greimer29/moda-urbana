@@ -7,35 +7,38 @@ import CatalogProductStockService from '#services/catalog_product_stock_service'
 import { formatCatalogProductCode } from '#utils/catalog_product_code'
 import { DateTime } from 'luxon'
 
-export type InventoryReportFilters = {
-  search?: string
-  category?: string
-  active?: boolean
-  low_stock?: boolean
-  hide_zero?: boolean
-  movement_from?: string
-  movement_to?: string
-  movement_month?: string
-  sort_by?: 'id' | 'name' | 'sale_price' | 'quantity'
-  sort_dir?: 'asc' | 'desc'
-  page?: number
-  per_page?: number
-  export?: boolean
+export type InventoryReportSizeLine = {
+  size: string | null
+  quantity: string
 }
 
-export type InventoryReportRow = {
+export type InventoryReportProduct = {
   product_id: number
   code: string
   image_path: string | null
   description: string
-  size: string | null
-  quantity: string
   sale_price_usd: string
   cost_usd: string | null
   sale_unit: string
   category: string
   stock_source: 'manual' | 'formula'
   low_stock: boolean
+  has_sizes: boolean
+  total_quantity: string
+  lines: InventoryReportSizeLine[]
+}
+
+export type InventoryReportFilters = {
+  search?: string
+  category?: string
+  active?: boolean
+  low_stock?: boolean
+  hide_zero?: boolean
+  sort_by?: 'id' | 'name' | 'sale_price' | 'quantity'
+  sort_dir?: 'asc' | 'desc'
+  page?: number
+  per_page?: number
+  export?: boolean
 }
 
 export type InventoryMovementsFilters = {
@@ -80,7 +83,7 @@ export default class InventoryReportService {
     const products = await this.fetchProducts(filters)
     const stockMap = await this.stockService.calcularStockForProducts(products)
 
-    let rows: InventoryReportRow[] = []
+    let groups: InventoryReportProduct[] = []
 
     for (const product of products) {
       const productId = Number(product.id)
@@ -91,45 +94,60 @@ export default class InventoryReportService {
       const minimumStock = Number(product.minimumStock ?? 0)
       const productLowStock = stock.quantity < minimumStock
       const sizes = Array.isArray(product.sizes) ? product.sizes : []
+      const hasSizes = sizes.length > 0
 
-      if (sizes.length > 0) {
-        for (const sizeRow of sizes) {
-          const qty = Number(sizeRow.stockQuantity)
-          rows.push(this.buildRow(product, stock.source, productLowStock, {
-            size: sizeRow.size,
-            quantity: qty,
-          }))
-        }
+      let lines: InventoryReportSizeLine[] = []
+
+      if (hasSizes) {
+        lines = sizes.map((sizeRow) => ({
+          size: sizeRow.size,
+          quantity: Number(sizeRow.stockQuantity).toFixed(3),
+        }))
       } else {
-        rows.push(
-          this.buildRow(product, stock.source, productLowStock, {
-            size: null,
-            quantity: stock.quantity,
-          })
-        )
+        lines = [{ size: null, quantity: stock.quantity.toFixed(3) }]
       }
+
+      if (filters.hide_zero) {
+        lines = lines.filter((line) => Number(line.quantity) > 0)
+      }
+
+      if (lines.length === 0) {
+        continue
+      }
+
+      if (filters.low_stock && !productLowStock) {
+        continue
+      }
+
+      groups.push({
+        product_id: productId,
+        code: formatCatalogProductCode(productId),
+        image_path: product.imagePath,
+        description: product.name,
+        sale_price_usd: product.salePriceUsd,
+        cost_usd: product.costUsd,
+        sale_unit: product.saleUnit,
+        category: product.category,
+        stock_source: stock.source,
+        low_stock: productLowStock,
+        has_sizes: hasSizes,
+        total_quantity: stock.quantity.toFixed(3),
+        lines,
+      })
     }
 
-    if (filters.hide_zero) {
-      rows = rows.filter((row) => Number(row.quantity) > 0)
-    }
-
-    if (filters.low_stock) {
-      rows = rows.filter((row) => row.low_stock)
-    }
-
-    rows = this.sortRows(rows, filters.sort_by ?? 'id', filters.sort_dir ?? 'asc')
+    groups = this.sortProducts(groups, filters.sort_by ?? 'id', filters.sort_dir ?? 'asc')
 
     const page = filters.page ?? 1
-    const perPage = filters.export ? rows.length || 1 : Math.min(filters.per_page ?? 30, 200)
-    const total = rows.length
+    const perPage = filters.export ? groups.length || 1 : Math.min(filters.per_page ?? 30, 200)
+    const total = groups.length
     const lastPage = Math.max(1, Math.ceil(total / perPage))
     const currentPage = filters.export ? 1 : Math.min(page, lastPage)
     const offset = (currentPage - 1) * perPage
-    const data = filters.export ? rows : rows.slice(offset, offset + perPage)
+    const data = filters.export ? groups : groups.slice(offset, offset + perPage)
 
     return {
-      rows: data,
+      products: data,
       meta: {
         total,
         per_page: perPage,
@@ -257,90 +275,28 @@ export default class InventoryReportService {
       })
     }
 
-    const movementPeriod = this.resolveMovementPeriod(filters)
-    if (movementPeriod) {
-      query.whereExists((subquery) => {
-        subquery
-          .from('product_inventory_movements as pim')
-          .whereRaw('pim.catalog_product_id = catalog_products.id')
-
-        if (movementPeriod.from) {
-          subquery.where(
-            'pim.created_at',
-            '>=',
-            DateTime.fromISO(movementPeriod.from).startOf('day').toSQL()!
-          )
-        }
-
-        if (movementPeriod.to) {
-          subquery.where(
-            'pim.created_at',
-            '<=',
-            DateTime.fromISO(movementPeriod.to).endOf('day').toSQL()!
-          )
-        }
-      })
-    }
-
     return query.orderBy('id', 'asc')
   }
 
-  private buildRow(
-    product: CatalogProduct,
-    stockSource: 'manual' | 'formula',
-    productLowStock: boolean,
-    row: { size: string | null; quantity: number }
-  ): InventoryReportRow {
-    return {
-      product_id: Number(product.id),
-      code: formatCatalogProductCode(Number(product.id)),
-      image_path: product.imagePath,
-      description: product.name,
-      size: row.size,
-      quantity: row.quantity.toFixed(3),
-      sale_price_usd: product.salePriceUsd,
-      cost_usd: product.costUsd,
-      sale_unit: product.saleUnit,
-      category: product.category,
-      stock_source: stockSource,
-      low_stock: productLowStock,
-    }
-  }
-
-  private sortRows(
-    rows: InventoryReportRow[],
+  private sortProducts(
+    products: InventoryReportProduct[],
     sortBy: InventoryReportFilters['sort_by'],
     sortDir: InventoryReportFilters['sort_dir']
   ) {
     const dir = sortDir === 'desc' ? -1 : 1
 
-    return [...rows].sort((a, b) => {
+    return [...products].sort((a, b) => {
       switch (sortBy) {
         case 'name':
           return a.description.localeCompare(b.description, 'es') * dir
         case 'sale_price':
           return (Number(a.sale_price_usd) - Number(b.sale_price_usd)) * dir
         case 'quantity':
-          return (Number(a.quantity) - Number(b.quantity)) * dir
+          return (Number(a.total_quantity) - Number(b.total_quantity)) * dir
         case 'id':
         default:
-          if (a.product_id !== b.product_id) {
-            return (a.product_id - b.product_id) * dir
-          }
-          return (a.size ?? '').localeCompare(b.size ?? '', 'es') * dir
+          return (a.product_id - b.product_id) * dir
       }
-    })
-  }
-
-  private resolveMovementPeriod(filters: InventoryReportFilters) {
-    if (!filters.movement_from && !filters.movement_to && !filters.movement_month) {
-      return null
-    }
-
-    return this.resolvePeriod({
-      from: filters.movement_from,
-      to: filters.movement_to,
-      month: filters.movement_month,
     })
   }
 

@@ -36,7 +36,7 @@ export default class ReportsController {
     const result = await this.inventoryService.listarSnapshot(filters)
 
     return serialize({
-      rows: result.rows,
+      products: result.products,
       meta: result.meta,
     })
   }

@@ -899,7 +899,10 @@ test.group('Inventory Reports API', (group) => {
     await seedAdminUser()
   })
 
-  test('GET /api/v1/reports/inventory returns size breakdown rows', async ({ client, assert }) => {
+  test('GET /api/v1/reports/inventory returns grouped products with size lines', async ({
+    client,
+    assert,
+  }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const product = await CatalogProduct.create({
       name: 'Zapato Reporte',
@@ -929,19 +932,21 @@ test.group('Inventory Reports API', (group) => {
     const response = await client.get('/api/v1/reports/inventory').loginAs(user)
 
     response.assertStatus(200)
-    const rows = response.body().data.rows as Array<{
+    const products = response.body().data.products as Array<{
       product_id: number
-      size: string | null
-      quantity: string
+      has_sizes: boolean
+      lines: Array<{ size: string | null; quantity: string }>
       description: string
     }>
 
-    assert.lengthOf(rows, 2)
-    assert.equal(rows[0].size, '40')
-    assert.equal(rows[0].quantity, '1.000')
-    assert.equal(rows[1].size, '41')
-    assert.equal(rows[1].quantity, '2.000')
-    assert.equal(rows[0].description, 'Zapato Reporte')
+    assert.lengthOf(products, 1)
+    assert.isTrue(products[0].has_sizes)
+    assert.lengthOf(products[0].lines, 2)
+    assert.equal(products[0].lines[0].size, '40')
+    assert.equal(products[0].lines[0].quantity, '1.000')
+    assert.equal(products[0].lines[1].size, '41')
+    assert.equal(products[0].lines[1].quantity, '2.000')
+    assert.equal(products[0].description, 'Zapato Reporte')
   })
 
   test('GET /api/v1/reports/inventory filters low stock and hide zero', async ({
@@ -975,7 +980,7 @@ test.group('Inventory Reports API', (group) => {
       .qs({ low_stock: true })
       .loginAs(user)
     lowStockResponse.assertStatus(200)
-    const lowRows = lowStockResponse.body().data.rows
+    const lowRows = lowStockResponse.body().data.products
     assert.lengthOf(lowRows, 1)
     assert.equal(lowRows[0].product_id, Number(low.id))
 
@@ -984,8 +989,12 @@ test.group('Inventory Reports API', (group) => {
       .qs({ hide_zero: true })
       .loginAs(user)
     hideZeroResponse.assertStatus(200)
-    const hideRows = hideZeroResponse.body().data.rows
-    assert.isTrue(hideRows.every((row: { quantity: string }) => Number(row.quantity) > 0))
+    const hideProducts = hideZeroResponse.body().data.products
+    assert.isTrue(
+      hideProducts.every((product: { lines: Array<{ quantity: string }> }) =>
+        product.lines.every((line) => Number(line.quantity) > 0)
+      )
+    )
   })
 
   test('GET /api/v1/reports/inventory/:id/movements returns filtered movements', async ({

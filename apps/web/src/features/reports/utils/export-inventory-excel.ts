@@ -1,8 +1,9 @@
 import type {
   InventoryMovementRow,
   InventoryProductSummary,
-  InventoryReportRow,
+  InventoryReportProduct,
 } from '@/features/reports/types/inventory-report'
+import { productSaleUnitAbrev } from '@/features/ventas/constants'
 import { INVENTORY_MOVEMENT_LABELS } from '@/features/reports/utils/inventory-movement-labels'
 
 type A4SheetOptions = {
@@ -99,20 +100,34 @@ async function downloadA4Workbook(options: A4SheetOptions) {
 }
 
 export async function exportInventorySnapshotExcel(
-  rows: InventoryReportRow[],
+  products: InventoryReportProduct[],
   filterSummary: string,
   formatMoney: (amountUsd: string | null | undefined) => string
 ) {
+  const rows = products.flatMap((product) =>
+    product.lines.map((line) => ({
+      code: product.code,
+      description: product.description,
+      size: line.size,
+      quantity: line.quantity,
+      unit: productSaleUnitAbrev(product.sale_unit),
+      sale_price_usd: product.sale_price_usd,
+      cost_usd: product.cost_usd,
+      category: product.category,
+    }))
+  )
+
   await downloadA4Workbook({
     title: 'Reporte de inventario',
     filterSummary,
     filename: `inventario-${new Date().toISOString().slice(0, 10)}.xlsx`,
-    headers: ['Código', 'Descripción', 'Talla', 'Cantidad', 'Precio', 'Costo', 'Categoría'],
+    headers: ['Código', 'Descripción', 'Talla', 'Cantidad', 'Unidad', 'Precio', 'Costo', 'Categoría'],
     rows: rows.map((row) => [
       row.code,
       row.description,
       row.size ?? '—',
       Number(row.quantity),
+      row.unit,
       formatMoney(row.sale_price_usd),
       formatMoney(row.cost_usd),
       row.category,

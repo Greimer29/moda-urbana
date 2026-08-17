@@ -1,10 +1,30 @@
-export type InventoryReportRow = {
+export type InventoryReportSizeLine = {
+  size: string | null
+  quantity: string
+}
+
+export type InventoryReportProduct = {
   product_id: number
   code: string
   image_path: string | null
   description: string
-  size: string | null
-  quantity: string
+  sale_price_usd: string
+  cost_usd: string | null
+  sale_unit: string
+  category: string
+  stock_source: 'manual' | 'formula'
+  low_stock: boolean
+  has_sizes: boolean
+  total_quantity: string
+  lines: InventoryReportSizeLine[]
+}
+
+/** @deprecated flat row — use InventoryReportProduct.lines */
+export type InventoryReportRow = InventoryReportSizeLine & {
+  product_id: number
+  code: string
+  image_path: string | null
+  description: string
   sale_price_usd: string
   cost_usd: string | null
   sale_unit: string
@@ -26,9 +46,6 @@ export type InventoryReportParams = {
   active?: boolean
   low_stock?: boolean
   hide_zero?: boolean
-  movement_from?: string
-  movement_to?: string
-  movement_month?: string
   sort_by?: 'id' | 'name' | 'sale_price' | 'quantity'
   sort_dir?: 'asc' | 'desc'
   page?: number
@@ -38,7 +55,7 @@ export type InventoryReportParams = {
 
 export type InventoryReportResponse = {
   data: {
-    rows: InventoryReportRow[]
+    products: InventoryReportProduct[]
     meta: InventoryReportMeta
   }
 }
