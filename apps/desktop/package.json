@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "App de escritorio Moda Urbana (Electron)",
   "author": "Moda Urbana",
   "main": "dist/main.js",

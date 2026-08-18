@@ -14,9 +14,99 @@ type A4SheetOptions = {
   filename: string
 }
 
+const thinBorder = {
+  top: { style: 'thin' as const, color: { argb: 'FFEEEEEE' } },
+  bottom: { style: 'thin' as const, color: { argb: 'FFEEEEEE' } },
+  left: { style: 'thin' as const, color: { argb: 'FFEEEEEE' } },
+  right: { style: 'thin' as const, color: { argb: 'FFEEEEEE' } },
+}
+
+const headerBorder = {
+  top: { style: 'thin' as const, color: { argb: 'FFDDDDDD' } },
+  bottom: { style: 'thin' as const, color: { argb: 'FFDDDDDD' } },
+  left: { style: 'thin' as const, color: { argb: 'FFDDDDDD' } },
+  right: { style: 'thin' as const, color: { argb: 'FFDDDDDD' } },
+}
+
 async function loadExcelJS() {
   const module = await import('exceljs')
   return module.default
+}
+
+function formatQty(value: string) {
+  const num = Number(value)
+  return Number.isInteger(num) ? num : Number(num.toFixed(3))
+}
+
+function styleCell(
+  cell: {
+    value?: unknown
+    font?: object
+    fill?: object
+    border?: object
+    alignment?: object
+  },
+  options?: { header?: boolean; merged?: boolean }
+) {
+  cell.border = options?.header ? headerBorder : thinBorder
+  if (options?.merged) {
+    cell.alignment = { vertical: 'middle', wrapText: true }
+  }
+}
+
+async function downloadWorkbookBuffer(
+  sheet: import('exceljs').Worksheet,
+  filename: string
+) {
+  const buffer = await sheet.workbook.xlsx.writeBuffer()
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+function writeSheetHeader(
+  sheet: import('exceljs').Worksheet,
+  title: string,
+  filterSummary: string,
+  headers: string[]
+) {
+  const lastCol = String.fromCharCode(64 + headers.length)
+
+  sheet.mergeCells(`A1:${lastCol}1`)
+  sheet.getCell('A1').value = title
+  sheet.getCell('A1').font = { bold: true, size: 14 }
+
+  sheet.mergeCells(`A2:${lastCol}2`)
+  sheet.getCell('A2').value = filterSummary
+  sheet.getCell('A2').font = { size: 10, color: { argb: 'FF666666' } }
+
+  const headerRowIndex = 4
+  const headerRow = sheet.getRow(headerRowIndex)
+  headers.forEach((header, index) => {
+    const cell = headerRow.getCell(index + 1)
+    cell.value = header
+    cell.font = { bold: true }
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF5F5F5' },
+    }
+    styleCell(cell, { header: true })
+  })
+
+  headers.forEach((header, index) => {
+    sheet.getColumn(index + 1).width = Math.max(12, header.length + 2)
+  })
+
+  sheet.views = [{ state: 'frozen', ySplit: headerRowIndex }]
+
+  return headerRowIndex
 }
 
 async function downloadA4Workbook(options: A4SheetOptions) {
@@ -40,63 +130,131 @@ async function downloadA4Workbook(options: A4SheetOptions) {
     },
   })
 
-  sheet.mergeCells('A1', `${String.fromCharCode(64 + options.headers.length)}1`)
-  sheet.getCell('A1').value = options.title
-  sheet.getCell('A1').font = { bold: true, size: 14 }
-
-  sheet.mergeCells('A2', `${String.fromCharCode(64 + options.headers.length)}2`)
-  sheet.getCell('A2').value = options.filterSummary
-  sheet.getCell('A2').font = { size: 10, color: { argb: 'FF666666' } }
-
-  const headerRowIndex = 4
-  const headerRow = sheet.getRow(headerRowIndex)
-  options.headers.forEach((header, index) => {
-    const cell = headerRow.getCell(index + 1)
-    cell.value = header
-    cell.font = { bold: true }
-    cell.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFF5F5F5' },
-    }
-    cell.border = {
-      top: { style: 'thin', color: { argb: 'FFDDDDDD' } },
-      bottom: { style: 'thin', color: { argb: 'FFDDDDDD' } },
-      left: { style: 'thin', color: { argb: 'FFDDDDDD' } },
-      right: { style: 'thin', color: { argb: 'FFDDDDDD' } },
-    }
-  })
+  const headerRowIndex = writeSheetHeader(sheet, options.title, options.filterSummary, options.headers)
 
   options.rows.forEach((rowValues, rowOffset) => {
     const row = sheet.getRow(headerRowIndex + 1 + rowOffset)
     rowValues.forEach((value, colIndex) => {
       const cell = row.getCell(colIndex + 1)
       cell.value = value
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FFEEEEEE' } },
-        bottom: { style: 'thin', color: { argb: 'FFEEEEEE' } },
-        left: { style: 'thin', color: { argb: 'FFEEEEEE' } },
-        right: { style: 'thin', color: { argb: 'FFEEEEEE' } },
-      }
+      styleCell(cell)
     })
   })
 
-  options.headers.forEach((_, index) => {
-    sheet.getColumn(index + 1).width = Math.max(12, options.headers[index]?.length ?? 10)
+  await downloadWorkbookBuffer(sheet, options.filename)
+}
+
+async function downloadGroupedInventoryWorkbook(
+  products: InventoryReportProduct[],
+  filterSummary: string,
+  formatMoney: (amountUsd: string | null | undefined) => string
+) {
+  const ExcelJS = await loadExcelJS()
+  const workbook = new ExcelJS.Workbook()
+  const headers = ['Código', 'Descripción', 'Talla', 'Cantidad', 'Unidad', 'Precio', 'Costo', 'Categoría']
+
+  const sheet = workbook.addWorksheet('Inventario', {
+    pageSetup: {
+      paperSize: 9,
+      orientation: 'portrait',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: {
+        left: 0.5,
+        right: 0.5,
+        top: 0.6,
+        bottom: 0.6,
+        header: 0.3,
+        footer: 0.3,
+      },
+    },
   })
 
-  sheet.views = [{ state: 'frozen', ySplit: headerRowIndex }]
+  const headerRowIndex = writeSheetHeader(
+    sheet,
+    'Reporte de inventario',
+    filterSummary,
+    headers
+  )
 
-  const buffer = await workbook.xlsx.writeBuffer()
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = options.filename
-  anchor.click()
-  URL.revokeObjectURL(url)
+  sheet.getColumn(1).width = 12
+  sheet.getColumn(2).width = 36
+  sheet.getColumn(3).width = 10
+  sheet.getColumn(4).width = 10
+  sheet.getColumn(5).width = 10
+  sheet.getColumn(6).width = 14
+  sheet.getColumn(7).width = 14
+  sheet.getColumn(8).width = 14
+
+  let currentRow = headerRowIndex + 1
+
+  for (const product of products) {
+    const lineCount = product.lines.length
+    const unitLabel = productSaleUnitAbrev(product.sale_unit)
+    const startRow = currentRow
+    const endRow = currentRow + lineCount - 1
+
+    const descriptionLines = [product.description, product.category]
+    if (product.has_sizes && lineCount > 1) {
+      descriptionLines.push(`${lineCount} tallas · total ${formatQty(product.total_quantity)}`)
+    }
+
+    if (lineCount > 1) {
+      sheet.mergeCells(startRow, 1, endRow, 1)
+      sheet.mergeCells(startRow, 2, endRow, 2)
+      sheet.mergeCells(startRow, 6, endRow, 6)
+      sheet.mergeCells(startRow, 7, endRow, 7)
+      sheet.mergeCells(startRow, 8, endRow, 8)
+    }
+
+    product.lines.forEach((line, lineIndex) => {
+      const rowNumber = startRow + lineIndex
+      const row = sheet.getRow(rowNumber)
+
+      if (lineIndex === 0) {
+        const codeCell = row.getCell(1)
+        codeCell.value = product.code
+        styleCell(codeCell, { merged: lineCount > 1 })
+
+        const descCell = row.getCell(2)
+        descCell.value = descriptionLines.join('\n')
+        styleCell(descCell, { merged: lineCount > 1 })
+
+        const priceCell = row.getCell(6)
+        priceCell.value = formatMoney(product.sale_price_usd)
+        styleCell(priceCell, { merged: lineCount > 1 })
+
+        const costCell = row.getCell(7)
+        costCell.value = product.cost_usd ? formatMoney(product.cost_usd) : '—'
+        styleCell(costCell, { merged: lineCount > 1 })
+
+        const categoryCell = row.getCell(8)
+        categoryCell.value = product.category
+        styleCell(categoryCell, { merged: lineCount > 1 })
+      }
+
+      const sizeCell = row.getCell(3)
+      sizeCell.value = line.size ?? '—'
+      styleCell(sizeCell)
+
+      const qtyCell = row.getCell(4)
+      qtyCell.value = formatQty(line.quantity)
+      qtyCell.alignment = { horizontal: 'right' }
+      styleCell(qtyCell)
+
+      const unitCell = row.getCell(5)
+      unitCell.value = unitLabel
+      styleCell(unitCell)
+    })
+
+    currentRow = endRow + 1
+  }
+
+  await downloadWorkbookBuffer(
+    sheet,
+    `inventario-${new Date().toISOString().slice(0, 10)}.xlsx`
+  )
 }
 
 export async function exportInventorySnapshotExcel(
@@ -104,35 +262,7 @@ export async function exportInventorySnapshotExcel(
   filterSummary: string,
   formatMoney: (amountUsd: string | null | undefined) => string
 ) {
-  const rows = products.flatMap((product) =>
-    product.lines.map((line) => ({
-      code: product.code,
-      description: product.description,
-      size: line.size,
-      quantity: line.quantity,
-      unit: productSaleUnitAbrev(product.sale_unit),
-      sale_price_usd: product.sale_price_usd,
-      cost_usd: product.cost_usd,
-      category: product.category,
-    }))
-  )
-
-  await downloadA4Workbook({
-    title: 'Reporte de inventario',
-    filterSummary,
-    filename: `inventario-${new Date().toISOString().slice(0, 10)}.xlsx`,
-    headers: ['Código', 'Descripción', 'Talla', 'Cantidad', 'Unidad', 'Precio', 'Costo', 'Categoría'],
-    rows: rows.map((row) => [
-      row.code,
-      row.description,
-      row.size ?? '—',
-      Number(row.quantity),
-      row.unit,
-      formatMoney(row.sale_price_usd),
-      formatMoney(row.cost_usd),
-      row.category,
-    ]),
-  })
+  await downloadGroupedInventoryWorkbook(products, filterSummary, formatMoney)
 }
 
 export async function exportInventoryMovementsExcel(

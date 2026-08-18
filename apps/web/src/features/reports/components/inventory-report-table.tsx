@@ -111,12 +111,10 @@ export function InventoryReportTable({ products }: InventoryReportTableProps) {
                     <td className="px-4 py-2.5 text-right font-medium tabular-nums text-neutral-900">
                       {formatQty(line.quantity)}
                     </td>
+                    <td className="px-4 py-2.5 text-neutral-700">{unitLabel}</td>
 
                     {isFirstLine ? (
                       <>
-                        <td className="px-4 py-3 align-top text-neutral-700" rowSpan={lineCount}>
-                          {unitLabel}
-                        </td>
                         <td className="px-4 py-3 align-top text-right tabular-nums" rowSpan={lineCount}>
                           {formatFromUsd(Number(product.sale_price_usd))}
                         </td>
