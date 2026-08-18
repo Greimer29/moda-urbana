@@ -155,7 +155,10 @@ test.group('Catalog sizes and sale discounts', (group) => {
     assert.equal(order.notes, 'Nota factura demo')
     assert.lengthOf(order.lines, 1)
     assert.equal(order.lines[0].size, '12')
-    assert.equal(order.lines[0].notes, 'Nota línea demo')
+    assert.equal(
+      order.lines[0].notes,
+      'Nota línea demo\nAjuste de precio: descuento de 20,00 USD (lista 100,00 → 80,00)'
+    )
     assert.equal(order.lines[0].unit_price_usd, '80.0000')
     assert.equal(Number(order.lines[0].subtotal_usd), 160)
 
@@ -173,7 +176,52 @@ test.group('Catalog sizes and sale discounts', (group) => {
 
     const line = await OrderLine.query().where('orderId', orderId).firstOrFail()
     assert.equal(line.size, '12')
-    assert.equal(line.notes, 'Nota línea demo')
+    assert.equal(
+      line.notes,
+      'Nota línea demo\nAjuste de precio: descuento de 20,00 USD (lista 100,00 → 80,00)'
+    )
+  })
+
+  test('adds an increase note when sold price is above catalog', async ({ client, assert }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente Aumento',
+      type: 'CORPORATE',
+      active: true,
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto Aumento',
+      category: 'Calzado',
+      saleUnit: 'UND',
+      salePriceUsd: '50.0000',
+      costUsd: '20.0000',
+      stockQuantity: '5.000',
+      minimumStock: '0.000',
+      active: true,
+    })
+
+    const createOrder = await client.post('/api/v1/orders').loginAs(user).json({
+      customer_id: Number(customer.id),
+      modality: 'CORPORATE',
+      description: 'Venta con aumento',
+      total_quantity: 1,
+      order_date: '2026-08-09',
+      lines: [
+        {
+          catalog_product_id: Number(product.id),
+          quantity: 1,
+          unit_price_usd: 60,
+        },
+      ],
+    })
+
+    createOrder.assertStatus(200)
+    const orderId = createOrder.body().data.order.id as number
+    const line = await OrderLine.query().where('orderId', orderId).firstOrFail()
+    assert.equal(
+      line.notes,
+      'Ajuste de precio: aumento de 10,00 USD (lista 50,00 → 60,00)'
+    )
   })
 
   test('product without sizes still sells with catalog price', async ({ client, assert }) => {
@@ -209,6 +257,59 @@ test.group('Catalog sizes and sale discounts', (group) => {
     const line = await OrderLine.query().where('orderId', orderId).firstOrFail()
     assert.isNull(line.catalogProductSizeId)
     assert.equal(line.unitPriceUsd, '25.0000')
+    assert.isNull(line.notes)
     assert.equal(order.status, 'DRAFT')
+  })
+
+  test('updates auto price note when line unit price changes', async ({ client, assert }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente Update Precio',
+      type: 'CORPORATE',
+      active: true,
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto Update Precio',
+      category: 'Calzado',
+      saleUnit: 'UND',
+      salePriceUsd: '40.0000',
+      costUsd: '15.0000',
+      stockQuantity: '5.000',
+      minimumStock: '0.000',
+      active: true,
+    })
+
+    const createOrder = await client.post('/api/v1/orders').loginAs(user).json({
+      customer_id: Number(customer.id),
+      modality: 'CORPORATE',
+      description: 'Venta update precio',
+      total_quantity: 1,
+      order_date: '2026-08-09',
+      lines: [{ catalog_product_id: Number(product.id), quantity: 1, notes: 'Prioritario' }],
+    })
+
+    createOrder.assertStatus(200)
+    const orderId = createOrder.body().data.order.id as number
+    const created = await OrderLine.query().where('orderId', orderId).firstOrFail()
+    assert.equal(created.notes, 'Prioritario')
+
+    const discounted = await client
+      .put(`/api/v1/orders/${orderId}/lines/${created.id}`)
+      .loginAs(user)
+      .json({ quantity: 1, unit_price_usd: 30 })
+
+    discounted.assertStatus(200)
+    assert.equal(
+      discounted.body().data.order_line.notes,
+      'Prioritario\nAjuste de precio: descuento de 10,00 USD (lista 40,00 → 30,00)'
+    )
+
+    const restored = await client
+      .put(`/api/v1/orders/${orderId}/lines/${created.id}`)
+      .loginAs(user)
+      .json({ quantity: 1, unit_price_usd: 40 })
+
+    restored.assertStatus(200)
+    assert.equal(restored.body().data.order_line.notes, 'Prioritario')
   })
 })

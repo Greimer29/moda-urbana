@@ -71,7 +71,7 @@ export function ReportsPage() {
           </h1>
           <p className={`${reportUi.subtitle} mt-2 max-w-xl`}>
             {isInventory
-              ? 'Stock actual de productos desglosado por talla, con acceso al historial de movimientos.'
+              ? 'Stock actual de productos y materiales. Las tallas se desglosan con su unidad en cada fila.'
               : 'Ingresos, egresos y balance consolidado a partir de ventas, compras y gastos.'}
           </p>
         </div>

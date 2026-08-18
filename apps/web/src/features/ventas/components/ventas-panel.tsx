@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileText, FolderOpen, Loader2, Plus, Search, ShoppingCart, X } from 'lucide-react'
+import { ChevronDown, FileText, FolderOpen, Loader2, Plus, Search, ShoppingCart, SlidersHorizontal } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -48,7 +48,12 @@ import {
   catalogSortValue,
   parseCatalogSortValue,
 } from '@/features/ventas/utils/catalog-sort'
+import {
+  buildPriceAdjustmentNote,
+  mergeLineNotes,
+} from '@/features/ventas/utils/price-adjustment-note'
 import { cartHasStockIssues } from '@/features/ventas/utils/product-stock'
+import { todayIsoDate } from '@/lib/app-timezone'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { normalizeInventoryQuantity } from '@/lib/inventory-units'
 import { cn } from '@/lib/utils'
@@ -101,6 +106,7 @@ function VentasCreateView() {
   const [billingMethod, setBillingMethod] = useState<BillingMethod>('FAST')
   const [cart, setCart] = useState<CartLine[]>([])
   const [cartOpen, setCartOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [orderNotes, setOrderNotes] = useState('')
   const [orderNotesOpen, setOrderNotesOpen] = useState(false)
   const [sizePickerProduct, setSizePickerProduct] = useState<CatalogProduct | null>(null)
@@ -200,6 +206,13 @@ function VentasCreateView() {
     [cart]
   )
   const stockBlocked = cartHasStockIssues(cart)
+  const defaultSortValue = catalogSortValue(DEFAULT_SORT.sortBy, DEFAULT_SORT.sortDir)
+  const activeFilterCount =
+    Number(Boolean(category)) +
+    Number(Boolean(brandFilter.trim())) +
+    Number(Boolean(modelFilter.trim())) +
+    Number(Boolean(sizeFilter.trim())) +
+    Number(sortValue !== defaultSortValue)
 
   const cartLines = useMemo<VentasCartLine[]>(
     () =>
@@ -287,9 +300,19 @@ function VentasCreateView() {
   function updateCartUnitPrice(key: string, unitPriceUsd: number) {
     setSuccessMessage(null)
     setCart((prev) =>
-      prev.map((item) =>
-        item.key === key ? { ...item, unitPriceUsd: Math.max(0, unitPriceUsd) } : item
-      )
+      prev.map((item) => {
+        if (item.key !== key) return item
+        const nextPrice = Math.max(0, unitPriceUsd)
+        return {
+          ...item,
+          unitPriceUsd: nextPrice,
+          notes:
+            mergeLineNotes(
+              item.notes,
+              buildPriceAdjustmentNote(Number(item.product.sale_price_usd), nextPrice)
+            ) ?? '',
+        }
+      })
     )
   }
 
@@ -360,7 +383,7 @@ function VentasCreateView() {
       throw new Error('Agregá al menos un producto al carrito.')
     }
 
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayIsoDate()
     const totalQty = cart.reduce((sum, line) => sum + line.quantity, 0)
     const description = cart.map((line) => line.product.name).join(', ').slice(0, 200)
     const orderPayload = {
@@ -478,10 +501,10 @@ function VentasCreateView() {
     }
   }
 
-  function renderBillingCart(className?: string) {
+  function renderBillingCart(options?: { onClose?: () => void }) {
     return (
       <VentasOrderCart
-        className={cn('h-full min-h-0 w-full', className)}
+        className="h-full min-h-0 w-full"
         orderLabel={orderLabel}
         lines={cartLines}
         subtotalUsd={cartTotal}
@@ -500,6 +523,7 @@ function VentasCreateView() {
         emptyMessage="Agregá productos desde el catálogo."
         billingMethod={billingMethod}
         onBillingMethodChange={setBillingMethod}
+        onClose={options?.onClose}
         headerAction={
           <Button
             type="button"
@@ -672,13 +696,38 @@ function VentasCreateView() {
             </div>
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pt-0">
-            <div className="flex shrink-0 flex-wrap gap-3">
-              <Input
-                placeholder="Buscar producto…"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="max-w-xs bg-white"
-              />
+            <div className="flex shrink-0 flex-col gap-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Buscar producto…"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="min-w-0 flex-1 bg-white md:max-w-xs"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="relative shrink-0 md:hidden"
+                  aria-expanded={filtersOpen}
+                  aria-controls="ventas-catalog-filters"
+                  onClick={() => setFiltersOpen((open) => !open)}
+                >
+                  <SlidersHorizontal className="size-4" />
+                  Filtros
+                  <ChevronDown
+                    className={cn('size-4 transition-transform', filtersOpen ? 'rotate-180' : '')}
+                  />
+                  {activeFilterCount > 0 ? (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-semibold text-white">
+                      {activeFilterCount}
+                    </span>
+                  ) : null}
+                </Button>
+              </div>
+              <div
+                id="ventas-catalog-filters"
+                className={cn('flex-wrap gap-3', filtersOpen ? 'flex' : 'hidden', 'md:flex')}
+              >
               <select
                 className="border-input flex h-9 rounded-md border bg-white px-3 text-sm"
                 value={category}
@@ -754,6 +803,7 @@ function VentasCreateView() {
                   </option>
                 ))}
               </select>
+              </div>
             </div>
 
             <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto pr-1">
@@ -825,27 +875,17 @@ function VentasCreateView() {
       />
       <div
         className={cn(
-          'fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col gap-2 bg-white p-3 shadow-xl transition-transform duration-300 xl:hidden',
+          'fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-xl transition-transform duration-300 xl:hidden',
+          'pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]',
           cartOpen ? 'translate-x-0' : 'pointer-events-none translate-x-full'
         )}
         role="dialog"
         aria-modal={cartOpen}
         aria-label="Facturación"
       >
-        <div className="flex shrink-0 justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            title="Cerrar carrito"
-            aria-label="Cerrar carrito"
-            onClick={() => setCartOpen(false)}
-          >
-            <X className="size-4" />
-          </Button>
+        <div className="min-h-0 flex-1 p-3">
+          {renderBillingCart({ onClose: () => setCartOpen(false) })}
         </div>
-        <div className="min-h-0 flex-1">{renderBillingCart()}</div>
       </div>
 
       <CustomerFormDialog

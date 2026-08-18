@@ -1,5 +1,6 @@
 import { Loader2, Pencil, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountSelect } from '@/features/accounts/components/account-select'
@@ -13,11 +14,25 @@ import { getApiErrorMessage } from '@/lib/api-error'
 const PER_PAGE = 20
 
 export function PurchasesGastosPanel() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [page, setPage] = useState(1)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
   const [accountFilter, setAccountFilter] = useState<number | null>(null)
   const [unassignedOnly, setUnassignedOnly] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('nuevo') !== '1') {
+      return
+    }
+
+    setSelectedExpense(null)
+    setDialogOpen(true)
+
+    const next = new URLSearchParams(searchParams)
+    next.delete('nuevo')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const { data, isLoading, isError, error } = useExpensesQuery({
     page,

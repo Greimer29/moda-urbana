@@ -1,3 +1,5 @@
+import { APP_TIMEZONE } from '@/lib/app-timezone'
+
 /**
  * Formatea una fecha ISO (`YYYY-MM-DD` o datetime con `T`) a `DD/MM/YYYY`.
  */
@@ -30,6 +32,7 @@ export function formatFechaHora(iso: string | null | undefined) {
   }
 
   return date.toLocaleString('es-VE', {
+    timeZone: APP_TIMEZONE,
     dateStyle: 'short',
     timeStyle: 'short',
   })

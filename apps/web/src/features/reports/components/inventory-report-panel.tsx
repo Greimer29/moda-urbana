@@ -71,7 +71,7 @@ export function InventoryReportPanel() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className={reportUi.muted}>
-          {meta ? `${meta.total} productos · Página ${meta.current_page} de ${meta.last_page}` : ' '}
+          {meta ? `${meta.total} ítems · Página ${meta.current_page} de ${meta.last_page}` : ' '}
         </p>
         <Button
           type="button"

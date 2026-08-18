@@ -54,7 +54,9 @@ export function VentasHistoryOrderLines({ orderId }: VentasHistoryOrderLinesProp
                       <td className="px-3 py-2">
                         <div>{line.catalog_product?.name ?? `Producto #${line.catalog_product_id}`}</div>
                         {line.notes ? (
-                          <p className="text-muted-foreground mt-0.5 text-xs">{line.notes}</p>
+                          <p className="text-muted-foreground mt-0.5 text-xs whitespace-pre-line">
+                            {line.notes}
+                          </p>
                         ) : null}
                       </td>
                       <td className="px-3 py-2 tabular-nums">{line.size ?? '—'}</td>

@@ -94,6 +94,14 @@ export type PermissionKey = {
   [G in keyof typeof PERMISSION_GROUPS]: keyof (typeof PERMISSION_GROUPS)[G]['permissions']
 }[keyof typeof PERMISSION_GROUPS]
 
+const ALL_PERMISSIONS = Object.values(PERMISSION_GROUPS).flatMap((group) =>
+  Object.keys(group.permissions)
+) as PermissionKey[]
+
+export function isValidPermission(value: string): value is PermissionKey {
+  return ALL_PERMISSIONS.includes(value as PermissionKey)
+}
+
 export type PermissionPresetId = 'vendedor' | 'inventario' | 'contador' | 'custom'
 
 export const PERMISSION_PRESETS: Record<

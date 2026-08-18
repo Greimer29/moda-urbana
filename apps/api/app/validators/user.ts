@@ -1,11 +1,8 @@
 import vine from '@vinejs/vine'
-import { allPermissions, type PermissionKey } from '#permissions/catalog'
-
-const PERMISSION_ENUM = allPermissions() as [PermissionKey, ...PermissionKey[]]
 
 const email = () => vine.string().email().maxLength(150)
 const password = () => vine.string().minLength(8).maxLength(255)
-const permissions = () => vine.array(vine.enum(PERMISSION_ENUM)).optional()
+const permissions = () => vine.array(vine.string()).optional()
 
 export const loginValidator = vine.create({
   email: email(),

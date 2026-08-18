@@ -21,6 +21,7 @@ apps/mobile/android/.idea/
 *.aab
 *.keystore
 *.jks
+apps/mobile/android/keystore.properties
 
 # Local scratch / npm lockfiles (monorepo uses pnpm)
 package-lock.json

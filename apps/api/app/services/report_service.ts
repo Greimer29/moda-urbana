@@ -18,6 +18,7 @@ import Order from '#models/order'
 import Purchase from '#models/purchase'
 import SupplierPayment from '#models/supplier_payment'
 
+import { nowInAppZone } from '#utils/app_timezone'
 import { DateTime } from 'luxon'
 
 export type AccountStatementMovementType =
@@ -880,7 +881,7 @@ export default class ReportService {
       }
     }
 
-    const now = DateTime.now()
+    const now = nowInAppZone()
 
     return {
       from: filters.from ?? now.startOf('month').toISODate()!,

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createSale, getSale, listSales } from '@/features/ventas/services/sales-service'
 import type { CreateSaleInput, SaleListParams } from '@/features/ventas/types'
+import { startOfMonthIsoDate } from '@/lib/app-timezone'
 import { invalidateSalesFinancials } from '@/lib/query-invalidation'
 
 export function useSalesQuery(params: SaleListParams = {}) {
@@ -31,8 +32,7 @@ export function useCreateSaleMutation() {
 }
 
 export function useVentasSummaryQuery() {
-  const now = new Date()
-  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  const monthStart = startOfMonthIsoDate()
 
   return useQuery({
     queryKey: ['ventas-summary', monthStart],

@@ -1,9 +1,13 @@
+export type InventoryItemKind = 'product' | 'material'
+
 export type InventoryReportSizeLine = {
   size: string | null
+  talla?: string | null
   quantity: string
 }
 
 export type InventoryReportProduct = {
+  kind?: InventoryItemKind
   product_id: number
   code: string
   image_path: string | null

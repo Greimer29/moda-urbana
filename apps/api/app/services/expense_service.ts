@@ -3,6 +3,7 @@ import Expense from '#models/expense'
 import AccountService from '#services/account_service'
 import CurrencyService from '#services/currency_service'
 import { assertRegistroMonedaUsd } from '#utils/monetary_registration'
+import { nowInAppZone } from '#utils/app_timezone'
 import { DateTime } from 'luxon'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
 import type { ExpenseValidatorPayload } from '#validators/expense'
@@ -115,7 +116,7 @@ export default class ExpenseService {
 
     const count = expenses.length
 
-    const now = DateTime.now()
+    const now = nowInAppZone()
     const weekStart = now.startOf('week').toISODate()!
     const weekEnd = now.endOf('week').toISODate()!
 

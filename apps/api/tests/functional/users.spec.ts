@@ -1,4 +1,5 @@
 import User from '#models/user'
+import { allPermissions } from '#permissions/catalog'
 import testUtils from '@adonisjs/core/services/test_utils'
 import { resetTestDatabase } from '#tests/helpers/reset_test_database'
 import { DateTime } from 'luxon'
@@ -257,5 +258,79 @@ test.group('Users API', (group) => {
     assert.exists(listed)
     assert.equal(listed!.name, 'Operador Lista')
     assert.equal(listed!.email, 'lista@hebra.local')
+  })
+
+  test('admin creates operator with vendedor permissions and no purchases', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await User.findByOrFail('email', TEST_EMAIL)
+    const vendedorPermissions = [
+      'dashboard.view',
+      'ventas.view',
+      'ventas.confirm',
+      'ventas.credit',
+      'ventas.returns',
+      'customers.view',
+      'customers.edit',
+    ]
+
+    const response = await client
+      .post('/api/v1/users')
+      .loginAs(admin)
+      .json({
+        name: 'Vendedor Sin Compras',
+        email: 'vendedor-sin-compras@hebra.local',
+        password: 'password123',
+        role: 'OPERATOR',
+        permissions: vendedorPermissions,
+      })
+
+    response.assertStatus(200)
+    const permissions = response.body().data.user.permissions as string[]
+    assert.includeMembers(permissions, vendedorPermissions)
+    assert.isFalse(permissions.some((permission) => permission.startsWith('purchases.')))
+  })
+
+  test('admin can save operator with every permission except purchases', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await User.findByOrFail('email', TEST_EMAIL)
+    const withoutPurchases = allPermissions().filter(
+      (permission) => !permission.startsWith('purchases.')
+    )
+
+    const createResponse = await client
+      .post('/api/v1/users')
+      .loginAs(admin)
+      .json({
+        name: 'Operador Sin Compras',
+        email: 'sin-compras@hebra.local',
+        password: 'password123',
+        role: 'OPERATOR',
+        permissions: [...withoutPurchases, 'not.a.real.permission'],
+      })
+
+    createResponse.assertStatus(200)
+    const created = createResponse.body().data.user as { id: number; permissions: string[] }
+    assert.includeMembers(created.permissions, withoutPurchases)
+    assert.notInclude(created.permissions, 'not.a.real.permission')
+    assert.isFalse(created.permissions.some((permission) => permission.startsWith('purchases.')))
+
+    const withPurchases = [...withoutPurchases, 'purchases.view', 'purchases.edit']
+    await client
+      .put(`/api/v1/users/${created.id}`)
+      .loginAs(admin)
+      .json({ permissions: withPurchases })
+
+    const removeResponse = await client
+      .put(`/api/v1/users/${created.id}`)
+      .loginAs(admin)
+      .json({ permissions: withoutPurchases })
+
+    removeResponse.assertStatus(200)
+    const updated = removeResponse.body().data.user.permissions as string[]
+    assert.isFalse(updated.some((permission) => permission.startsWith('purchases.')))
   })
 })

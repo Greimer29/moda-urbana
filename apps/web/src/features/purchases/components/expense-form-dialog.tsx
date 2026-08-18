@@ -8,6 +8,8 @@ import { useForm } from 'react-hook-form'
 
 import { z } from 'zod'
 
+import { todayIsoDate } from '@/lib/app-timezone'
+
 import { Button } from '@/components/ui/button'
 
 import {
@@ -112,7 +114,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
 
     defaultValues: {
 
-      date: new Date().toISOString().slice(0, 10),
+      date: todayIsoDate(),
 
       description: '',
 
@@ -148,7 +150,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
 
           : {
 
-              date: new Date().toISOString().slice(0, 10),
+              date: todayIsoDate(),
 
               description: '',
 

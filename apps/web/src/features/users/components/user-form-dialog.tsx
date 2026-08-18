@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  isValidPermission,
   PERMISSION_PRESETS,
   type PermissionKey,
   type PermissionPresetId,
@@ -35,7 +36,7 @@ const selectClassName = cn(
 
 function normalizePermissions(user?: AppUser | null): PermissionKey[] {
   if (!user?.permissions?.length || user.permissions[0] === '*') return []
-  return user.permissions as PermissionKey[]
+  return user.permissions.filter(isValidPermission)
 }
 
 export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps) {
@@ -87,7 +88,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
         name: name.trim(),
         email: email.trim(),
         role,
-        permissions: role === 'OPERATOR' ? permissions : undefined,
+        permissions: role === 'OPERATOR' ? permissions.filter(isValidPermission) : undefined,
         ...(password ? { password } : {}),
       }
 

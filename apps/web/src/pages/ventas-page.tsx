@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ExpensesLink } from '@/features/purchases/components/expenses-link'
 import { ProfitMarginLink } from '@/features/purchases/components/profit-margin-link'
 import { VentasHistoryPanel } from '@/features/ventas/components/ventas-history-panel'
 import { VentasPanel } from '@/features/ventas/components/ventas-panel'
@@ -34,7 +35,10 @@ export function VentasPage() {
             </button>
           ))}
         </div>
-        <ProfitMarginLink />
+        <div className="flex items-center gap-2">
+          <ExpensesLink />
+          <ProfitMarginLink />
+        </div>
       </div>
 
       {activeTab === 'facturar' ? (

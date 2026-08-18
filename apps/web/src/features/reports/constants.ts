@@ -29,25 +29,8 @@ export function currencySymbol(code: string) {
   return code
 }
 
-export function currentMonthIso() {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  return `${y}-${m}`
-}
-
-export function previousMonthIso() {
-  const now = new Date()
-  now.setMonth(now.getMonth() - 1)
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  return `${y}-${m}`
-}
-
-export function todayIso() {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
+export {
+  currentMonthIso,
+  previousMonthIso,
+  todayIsoDate as todayIso,
+} from '@/lib/app-timezone'

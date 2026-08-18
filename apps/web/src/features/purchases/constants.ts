@@ -24,6 +24,14 @@ export function profitMarginUrl(options?: { productId?: number }) {
   return `/purchases?${params.toString()}#${PROFIT_MARGIN_PANEL_ID}`
 }
 
+export function gastosUrl(options?: { nuevo?: boolean }) {
+  const params = new URLSearchParams({ tab: 'gastos' })
+  if (options?.nuevo) {
+    params.set('nuevo', '1')
+  }
+  return `/purchases?${params.toString()}`
+}
+
 export function formatUsd(value: string | number | null | undefined) {
   if (value === null || value === undefined || value === '') {
     return '—'

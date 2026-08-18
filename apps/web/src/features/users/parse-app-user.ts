@@ -1,4 +1,4 @@
-import type { PermissionKey } from '@/features/permissions/catalog'
+import { isValidPermission, type PermissionKey } from '@/features/permissions/catalog'
 import type { AppUser, AppUserRole } from '@/features/users/types'
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -9,18 +9,30 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>
 }
 
+function permissionList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string')
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as unknown
+      return permissionList(parsed)
+    } catch {
+      return []
+    }
+  }
+
+  return []
+}
+
 function parsePermissions(role: AppUserRole, value: unknown): AppUser['permissions'] {
   if (role === 'ADMIN') {
     return ['*']
   }
 
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  return value.filter(
-    (item): item is PermissionKey => typeof item === 'string' && item !== '*'
-  )
+  const permissions: PermissionKey[] = permissionList(value).filter(isValidPermission)
+  return permissions
 }
 
 export function parseAppUser(raw: unknown): AppUser {

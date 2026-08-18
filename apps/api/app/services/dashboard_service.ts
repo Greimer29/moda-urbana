@@ -2,6 +2,11 @@ import MaterialService from '#services/material_service'
 import CurrencyService from '#services/currency_service'
 import CatalogProductStockService from '#services/catalog_product_stock_service'
 import CatalogProduct from '#models/catalog_product'
+import {
+  currentMonthRange,
+  nowInAppZone,
+  todayIsoDate,
+} from '#utils/app_timezone'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import {
@@ -272,8 +277,7 @@ export default class DashboardService {
   }
 
   private async comprasDelMes(): Promise<PurchasesMonthSummary> {
-    const inicioMes = DateTime.now().startOf('month').toISODate()!
-    const finMes = DateTime.now().endOf('month').toISODate()!
+    const { from: inicioMes, to: finMes } = currentMonthRange()
     const period = { from: inicioMes, to: finMes }
 
     const purchases = await db
@@ -371,8 +375,7 @@ export default class DashboardService {
   }
 
   private async gastosMaquinasDelMes(): Promise<MachineExpensesMonthSummary> {
-    const inicioMes = DateTime.now().startOf('month').toISODate()!
-    const finMes = DateTime.now().endOf('month').toISODate()!
+    const { from: inicioMes, to: finMes } = currentMonthRange()
     const rates = await this.currencyService.getActiveRates()
 
     const machineRows = await db
@@ -390,7 +393,7 @@ export default class DashboardService {
   }
 
   private async gastosDelDia(): Promise<{ cantidad: number; montoUsd: number }> {
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
     const rates = await this.currencyService.getActiveRates()
 
     const expenses = await db
@@ -414,7 +417,7 @@ export default class DashboardService {
 
   /** Ventas del dashboard usan order_date (mismo criterio que reportes), no confirmed_at. */
   private async ventasDelDia(): Promise<VentasDelDia> {
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
 
     const ventas = await db
       .from('orders')
@@ -451,7 +454,7 @@ export default class DashboardService {
   }
 
   async productosVendidosDelDia(): Promise<DailyProductSalesResult> {
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
 
     const rows = await db
       .from('orders')
@@ -529,7 +532,7 @@ export default class DashboardService {
   }
 
   async gastosDelDiaDetalle(): Promise<DailyExpensesResult> {
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
     const rates = await this.currencyService.getActiveRates()
 
     const expenseRows = await db
@@ -589,7 +592,7 @@ export default class DashboardService {
   }
 
   private async gananciaDelDia(): Promise<GananciaDelDia> {
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
 
     const row = await db
       .from('orders')
@@ -630,7 +633,7 @@ export default class DashboardService {
   }
 
   private async ventasSeries(chart: 'daily' | 'weekly' | 'monthly'): Promise<VentasSeriePoint[]> {
-    const hoy = DateTime.now()
+    const hoy = nowInAppZone()
     const buckets =
       chart === 'daily'
         ? buildDailyVentasBuckets(hoy)
@@ -671,7 +674,7 @@ export default class DashboardService {
   }
 
   private async clientesConCredito(): Promise<ClienteCreditoItem[]> {
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
 
     const rows = await db
       .from('customers')
@@ -700,7 +703,7 @@ export default class DashboardService {
   }
 
   private async proveedoresConCredito(): Promise<ProveedorCreditoItem[]> {
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
 
     const rows = await db
       .from('suppliers')

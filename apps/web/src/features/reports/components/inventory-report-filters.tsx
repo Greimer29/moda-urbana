@@ -42,7 +42,7 @@ export function InventoryReportFilters({
   return (
     <div className={cn(reportUi.panel, 'p-5 md:p-6')}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className={reportUi.muted}>Stock actual de todo el catálogo registrado</p>
+        <p className={reportUi.muted}>Stock actual de productos y materiales</p>
 
         <Button
           type="button"

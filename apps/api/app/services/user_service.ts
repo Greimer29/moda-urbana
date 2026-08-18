@@ -2,7 +2,7 @@ import EmailDuplicadoException from '#exceptions/email_duplicado_exception'
 import UltimoAdminException from '#exceptions/ultimo_admin_exception'
 import UsuarioNoEncontradoException from '#exceptions/usuario_no_encontrado_exception'
 import User from '#models/user'
-import { sanitizePermissions, type PermissionKey } from '#permissions/catalog'
+import { sanitizePermissions } from '#permissions/catalog'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
 
 export type UserInput = {
@@ -10,7 +10,7 @@ export type UserInput = {
   email: string
   password?: string
   role: 'ADMIN' | 'OPERATOR'
-  permissions?: PermissionKey[]
+  permissions?: string[]
   active?: boolean
 }
 

@@ -5,6 +5,8 @@ import CatalogProductSize from '#models/catalog_product_size'
 import Customer from '#models/customer'
 import CustomerPayment from '#models/customer_payment'
 import Formula from '#models/formula'
+import InventoryMovement from '#models/inventory_movement'
+import Material from '#models/material'
 import Order from '#models/order'
 import OrderLine from '#models/order_line'
 import ProductInventoryMovement from '#models/product_inventory_movement'
@@ -935,7 +937,7 @@ test.group('Inventory Reports API', (group) => {
     const products = response.body().data.products as Array<{
       product_id: number
       has_sizes: boolean
-      lines: Array<{ size: string | null; quantity: string }>
+      lines: Array<{ size: string | null; talla: string | null; quantity: string }>
       description: string
     }>
 
@@ -943,10 +945,97 @@ test.group('Inventory Reports API', (group) => {
     assert.isTrue(products[0].has_sizes)
     assert.lengthOf(products[0].lines, 2)
     assert.equal(products[0].lines[0].size, '40')
+    assert.equal(products[0].lines[0].talla, '40')
     assert.equal(products[0].lines[0].quantity, '1.000')
     assert.equal(products[0].lines[1].size, '41')
+    assert.equal(products[0].lines[1].talla, '41')
     assert.equal(products[0].lines[1].quantity, '2.000')
     assert.equal(products[0].description, 'Zapato Reporte')
+  })
+
+  test('GET /api/v1/reports/inventory includes all products and materials with kind', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+
+    const sized = await CatalogProduct.create({
+      name: 'Nike Pegasus',
+      category: 'Zapatos',
+      saleUnit: 'PAR',
+      salePriceUsd: '60.0000',
+      costUsd: '20.0000',
+      stockQuantity: '2.000',
+      minimumStock: '0.000',
+      active: true,
+    })
+    await CatalogProductSize.createMany([
+      { catalogProductId: Number(sized.id), size: '38', stockQuantity: '1.0000' },
+      { catalogProductId: Number(sized.id), size: '39', stockQuantity: '1.0000' },
+    ])
+
+    await CatalogProduct.create({
+      name: 'Camisa Básica',
+      category: 'Ropa',
+      saleUnit: 'UND',
+      salePriceUsd: '15.0000',
+      costUsd: '5.0000',
+      stockQuantity: '8.000',
+      minimumStock: '2.000',
+      active: true,
+    })
+
+    const material = await Material.create({
+      code: '5810',
+      name: 'Atlética',
+      category: 'FABRIC',
+      unit: 'ROL',
+      minimumStock: '1',
+      active: true,
+    })
+    await InventoryMovement.create({
+      materialId: Number(material.id),
+      type: 'PURCHASE_IN',
+      quantity: '4',
+    })
+
+    const response = await client.get('/api/v1/reports/inventory').loginAs(user)
+    response.assertStatus(200)
+
+    const items = response.body().data.products as Array<{
+      kind: string
+      description: string
+      sale_unit: string
+      has_sizes: boolean
+      lines: Array<{ size: string | null; talla?: string | null; quantity: string }>
+    }>
+
+    assert.lengthOf(items, 3)
+
+    const shoes = items.find((item) => item.description === 'Nike Pegasus')
+    const shirt = items.find((item) => item.description === 'Camisa Básica')
+    const fabric = items.find((item) => item.description === 'Atlética')
+
+    assert.exists(shoes)
+    assert.equal(shoes!.kind, 'product')
+    assert.isTrue(shoes!.has_sizes)
+    assert.lengthOf(shoes!.lines, 2)
+    assert.equal(shoes!.sale_unit, 'PAR')
+    assert.equal(shoes!.lines[0].size, '38')
+    assert.equal(shoes!.lines[0].talla, '38')
+    assert.equal(shoes!.lines[1].size, '39')
+    assert.equal(shoes!.lines[1].talla, '39')
+
+    assert.exists(shirt)
+    assert.equal(shirt!.kind, 'product')
+    assert.isFalse(shirt!.has_sizes)
+    assert.equal(shirt!.lines[0].size, null)
+    assert.equal(shirt!.sale_unit, 'UND')
+
+    assert.exists(fabric)
+    assert.equal(fabric!.kind, 'material')
+    assert.equal(fabric!.sale_unit, 'ROL')
+    assert.equal(Number(fabric!.lines[0].quantity), 4)
   })
 
   test('GET /api/v1/reports/inventory filters low stock and hide zero', async ({

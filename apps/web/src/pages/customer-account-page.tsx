@@ -13,6 +13,7 @@ import { formatFecha } from '@/features/orders/constants'
 import type { OrderEstado } from '@/features/orders/types'
 import { CreditPurchaseBadge } from '@/features/purchases/components/credit-purchase-badge'
 import { detailPageErrorMessage } from '@/lib/detail-page-messages'
+import { todayIsoDate } from '@/lib/app-timezone'
 import { parsePositiveIntRouteParam } from '@/lib/route-id'
 
 const BILLABLE_STATUSES = new Set<OrderEstado>(['CONFIRMED', 'IN_PRODUCTION', 'DELIVERED'])
@@ -20,7 +21,7 @@ const BILLABLE_STATUSES = new Set<OrderEstado>(['CONFIRMED', 'IN_PRODUCTION', 'D
 function creditEstado(creditDueDate: string | null, balanceUsd: string) {
   if (Number(balanceUsd) <= 0) return { label: 'Pagada', className: 'bg-emerald-100 text-emerald-800' }
   if (!creditDueDate) return { label: 'Vigente', className: 'bg-amber-100 text-amber-800' }
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayIsoDate()
   if (creditDueDate < today) return { label: 'Vencida', className: 'bg-red-100 text-red-800' }
   return { label: 'Vigente', className: 'bg-amber-100 text-amber-800' }
 }

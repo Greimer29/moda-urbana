@@ -5,14 +5,33 @@ import ProductInventoryMovement, {
 } from '#models/product_inventory_movement'
 import CatalogProductStockService from '#services/catalog_product_stock_service'
 import { formatCatalogProductCode } from '#utils/catalog_product_code'
+import { nowInAppZone } from '#utils/app_timezone'
+import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
+
+const STOCK_ACTUAL_SQL =
+  'COALESCE((SELECT SUM(quantity) FROM inventory_movements WHERE material_id = materials.id), 0)'
+
+const MATERIAL_CATEGORY_LABELS: Record<string, string> = {
+  FABRIC: 'Telas',
+  THREAD: 'Hilos',
+  BUTTON: 'Botones',
+  ELASTIC: 'Elásticas',
+  LABEL: 'Etiquetas',
+  BAG: 'Envolturas',
+  OTHER: 'Otro',
+}
+
+export type InventoryItemKind = 'product' | 'material'
 
 export type InventoryReportSizeLine = {
   size: string | null
+  talla: string | null
   quantity: string
 }
 
 export type InventoryReportProduct = {
+  kind: InventoryItemKind
   product_id: number
   code: string
   image_path: string | null
@@ -82,6 +101,8 @@ export default class InventoryReportService {
   async listarSnapshot(filters: InventoryReportFilters = {}) {
     const products = await this.fetchProducts(filters)
     const stockMap = await this.stockService.calcularStockForProducts(products)
+    const sizesByProduct = await this.loadSizeLinesByProductId(products.map((item) => Number(item.id)))
+    const materials = await this.fetchMaterials(filters)
 
     let groups: InventoryReportProduct[] = []
 
@@ -93,19 +114,12 @@ export default class InventoryReportService {
       }
       const minimumStock = Number(product.minimumStock ?? 0)
       const productLowStock = stock.quantity < minimumStock
-      const sizes = Array.isArray(product.sizes) ? product.sizes : []
-      const hasSizes = sizes.length > 0
+      const sizeLines = sizesByProduct.get(productId) ?? []
+      const hasSizes = sizeLines.length > 0
 
-      let lines: InventoryReportSizeLine[] = []
-
-      if (hasSizes) {
-        lines = sizes.map((sizeRow) => ({
-          size: sizeRow.size,
-          quantity: Number(sizeRow.stockQuantity).toFixed(3),
-        }))
-      } else {
-        lines = [{ size: null, quantity: stock.quantity.toFixed(3) }]
-      }
+      let lines: InventoryReportSizeLine[] = hasSizes
+        ? sizeLines
+        : [this.unsizedLine(stock.quantity)]
 
       if (filters.hide_zero) {
         lines = lines.filter((line) => Number(line.quantity) > 0)
@@ -120,6 +134,7 @@ export default class InventoryReportService {
       }
 
       groups.push({
+        kind: 'product',
         product_id: productId,
         code: formatCatalogProductCode(productId),
         image_path: product.imagePath,
@@ -136,6 +151,7 @@ export default class InventoryReportService {
       })
     }
 
+    groups.push(...materials)
     groups = this.sortProducts(groups, filters.sort_by ?? 'id', filters.sort_dir ?? 'asc')
 
     const page = filters.page ?? 1
@@ -246,10 +262,52 @@ export default class InventoryReportService {
     }
   }
 
+  private unsizedLine(quantity: number): InventoryReportSizeLine {
+    return { size: null, talla: null, quantity: quantity.toFixed(3) }
+  }
+
+  private sizeLabel(value: unknown): string | null {
+    if (value == null) {
+      return null
+    }
+
+    const label = String(value).trim()
+    return label.length > 0 ? label : null
+  }
+
+  private async loadSizeLinesByProductId(
+    productIds: number[]
+  ): Promise<Map<number, InventoryReportSizeLine[]>> {
+    const linesByProduct = new Map<number, InventoryReportSizeLine[]>()
+    if (productIds.length === 0) {
+      return linesByProduct
+    }
+
+    const rows = await db
+      .from('catalog_product_sizes')
+      .select('catalog_product_id', 'size', 'stock_quantity')
+      .whereIn('catalog_product_id', productIds)
+      .orderBy('size', 'asc')
+
+    for (const row of rows) {
+      const productId = Number(row.catalog_product_id ?? row.catalogProductId)
+      const label = this.sizeLabel(row.size)
+      const quantity = Number(row.stock_quantity ?? row.stockQuantity).toFixed(3)
+      const line: InventoryReportSizeLine = { size: label, talla: label, quantity }
+      const existing = linesByProduct.get(productId)
+
+      if (existing) {
+        existing.push(line)
+      } else {
+        linesByProduct.set(productId, [line])
+      }
+    }
+
+    return linesByProduct
+  }
+
   private async fetchProducts(filters: InventoryReportFilters): Promise<CatalogProduct[]> {
-    const query = CatalogProduct.query().preload('sizes', (sizesQuery) =>
-      sizesQuery.orderBy('size', 'asc')
-    )
+    const query = CatalogProduct.query()
 
     if (filters.active === true) {
       query.where('active', true)
@@ -278,6 +336,68 @@ export default class InventoryReportService {
     return query.orderBy('id', 'asc')
   }
 
+  private async fetchMaterials(filters: InventoryReportFilters): Promise<InventoryReportProduct[]> {
+    const query = db
+      .from('materials')
+      .select('materials.*')
+      .select(db.raw(`${STOCK_ACTUAL_SQL} as stock_actual`))
+
+    if (filters.active === true) {
+      query.where('materials.active', true)
+    }
+
+    if (filters.category?.trim()) {
+      query.where('materials.category', filters.category.trim())
+    }
+
+    if (filters.search?.trim()) {
+      const term = `%${filters.search.trim()}%`
+      query.where((builder) => {
+        builder
+          .whereILike('materials.name', term)
+          .orWhereILike('materials.code', term)
+          .orWhereILike('materials.description', term)
+      })
+    }
+
+    const rows = await query.orderBy('materials.id', 'asc')
+    const items: InventoryReportProduct[] = []
+
+    for (const row of rows) {
+      const quantity = Number(row.stock_actual ?? 0)
+      const minimumStock = Number(row.minimum_stock ?? row.minimumStock ?? 0)
+      const lowStock = quantity < minimumStock
+
+      if (filters.hide_zero && quantity <= 0) {
+        continue
+      }
+
+      if (filters.low_stock && !lowStock) {
+        continue
+      }
+
+      const category = String(row.category ?? '')
+      items.push({
+        kind: 'material',
+        product_id: Number(row.id),
+        code: String(row.code ?? ''),
+        image_path: row.image_path ?? row.imagePath ?? null,
+        description: String(row.name ?? ''),
+        sale_price_usd: String(row.sale_price_usd ?? row.salePriceUsd ?? '0'),
+        cost_usd: row.last_purchase_price_usd ?? row.lastPurchasePriceUsd ?? row.reference_cost_usd ?? null,
+        sale_unit: String(row.unit ?? 'UND'),
+        category: MATERIAL_CATEGORY_LABELS[category] ?? category,
+        stock_source: 'manual',
+        low_stock: lowStock,
+        has_sizes: false,
+        total_quantity: quantity.toFixed(3),
+        lines: [this.unsizedLine(quantity)],
+      })
+    }
+
+    return items
+  }
+
   private sortProducts(
     products: InventoryReportProduct[],
     sortBy: InventoryReportFilters['sort_by'],
@@ -294,8 +414,12 @@ export default class InventoryReportService {
         case 'quantity':
           return (Number(a.total_quantity) - Number(b.total_quantity)) * dir
         case 'id':
-        default:
+        default: {
+          const kindRank = (kind: InventoryItemKind) => (kind === 'product' ? 0 : 1)
+          const kindDiff = kindRank(a.kind) - kindRank(b.kind)
+          if (kindDiff !== 0) return kindDiff * dir
           return (a.product_id - b.product_id) * dir
+        }
       }
     })
   }
@@ -313,7 +437,7 @@ export default class InventoryReportService {
       }
     }
 
-    const now = DateTime.now()
+    const now = nowInAppZone()
 
     return {
       from: filters.from ?? now.startOf('month').toISODate()!,

@@ -25,6 +25,7 @@ import { AccountSelect } from '@/features/accounts/components/account-select'
 import { CurrencySelect } from '@/features/currencies/components/currency-select'
 import { useSuppliersQuery } from '@/features/suppliers/hooks/use-suppliers'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { todayIsoDate } from '@/lib/app-timezone'
 
 const schema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida'),
@@ -63,7 +64,7 @@ export function MachineExpenseFormDialog({
   } = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      date: new Date().toISOString().slice(0, 10),
+      date: todayIsoDate(),
       category: 'REPAIR',
       description: '',
       amount: 0,

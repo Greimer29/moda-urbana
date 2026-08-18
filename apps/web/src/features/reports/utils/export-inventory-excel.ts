@@ -5,6 +5,8 @@ import type {
 } from '@/features/reports/types/inventory-report'
 import { productSaleUnitAbrev } from '@/features/ventas/constants'
 import { INVENTORY_MOVEMENT_LABELS } from '@/features/reports/utils/inventory-movement-labels'
+import { inventoryLineSizeLabel } from '@/features/reports/utils/inventory-line-size'
+import { todayIsoDate } from '@/lib/app-timezone'
 
 type A4SheetOptions = {
   title: string
@@ -151,7 +153,7 @@ async function downloadGroupedInventoryWorkbook(
 ) {
   const ExcelJS = await loadExcelJS()
   const workbook = new ExcelJS.Workbook()
-  const headers = ['Código', 'Descripción', 'Talla', 'Cantidad', 'Unidad', 'Precio', 'Costo', 'Categoría']
+  const headers = ['Código', 'Tipo', 'Descripción', 'Talla', 'Cantidad', 'Unidad', 'Precio', 'Costo', 'Categoría']
 
   const sheet = workbook.addWorksheet('Inventario', {
     pageSetup: {
@@ -179,13 +181,14 @@ async function downloadGroupedInventoryWorkbook(
   )
 
   sheet.getColumn(1).width = 12
-  sheet.getColumn(2).width = 36
-  sheet.getColumn(3).width = 10
+  sheet.getColumn(2).width = 12
+  sheet.getColumn(3).width = 36
   sheet.getColumn(4).width = 10
   sheet.getColumn(5).width = 10
-  sheet.getColumn(6).width = 14
+  sheet.getColumn(6).width = 10
   sheet.getColumn(7).width = 14
   sheet.getColumn(8).width = 14
+  sheet.getColumn(9).width = 14
 
   let currentRow = headerRowIndex + 1
 
@@ -203,9 +206,10 @@ async function downloadGroupedInventoryWorkbook(
     if (lineCount > 1) {
       sheet.mergeCells(startRow, 1, endRow, 1)
       sheet.mergeCells(startRow, 2, endRow, 2)
-      sheet.mergeCells(startRow, 6, endRow, 6)
+      sheet.mergeCells(startRow, 3, endRow, 3)
       sheet.mergeCells(startRow, 7, endRow, 7)
       sheet.mergeCells(startRow, 8, endRow, 8)
+      sheet.mergeCells(startRow, 9, endRow, 9)
     }
 
     product.lines.forEach((line, lineIndex) => {
@@ -217,33 +221,37 @@ async function downloadGroupedInventoryWorkbook(
         codeCell.value = product.code
         styleCell(codeCell, { merged: lineCount > 1 })
 
-        const descCell = row.getCell(2)
+        const kindCell = row.getCell(2)
+        kindCell.value = product.kind === 'material' ? 'Material' : 'Producto'
+        styleCell(kindCell, { merged: lineCount > 1 })
+
+        const descCell = row.getCell(3)
         descCell.value = descriptionLines.join('\n')
         styleCell(descCell, { merged: lineCount > 1 })
 
-        const priceCell = row.getCell(6)
+        const priceCell = row.getCell(7)
         priceCell.value = formatMoney(product.sale_price_usd)
         styleCell(priceCell, { merged: lineCount > 1 })
 
-        const costCell = row.getCell(7)
+        const costCell = row.getCell(8)
         costCell.value = product.cost_usd ? formatMoney(product.cost_usd) : '—'
         styleCell(costCell, { merged: lineCount > 1 })
 
-        const categoryCell = row.getCell(8)
+        const categoryCell = row.getCell(9)
         categoryCell.value = product.category
         styleCell(categoryCell, { merged: lineCount > 1 })
       }
 
-      const sizeCell = row.getCell(3)
-      sizeCell.value = line.size ?? '—'
+      const sizeCell = row.getCell(4)
+      sizeCell.value = inventoryLineSizeLabel(line)
       styleCell(sizeCell)
 
-      const qtyCell = row.getCell(4)
+      const qtyCell = row.getCell(5)
       qtyCell.value = formatQty(line.quantity)
       qtyCell.alignment = { horizontal: 'right' }
       styleCell(qtyCell)
 
-      const unitCell = row.getCell(5)
+      const unitCell = row.getCell(6)
       unitCell.value = unitLabel
       styleCell(unitCell)
     })
@@ -253,7 +261,7 @@ async function downloadGroupedInventoryWorkbook(
 
   await downloadWorkbookBuffer(
     sheet,
-    `inventario-${new Date().toISOString().slice(0, 10)}.xlsx`
+    `inventario-${todayIsoDate()}.xlsx`
   )
 }
 
@@ -274,7 +282,7 @@ export async function exportInventoryMovementsExcel(
   await downloadA4Workbook({
     title: `Movimientos — ${product.code} ${product.description}`,
     filterSummary,
-    filename: `movimientos-${product.code}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    filename: `movimientos-${product.code}-${todayIsoDate()}.xlsx`,
     headers: ['Fecha', 'Tipo', 'Cantidad', 'Referencia', 'Detalle'],
     rows: movements.map((movement) => [
       new Date(movement.created_at).toLocaleString('es-VE'),

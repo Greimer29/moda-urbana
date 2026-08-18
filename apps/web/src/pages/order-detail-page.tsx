@@ -747,6 +747,11 @@ export function OrderDetallePage() {
                             {fullyReturned ? 'Devuelto' : `Devuelto: ${returned}`}
                           </span>
                         ) : null}
+                        {line.notes ? (
+                          <p className="text-muted-foreground mt-0.5 text-xs whitespace-pre-line">
+                            {line.notes}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="py-2 text-right tabular-nums">
                         {returned > 0 && !fullyReturned ? (

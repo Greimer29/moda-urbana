@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { AccountSelect } from '@/features/accounts/components/account-select'
 import { useCreateSupplierPaymentMutation } from '@/features/suppliers/hooks/use-suppliers'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { todayIsoDate } from '@/lib/app-timezone'
 
 type PurchasePaymentFormDialogProps = {
   open: boolean
@@ -34,7 +35,7 @@ export function PurchasePaymentFormDialog({
   maxAmountUsd,
   onSuccess,
 }: PurchasePaymentFormDialogProps) {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayIsoDate()
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(today)
   const [accountId, setAccountId] = useState<number | null>(null)

@@ -59,6 +59,7 @@ import { useSuppliersQuery } from '@/features/suppliers/hooks/use-suppliers'
 import { supplierImageUrl } from '@/features/suppliers/constants'
 import { PublicImage } from '@/components/public-image'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { addDaysIsoDate, todayIsoDate } from '@/lib/app-timezone'
 import { detailPageErrorMessage } from '@/lib/detail-page-messages'
 import { parsePositiveIntRouteParam } from '@/lib/route-id'
 import { parseDecimalInput } from '@/lib/numeric-input'
@@ -124,9 +125,7 @@ function localItemUnit(item: LocalPurchaseItem) {
 }
 
 function addDaysIso(baseIso: string, days: number) {
-  const date = new Date(`${baseIso}T12:00:00`)
-  date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
+  return addDaysIsoDate(baseIso, days)
 }
 
 function parseDbItemId(localId: string): number | null {
@@ -859,7 +858,7 @@ export function PurchaseDetallePage() {
                               markDirty()
                               if (checked) {
                                 const days = supplier?.creditDays ?? 30
-                                const base = purchase?.date ?? new Date().toISOString().slice(0, 10)
+                                const base = purchase?.date ?? todayIsoDate()
                                 setCreditDueDate(addDaysIso(base, days))
                               } else {
                                 setCreditDueDate('')

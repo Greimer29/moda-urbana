@@ -29,6 +29,7 @@ import type { FulfilledPendingOrder } from '#services/order_service'
 import drive from '@adonisjs/drive/services/main'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import db from '@adonisjs/lucid/services/db'
+import { nowInAppZone } from '#utils/app_timezone'
 import { DateTime } from 'luxon'
 import { randomUUID } from 'node:crypto'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
@@ -768,7 +769,7 @@ export default class PurchaseService {
     if (!supplier.creditDays || supplier.creditDays <= 0) {
       return null
     }
-    return DateTime.now().plus({ days: supplier.creditDays }).toISODate()
+    return nowInAppZone().plus({ days: supplier.creditDays }).toISODate()
   }
 
   private assertBorrador(purchase: Purchase) {

@@ -23,6 +23,10 @@ import { VentasBillingMethodToggle } from '@/features/ventas/components/ventas-b
 import { inventoryQuantityDecimals } from '@/lib/inventory-units'
 import { cn } from '@/lib/utils'
 import { parseDecimalInput } from '@/lib/numeric-input'
+import {
+  buildPriceAdjustmentNote,
+  mergeLineNotes,
+} from '@/features/ventas/utils/price-adjustment-note'
 
 export type VentasCartLine = {
   key: string
@@ -55,6 +59,7 @@ type VentasOrderCartProps = {
   children?: ReactNode
   className?: string
   headerAction?: ReactNode
+  onClose?: () => void
   billingMethod?: BillingMethod
   onBillingMethodChange?: (method: BillingMethod) => void
 }
@@ -97,6 +102,8 @@ function CartLineCard({
 
   const listPrice = line.listPriceUsd ?? line.unitPriceUsd
   const hasDiscount = listPrice > line.unitPriceUsd + 0.0001
+  const hasIncrease = line.unitPriceUsd > listPrice + 0.0001
+  const hasPriceAdjustment = hasDiscount || hasIncrease
   const hasNotes = Boolean(line.notes?.trim())
   const unit = line.saleUnit ?? 'UND'
   const decimals = inventoryQuantityDecimals(unit)
@@ -131,7 +138,9 @@ function CartLineCard({
   }
 
   function applyNotes() {
-    onUpdateLineNotes?.(draftNotes.trim())
+    const merged =
+      mergeLineNotes(draftNotes, buildPriceAdjustmentNote(listPrice, line.unitPriceUsd)) ?? ''
+    onUpdateLineNotes?.(merged)
     setNotesOpen(false)
   }
 
@@ -202,10 +211,10 @@ function CartLineCard({
                   size="icon"
                   className={cn(
                     'size-7',
-                    hasDiscount ? 'text-violet-700' : 'text-muted-foreground'
+                    hasPriceAdjustment ? 'text-violet-700' : 'text-muted-foreground'
                   )}
-                  title="Precio y descuento"
-                  aria-label="Precio y descuento"
+                  title="Precio, descuento o aumento"
+                  aria-label="Precio, descuento o aumento"
                   onClick={openPriceModal}
                 >
                   <SlidersHorizontal className="size-3.5" />
@@ -233,9 +242,15 @@ function CartLineCard({
                   <p className="text-muted-foreground text-[11px] line-through">
                     {formatFromUsd(listPrice)} c/u
                   </p>
+                ) : hasIncrease ? (
+                  <p className="text-muted-foreground text-[11px]">
+                    Lista {formatFromUsd(listPrice)} c/u
+                  </p>
                 ) : null}
                 {hasNotes ? (
-                  <p className="text-muted-foreground line-clamp-1 text-[11px]">{line.notes}</p>
+                  <p className="text-muted-foreground whitespace-pre-line line-clamp-2 text-[11px]">
+                    {line.notes}
+                  </p>
                 ) : null}
               </div>
               <CartLineSubtotal line={line} />
@@ -264,6 +279,9 @@ function CartLineCard({
               />
               <p className="text-muted-foreground text-xs">
                 Precio de lista: {formatFromUsd(listPrice)}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Si cambia el precio, la venta guarda una nota de descuento o aumento.
               </p>
               {displayCurrency !== 'USD' ? (
                 <p className="text-muted-foreground text-xs">
@@ -353,6 +371,7 @@ export function VentasOrderCart({
   children,
   className,
   headerAction,
+  onClose,
   billingMethod,
   onBillingMethodChange,
 }: VentasOrderCartProps) {
@@ -396,10 +415,24 @@ export function VentasOrderCart({
             className="text-destructive hover:text-destructive size-8"
             disabled={lines.length === 0}
             onClick={onClear}
+            title="Vaciar carrito"
             aria-label="Vaciar carrito"
           >
             <Trash2 className="size-4" />
           </Button>
+          {onClose ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-9"
+              title="Cerrar carrito"
+              aria-label="Cerrar carrito"
+              onClick={onClose}
+            >
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import ArchivoImagenNoDisponibleException from '#exceptions/archivo_imagen_no_di
 import CatalogProduct from '#models/catalog_product'
 import CatalogProductSize from '#models/catalog_product_size'
 import Formula from '#models/formula'
+import Order from '#models/order'
 import OrderLine from '#models/order_line'
 import CategoryService from '#services/category_service'
 import FormulaService from '#services/formula_service'
@@ -389,16 +390,10 @@ export default class CatalogProductService {
         throw new ProductoCatalogoNoEncontradoException()
       }
 
+      await this.detachFromDraftOrders(id, trx)
       await this.assertNoPedidosActivos(id, trx)
 
-      const tieneVentas = await db
-        .from('sale_lines')
-        .where('catalog_product_id', id)
-        .count('* as total')
-        .useTransaction(trx)
-        .first()
-
-      if (Number(tieneVentas?.total ?? 0) > 0) {
+      if (await this.tieneHistorialVinculado(id, trx)) {
         product.active = false
         product.useTransaction(trx)
         await product.save()
@@ -613,20 +608,98 @@ export default class CatalogProductService {
     }
   }
 
+  private async detachFromDraftOrders(
+    catalogProductId: number,
+    trx: TransactionClientContract
+  ) {
+    const draftLines = await OrderLine.query({ client: trx })
+      .where('catalogProductId', catalogProductId)
+      .whereHas('order', (query) => {
+        query.where('status', 'DRAFT')
+      })
+
+    if (draftLines.length === 0) {
+      return
+    }
+
+    const orderIds = [...new Set(draftLines.map((line) => Number(line.orderId)))]
+
+    await OrderLine.query({ client: trx })
+      .whereIn(
+        'id',
+        draftLines.map((line) => Number(line.id))
+      )
+      .delete()
+
+    for (const orderId of orderIds) {
+      const remaining = await OrderLine.query({ client: trx }).where('orderId', orderId)
+      const order = await Order.query({ client: trx }).where('id', orderId).first()
+
+      if (!order) {
+        continue
+      }
+
+      order.useTransaction(trx)
+
+      if (remaining.length === 0) {
+        await order.delete()
+        continue
+      }
+
+      let total = 0
+      let qty = 0
+      for (const line of remaining) {
+        total += Number(line.subtotalUsd)
+        qty += Number(line.quantity)
+      }
+
+      order.totalPrice = total.toFixed(4)
+      order.totalQuantity = Math.max(0, Math.ceil(qty))
+      await order.save()
+    }
+  }
+
   private async assertNoPedidosActivos(
     catalogProductId: number,
-    trx: import('@adonisjs/lucid/types/database').TransactionClientContract
+    trx: TransactionClientContract
   ) {
     const activo = await OrderLine.query({ client: trx })
       .where('catalogProductId', catalogProductId)
       .whereHas('order', (query) => {
-        query.whereIn('status', ['DRAFT', 'CONFIRMED', 'IN_PRODUCTION'])
+        query.whereIn('status', ['CONFIRMED', 'IN_PRODUCTION'])
       })
       .first()
 
     if (activo) {
       throw new ProductoCatalogoEnPedidosActivosException()
     }
+  }
+
+  private async tieneHistorialVinculado(
+    catalogProductId: number,
+    trx: TransactionClientContract
+  ): Promise<boolean> {
+    const tables = [
+      'sale_lines',
+      'order_lines',
+      'product_inventory_movements',
+      'purchase_items',
+    ] as const
+
+    for (const table of tables) {
+      const row = await db
+        .from(table)
+        .where('catalog_product_id', catalogProductId)
+        .count('* as total')
+        .useTransaction(trx)
+        .first()
+
+      if (Number(row?.total ?? 0) > 0) {
+        return true
+      }
+    }
+
+    return false
   }
 
   private normalizeSizesInput(sizes: CatalogProductSizeInput[]): CatalogProductSizeInput[] {

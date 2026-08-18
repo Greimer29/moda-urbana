@@ -15,6 +15,7 @@ type CatalogProductDeleteDialogProps = {
   onOpenChange: (open: boolean) => void
   product: CatalogProduct | null
   isPending: boolean
+  error?: string | null
   onConfirm: () => void
 }
 
@@ -23,6 +24,7 @@ export function CatalogProductDeleteDialog({
   onOpenChange,
   product,
   isPending,
+  error,
   onConfirm,
 }: CatalogProductDeleteDialogProps) {
   if (!product) {
@@ -44,23 +46,26 @@ export function CatalogProductDeleteDialog({
               </p>
               {hasMovements ? (
                 <p className="text-xs">
-                  Si el producto tiene <strong>ventas registradas</strong>, se{' '}
+                  Si el producto tiene <strong>ventas o movimientos</strong>, se{' '}
                   <strong>desactivará</strong> y dejará de verse en el catálogo, pero el historial se
                   conserva.
                 </p>
               ) : (
                 <p className="text-xs">
-                  Sin ventas ni pedidos activos, se <strong>elimina permanentemente</strong> de la
-                  base de datos.
+                  Sin ventas ni pedidos, se <strong>elimina permanentemente</strong> de la base de
+                  datos. Si ya se vendió, se desactiva y desaparece del catálogo.
                 </p>
               )}
               <p className="text-muted-foreground text-xs">
-                No se puede eliminar si está en un pedido activo (borrador, confirmado o en
-                producción).
+                Las ventas entregadas o devueltas (facturación rápida) no bloquean: el producto se
+                desactiva y sale del catálogo. Los borradores de Ventas se cierran solos. Solo
+                impide eliminar un pedido confirmado o en producción.
               </p>
             </div>
           </DialogDescription>
         </DialogHeader>
+
+        {error ? <p className="text-destructive text-sm whitespace-pre-line">{error}</p> : null}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>

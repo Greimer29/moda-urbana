@@ -11,6 +11,7 @@ import { formatFecha } from '@/features/orders/constants'
 import { OrderEstadoBadge } from '@/features/orders/components/order-status-badge'
 import { useOrdersQuery } from '@/features/orders/hooks/use-orders'
 import type { OrderEstado } from '@/features/orders/types'
+import { startOfMonthIsoDate, todayIsoDate } from '@/lib/app-timezone'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
@@ -19,26 +20,17 @@ const RETURNABLE: OrderEstado[] = ['CONFIRMED', 'IN_PRODUCTION', 'DELIVERED']
 
 type DateFilter = 'today' | 'month' | 'custom' | 'all'
 
-function startOfMonthIso() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-}
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10)
-}
-
 function resolveDateRange(
   filter: DateFilter,
   customFrom: string,
   customTo: string
 ): Record<string, string> | null {
   if (filter === 'today') {
-    const today = todayIso()
+    const today = todayIsoDate()
     return { date_desde: today, date_hasta: today }
   }
   if (filter === 'month') {
-    return { date_desde: startOfMonthIso(), date_hasta: todayIso() }
+    return { date_desde: startOfMonthIsoDate(), date_hasta: todayIsoDate() }
   }
   if (filter === 'custom') {
     if (!customFrom) {

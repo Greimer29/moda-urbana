@@ -20,11 +20,12 @@ export function UserPermissionsMatrix({
   className,
 }: UserPermissionsMatrixProps) {
   function toggle(permission: PermissionKey, checked: boolean) {
+    const current = Array.isArray(value) ? value : []
     if (checked) {
-      onChange([...new Set([...value, permission])])
+      onChange([...new Set([...current, permission])])
       return
     }
-    onChange(value.filter((item) => item !== permission))
+    onChange(current.filter((item) => item !== permission))
   }
 
   return (
@@ -35,7 +36,7 @@ export function UserPermissionsMatrix({
           <div className="grid gap-3 sm:grid-cols-2">
             {Object.entries(group.permissions).map(([permission, label]) => {
               const key = permission as PermissionKey
-              const checked = value.includes(key)
+              const checked = Array.isArray(value) && value.includes(key)
 
               return (
                 <div key={permission} className="flex items-center justify-between gap-3">

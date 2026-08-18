@@ -15,6 +15,7 @@ import OrderLine from '#models/order_line'
 import Currency from '#models/currency'
 import testUtils from '@adonisjs/core/services/test_utils'
 import { resetTestDatabase } from '#tests/helpers/reset_test_database'
+import { nowInAppZone, todayIsoDate } from '#utils/app_timezone'
 import { DateTime } from 'luxon'
 import { test } from '@japa/runner'
 
@@ -107,7 +108,7 @@ test.group('Dashboard API', (group) => {
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const supplier = await Supplier.create({ name: 'El Castillo', active: true })
-    const mesActual = DateTime.now().toISODate()!
+    const mesActual = todayIsoDate()
 
     await Purchase.create({
       supplierId: supplier.id,
@@ -151,7 +152,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
-    const mesActual = DateTime.now().toISODate()!
+    const mesActual = todayIsoDate()
     const machine = await Machine.create({
       name: 'Overlock',
       type: 'OVERLOCK',
@@ -214,7 +215,7 @@ test.group('Dashboard API', (group) => {
       modality: 'CORPORATE',
       description: 'Venta hoy',
       totalQuantity: 2,
-      orderDate: DateTime.now(),
+      orderDate: DateTime.fromISO(todayIsoDate()),
       status: 'DELIVERED',
       totalPrice: '24.0000',
       confirmedAt: DateTime.now(),
@@ -300,7 +301,7 @@ test.group('Dashboard API', (group) => {
       modality: 'CORPORATE',
       description: 'Venta fórmula',
       totalQuantity: 2,
-      orderDate: DateTime.now(),
+      orderDate: DateTime.fromISO(todayIsoDate()),
       status: 'DELIVERED',
       totalPrice: '24.0000',
       confirmedAt: DateTime.now(),
@@ -331,7 +332,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
     const customer = await Customer.create({
       name: 'Cliente Ganancia',
       active: true,
@@ -351,7 +352,7 @@ test.group('Dashboard API', (group) => {
       modality: 'CORPORATE',
       description: 'Venta hoy',
       totalQuantity: 2,
-      orderDate: DateTime.now(),
+      orderDate: DateTime.fromISO(todayIsoDate()),
       status: 'DELIVERED',
       totalPrice: '24.0000',
       confirmedAt: DateTime.now(),
@@ -407,7 +408,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
 
     await Expense.create({
       date: DateTime.fromISO(hoy),
@@ -451,7 +452,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
 
     await Currency.query().where('code', 'VES').update({ ratePerUsd: '40.0000' })
 
@@ -489,8 +490,8 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
-    const hoy = DateTime.now().toISODate()!
-    const ayer = DateTime.now().minus({ days: 1 }).toISODate()!
+    const hoy = todayIsoDate()
+    const ayer = nowInAppZone().minus({ days: 1 }).toISODate()!
     const customer = await Customer.create({ name: 'Cliente Fecha', active: true })
     const product = await CatalogProduct.create({
       name: 'Producto fecha venta',
@@ -564,7 +565,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
     const customer = await Customer.create({ name: 'Cliente Costo', active: true })
     const product = await CatalogProduct.create({
       name: 'Producto costo congelado',
@@ -615,8 +616,8 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
-    const hoy = DateTime.now().toISODate()!
-    const mes = DateTime.now().toFormat('yyyy-MM')
+    const hoy = todayIsoDate()
+    const mes = nowInAppZone().toFormat('yyyy-MM')
     const customer = await Customer.create({ name: 'Cliente coherencia', active: true })
     const product = await CatalogProduct.create({
       name: 'Producto coherencia reporte',
@@ -682,7 +683,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
-    const hoy = DateTime.now().toISODate()!
+    const hoy = todayIsoDate()
     const customer = await Customer.create({
       name: 'Cliente mixto coherencia',
       creditDays: 30,
@@ -733,7 +734,7 @@ test.group('Dashboard API', (group) => {
       paymentType: 'CREDIT',
       amountPaidUsd: '0.0000',
       balanceUsd: '40.0000',
-      creditDueDate: DateTime.now().plus({ days: 30 }),
+      creditDueDate: nowInAppZone().plus({ days: 30 }),
       totalPrice: '40.0000',
       confirmedAt: DateTime.now(),
     })
@@ -797,7 +798,7 @@ test.group('Dashboard API', (group) => {
       modality: 'CORPORATE',
       description: 'Venta contado',
       totalQuantity: 1,
-      orderDate: DateTime.now(),
+      orderDate: DateTime.fromISO(todayIsoDate()),
       status: 'DELIVERED',
       paymentType: 'CASH',
       amountPaidUsd: '50.0000',
@@ -821,12 +822,12 @@ test.group('Dashboard API', (group) => {
       modality: 'CORPORATE',
       description: 'Venta crédito',
       totalQuantity: 1,
-      orderDate: DateTime.now(),
+      orderDate: DateTime.fromISO(todayIsoDate()),
       status: 'DELIVERED',
       paymentType: 'CREDIT',
       amountPaidUsd: '0.0000',
       balanceUsd: '50.0000',
-      creditDueDate: DateTime.now().plus({ days: 30 }),
+      creditDueDate: nowInAppZone().plus({ days: 30 }),
       totalPrice: '50.0000',
       confirmedAt: DateTime.now(),
     })
@@ -872,11 +873,11 @@ test.group('Dashboard API', (group) => {
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const supplier = await Supplier.create({ name: 'Proveedor crédito dashboard', active: true })
-    const dueInMonth = DateTime.now().endOf('month').minus({ days: 1 })
+    const dueInMonth = nowInAppZone().endOf('month').minus({ days: 1 })
 
     await Purchase.create({
       supplierId: supplier.id,
-      date: DateTime.now().minus({ days: 40 }),
+      date: nowInAppZone().minus({ days: 40 }),
       invoiceNumber: 'F-CRED-DASH',
       totalUsd: '100.0000',
       totalBs: '3600.00',
@@ -900,8 +901,8 @@ test.group('Dashboard API', (group) => {
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const supplier = await Supplier.create({ name: 'Proveedor coherencia dashboard', active: true })
-    const mes = DateTime.now().toFormat('yyyy-MM')
-    const mesActual = DateTime.now().toISODate()!
+    const mes = nowInAppZone().toFormat('yyyy-MM')
+    const mesActual = todayIsoDate()
 
     await Purchase.create({
       supplierId: supplier.id,
@@ -915,13 +916,13 @@ test.group('Dashboard API', (group) => {
 
     await Purchase.create({
       supplierId: supplier.id,
-      date: DateTime.now().minus({ days: 20 }),
+      date: nowInAppZone().minus({ days: 20 }),
       invoiceNumber: 'F-CRED-DASH-2',
       totalUsd: '80.0000',
       totalBs: '2880.00',
       status: 'CONFIRMED',
       isCredit: true,
-      creditDueDate: DateTime.now().endOf('month').minus({ days: 2 }),
+      creditDueDate: nowInAppZone().endOf('month').minus({ days: 2 }),
       balanceUsd: '40.0000',
       amountPaidUsd: '40.0000',
     })

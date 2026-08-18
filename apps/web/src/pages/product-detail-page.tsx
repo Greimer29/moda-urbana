@@ -125,7 +125,6 @@ export function ProductDetailPage() {
       }
     } catch (err) {
       setDeleteError(getApiErrorMessage(err))
-      setDeleteOpen(false)
     }
   }
 
@@ -171,7 +170,10 @@ export function ProductDetailPage() {
             variant="outline"
             size="icon"
             className="text-destructive hover:text-destructive"
-            onClick={() => setDeleteOpen(true)}
+            onClick={() => {
+              setDeleteError(null)
+              setDeleteOpen(true)
+            }}
             title="Eliminar producto"
             aria-label="Eliminar producto"
           >
@@ -370,6 +372,7 @@ export function ProductDetailPage() {
         onOpenChange={setDeleteOpen}
         product={product}
         isPending={deleteMutation.isPending}
+        error={deleteError}
         onConfirm={() => void confirmDelete()}
       />
 

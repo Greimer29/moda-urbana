@@ -106,14 +106,33 @@ export function isValidPermission(value: string): value is PermissionKey {
   return ALL_PERMISSIONS.includes(value as PermissionKey)
 }
 
-export function sanitizePermissions(values: string[] | null | undefined): PermissionKey[] {
-  if (!values?.length) return []
-  return values.filter(isValidPermission)
+function permissionList(values: string[] | string | null | undefined): string[] {
+  if (!values) return []
+  if (Array.isArray(values)) {
+    return values.filter((item): item is string => typeof item === 'string')
+  }
+  if (typeof values === 'string') {
+    try {
+      const parsed = JSON.parse(values) as unknown
+      return Array.isArray(parsed)
+        ? parsed.filter((item): item is string => typeof item === 'string')
+        : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+export function sanitizePermissions(
+  values: string[] | string | null | undefined
+): PermissionKey[] {
+  return permissionList(values).filter(isValidPermission)
 }
 
 export function userHasPermission(
   role: string,
-  permissions: string[] | null | undefined,
+  permissions: string[] | string | null | undefined,
   permission: PermissionKey
 ): boolean {
   if (role === 'ADMIN') return true
@@ -122,7 +141,7 @@ export function userHasPermission(
 
 export function effectivePermissions(
   role: string,
-  permissions: string[] | null | undefined
+  permissions: string[] | string | null | undefined
 ): PermissionKey[] | ['*'] {
   if (role === 'ADMIN') return ['*']
   return sanitizePermissions(permissions)

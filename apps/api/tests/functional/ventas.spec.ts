@@ -5,6 +5,7 @@ import FormulaMaterial from '#models/formula_material'
 import InventoryMovement from '#models/inventory_movement'
 import Material from '#models/material'
 import Order from '#models/order'
+import OrderLine from '#models/order_line'
 import User from '#models/user'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
@@ -423,7 +424,7 @@ test.group('Ventas API — catálogo y ventas', (group) => {
     assert.equal(Number(orderOut!.quantity), -15)
   })
 
-  test('DELETE catalog blocked when product in active order', async ({ client }) => {
+  test('DELETE catalog blocked when product in confirmed order', async ({ client }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
     const customer = await seedCustomer()
 
@@ -443,16 +444,17 @@ test.group('Ventas API — catálogo y ventas', (group) => {
       description: 'Test',
       totalQuantity: 5,
       orderDate: DateTime.fromISO('2026-06-01'),
-      status: 'DRAFT',
+      status: 'CONFIRMED',
     })
 
-    await client
-      .post(`/api/v1/orders/${order.id}/lines`)
-      .loginAs(user)
-      .json({
-        catalog_product_id: Number(catalog.id),
-        quantity: 5,
-      })
+    await OrderLine.create({
+      orderId: Number(order.id),
+      catalogProductId: Number(catalog.id),
+      quantity: '5.000',
+      unitPriceUsd: '30.0000',
+      subtotalUsd: '150.0000',
+      returnedQuantity: '0.000',
+    })
 
     const deleteResponse = await client
       .delete(`/api/v1/catalog-products/${catalog.id}`)
@@ -462,6 +464,151 @@ test.group('Ventas API — catálogo y ventas', (group) => {
     deleteResponse.assertBodyContains({
       error: { code: 'PRODUCTO_CATALOGO_EN_PEDIDOS_ACTIVOS' },
     })
+  })
+
+  test('DELETE catalog deactivates product with delivered order history', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await seedCustomer()
+
+    const catalog = await CatalogProduct.create({
+      name: 'Zapato vendido',
+      category: 'Calzado',
+      salePriceUsd: '40.0000',
+      costUsd: '15.0000',
+      stockQuantity: '1.000',
+      active: true,
+    })
+
+    const order = await Order.create({
+      code: 'PED-202606-0002',
+      customerId: Number(customer.id),
+      modality: 'CORPORATE',
+      description: 'Venta entregada',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO('2026-06-01'),
+      status: 'DELIVERED',
+      totalPrice: '40.0000',
+    })
+
+    await OrderLine.create({
+      orderId: Number(order.id),
+      catalogProductId: Number(catalog.id),
+      quantity: '1.000',
+      unitPriceUsd: '40.0000',
+      subtotalUsd: '40.0000',
+      returnedQuantity: '0.000',
+    })
+
+    const deleteResponse = await client
+      .delete(`/api/v1/catalog-products/${catalog.id}`)
+      .loginAs(user)
+
+    deleteResponse.assertStatus(200)
+    assert.equal(deleteResponse.body().data.modo, 'soft')
+
+    await catalog.refresh()
+    assert.isFalse(Boolean(catalog.active))
+  })
+
+  test('DELETE catalog deactivates product with returned quick-sale history', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await seedCustomer()
+
+    const catalog = await CatalogProduct.create({
+      name: 'Zapato devuelto',
+      category: 'Calzado',
+      salePriceUsd: '40.0000',
+      costUsd: '15.0000',
+      stockQuantity: '1.000',
+      active: true,
+    })
+
+    const order = await Order.create({
+      code: 'PED-202608-0003',
+      customerId: Number(customer.id),
+      modality: 'CORPORATE',
+      description: 'Facturación rápida devuelta',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO('2026-08-18'),
+      status: 'RETURNED',
+      totalPrice: '0.0000',
+      returnedAt: DateTime.fromISO('2026-08-18'),
+    })
+
+    await OrderLine.create({
+      orderId: Number(order.id),
+      catalogProductId: Number(catalog.id),
+      quantity: '1.000',
+      unitPriceUsd: '40.0000',
+      subtotalUsd: '40.0000',
+      returnedQuantity: '1.000',
+    })
+
+    const deleteResponse = await client
+      .delete(`/api/v1/catalog-products/${catalog.id}`)
+      .loginAs(user)
+
+    deleteResponse.assertStatus(200)
+    assert.equal(deleteResponse.body().data.modo, 'soft')
+
+    await catalog.refresh()
+    assert.isFalse(Boolean(catalog.active))
+  })
+
+  test('DELETE catalog closes leftover draft and removes product without history', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await seedCustomer()
+
+    const catalog = await CatalogProduct.create({
+      name: 'Zapato en borrador',
+      category: 'Calzado',
+      salePriceUsd: '40.0000',
+      costUsd: '15.0000',
+      stockQuantity: '1.000',
+      active: true,
+    })
+
+    const draft = await Order.create({
+      code: 'PED-202608-0004',
+      customerId: Number(customer.id),
+      modality: 'CORPORATE',
+      description: 'Borrador de Ventas',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO('2026-08-18'),
+      status: 'DRAFT',
+      totalPrice: '40.0000',
+    })
+
+    await OrderLine.create({
+      orderId: Number(draft.id),
+      catalogProductId: Number(catalog.id),
+      quantity: '1.000',
+      unitPriceUsd: '40.0000',
+      subtotalUsd: '40.0000',
+      returnedQuantity: '0.000',
+    })
+
+    const deleteResponse = await client
+      .delete(`/api/v1/catalog-products/${catalog.id}`)
+      .loginAs(user)
+
+    deleteResponse.assertStatus(200)
+    assert.equal(deleteResponse.body().data.modo, 'hard')
+
+    const leftover = await CatalogProduct.find(catalog.id)
+    assert.isNull(leftover)
+
+    const leftoverDraft = await Order.find(draft.id)
+    assert.isNull(leftoverDraft)
   })
 
   test('GET catalog product with formula exposes stock derived from materials', async ({

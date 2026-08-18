@@ -42,6 +42,11 @@ import {
   type TransicionResult,
   resolverTransicion,
 } from '#services/order_state_machine'
+import {
+  buildPriceAdjustmentNote,
+  mergeLineNotes,
+} from '#utils/price_adjustment_note'
+import { nowInAppZone } from '#utils/app_timezone'
 import drive from '@adonisjs/drive/services/main'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import db from '@adonisjs/lucid/services/db'
@@ -318,13 +323,18 @@ export default class OrderService {
       if (input.unit_price_usd !== undefined) {
         line.unitPriceUsd = input.unit_price_usd.toFixed(4)
       }
-      if (input.notes !== undefined) {
-        line.notes = input.notes?.trim() || null
-      }
+      await line.load('catalogProduct')
+      const listPriceUsd = line.catalogProduct
+        ? Number(line.catalogProduct.salePriceUsd)
+        : Number(line.unitPriceUsd)
+      const incomingNotes = input.notes !== undefined ? input.notes : line.notes
+      line.notes = mergeLineNotes(
+        incomingNotes,
+        buildPriceAdjustmentNote(listPriceUsd, Number(line.unitPriceUsd))
+      )
       line.subtotalUsd = (input.quantity * Number(line.unitPriceUsd)).toFixed(4)
       line.useTransaction(trx)
       await line.save()
-      await line.load('catalogProduct')
 
       return line
     })
@@ -1184,7 +1194,10 @@ export default class OrderService {
         returnedQuantity: '0.000',
         unitPriceUsd: unitPrice,
         subtotalUsd: subtotal,
-        notes: input.notes?.trim() || null,
+        notes: mergeLineNotes(
+          input.notes,
+          buildPriceAdjustmentNote(Number(product.salePriceUsd), Number(unitPrice))
+        ),
       },
       { client: trx }
     )
@@ -1526,7 +1539,7 @@ export default class OrderService {
       }
       order.balanceUsd = totalUsd.toFixed(4)
       order.amountPaidUsd = '0.0000'
-      order.creditDueDate = DateTime.now().plus({ days: customer.creditDays })
+      order.creditDueDate = nowInAppZone().plus({ days: customer.creditDays })
     } else {
       order.balanceUsd = '0.0000'
       order.amountPaidUsd = totalUsd.toFixed(4)
