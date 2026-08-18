@@ -1,3 +1,4 @@
+import { AppNotifications } from '@/components/app-notifications'
 import { RoutePermissionOutlet } from '@/components/auth/route-permission-outlet'
 import { AppHeader } from '@/components/layout/app-header'
 import { AppSidebar } from '@/components/layout/app-sidebar'
@@ -14,6 +15,7 @@ export function AppLayout() {
             <RoutePermissionOutlet />
           </main>
         </div>
+        <AppNotifications />
       </div>
     </DisplayCurrencyProvider>
   )

@@ -18,6 +18,7 @@ import {
 } from '@/features/machines/hooks/use-machines'
 import type { Machine } from '@/features/machines/types'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { notify } from '@/lib/notify'
 import { cn } from '@/lib/utils'
 
 const PER_PAGE = 20
@@ -32,7 +33,6 @@ export function MachinesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null)
   const [machineToDelete, setMachineToDelete] = useState<Machine | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
 
   const deleteMutation = useDeleteMachineMutation()
 
@@ -76,20 +76,18 @@ export function MachinesPage() {
       return
     }
 
-    setActionError(null)
-
     try {
       const result = await deleteMutation.mutateAsync(machineToDelete.id)
       setDeleteDialogOpen(false)
       setMachineToDelete(null)
 
       if (result.modo === 'soft') {
-        setActionError(
-          `"${machineToDelete.name}" fue desactivada porque tiene gastos asociados.`
-        )
+        notify.warning(`"${machineToDelete.name}" fue desactivada porque tiene gastos asociados.`)
+      } else {
+        notify.success(`"${machineToDelete.name}" fue eliminada.`)
       }
     } catch (deleteError) {
-      setActionError(getApiErrorMessage(deleteError))
+      notify.error(getApiErrorMessage(deleteError))
     }
   }
 
@@ -156,8 +154,6 @@ export function MachinesPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
-
           {isLoading ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">
               <Loader2 className="size-4 animate-spin" />

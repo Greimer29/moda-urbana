@@ -15,6 +15,7 @@ import {
 } from '@/features/materials/hooks/use-materials'
 import type { Material, MaterialCategoria, MaterialStatusFilter } from '@/features/materials/types'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { notify } from '@/lib/notify'
 import { cn } from '@/lib/utils'
 
 const PER_PAGE = 30
@@ -36,7 +37,6 @@ export function MaterialsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [materialToDelete, setMaterialToDelete] = useState<Material | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
 
   const deleteMutation = useDeleteMaterialMutation()
 
@@ -89,20 +89,20 @@ export function MaterialsPage() {
       return
     }
 
-    setActionError(null)
-
     try {
       const result = await deleteMutation.mutateAsync(materialToDelete.id)
       setDeleteDialogOpen(false)
       setMaterialToDelete(null)
 
       if (result.modo === 'soft') {
-        setActionError(
+        notify.warning(
           `"${materialToDelete.name}" fue desactivado porque tiene movimientos asociados.`
         )
+      } else {
+        notify.success(`"${materialToDelete.name}" fue eliminado.`)
       }
     } catch (deleteError) {
-      setActionError(getApiErrorMessage(deleteError))
+      notify.error(getApiErrorMessage(deleteError))
     }
   }
 
@@ -178,8 +178,6 @@ export function MaterialsPage() {
                 setPage(1)
               }}
             />
-
-            {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
 
             {isLoading ? (
               <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">

@@ -20,6 +20,7 @@ import {
   parseCatalogSortValue,
 } from '@/features/ventas/utils/catalog-sort'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { notify } from '@/lib/notify'
 
 const PER_PAGE = 30
 const DEFAULT_SORT = { sortBy: 'name' as const, sortDir: 'asc' as const }
@@ -40,7 +41,6 @@ export function ProductosPage() {
   const [category, setCategory] = useState('')
   const [sortValue, setSortValue] = useState(catalogSortValue(DEFAULT_SORT.sortBy, DEFAULT_SORT.sortDir))
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [actionError, setActionError] = useState<string | null>(null)
 
   const deleteMutation = useDeleteCatalogProductMutation()
   const { data: categories = [] } = useActiveCategoriesQuery()
@@ -82,14 +82,15 @@ export function ProductosPage() {
   }
 
   async function handleDeleteProduct(product: CatalogProduct) {
-    setActionError(null)
     try {
       const result = await deleteMutation.mutateAsync(product.id)
       if (result.modo === 'soft') {
-        setActionError(`"${product.name}" fue desactivado porque tiene ventas asociadas.`)
+        notify.warning(`"${product.name}" fue desactivado porque tiene ventas asociadas.`)
+      } else {
+        notify.success(`"${product.name}" fue eliminado.`)
       }
     } catch (deleteError) {
-      setActionError(getApiErrorMessage(deleteError))
+      notify.error(getApiErrorMessage(deleteError))
     }
   }
 
@@ -182,8 +183,6 @@ export function ProductosPage() {
               ))}
             </select>
           </div>
-
-          {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
 
           {isLoading ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">

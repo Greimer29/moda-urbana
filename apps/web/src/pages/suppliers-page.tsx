@@ -12,6 +12,7 @@ import {
 } from '@/features/suppliers/hooks/use-suppliers'
 import type { Supplier } from '@/features/suppliers/types'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { notify } from '@/lib/notify'
 import { cn } from '@/lib/utils'
 
 const PER_PAGE = 20
@@ -32,7 +33,6 @@ export function SuppliersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
 
   const deleteMutation = useDeleteSupplierMutation()
 
@@ -74,20 +74,18 @@ export function SuppliersPage() {
       return
     }
 
-    setActionError(null)
-
     try {
       const result = await deleteMutation.mutateAsync(supplierToDelete.id)
       setDeleteDialogOpen(false)
       setSupplierToDelete(null)
 
       if (result.modo === 'soft') {
-        setActionError(
-          `"${supplierToDelete.name}" fue desactivado porque tiene registros asociados.`
-        )
+        notify.warning(`"${supplierToDelete.name}" fue desactivado porque tiene registros asociados.`)
+      } else {
+        notify.success(`"${supplierToDelete.name}" fue eliminado.`)
       }
     } catch (deleteError) {
-      setActionError(getApiErrorMessage(deleteError))
+      notify.error(getApiErrorMessage(deleteError))
     }
   }
 
@@ -123,8 +121,6 @@ export function SuppliersPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
-
           {isLoading ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">
               <Loader2 className="size-4 animate-spin" />

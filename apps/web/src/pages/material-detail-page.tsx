@@ -31,6 +31,7 @@ import {
 } from '@/features/materials/hooks/use-materials'
 
 import { getApiErrorMessage } from '@/lib/api-error'
+import { notify } from '@/lib/notify'
 import { detailPageErrorMessage } from '@/lib/detail-page-messages'
 import { parsePositiveIntRouteParam } from '@/lib/route-id'
 
@@ -69,8 +70,6 @@ export function MaterialDetallePage() {
   const [ajusteOpen, setAjusteOpen] = useState(false)
 
   const [deleteOpen, setDeleteOpen] = useState(false)
-
-  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const deleteMutation = useDeleteMaterialMutation()
 
@@ -164,20 +163,17 @@ export function MaterialDetallePage() {
 
   async function confirmDelete() {
     if (!material) return
-    setDeleteError(null)
     try {
       const result = await deleteMutation.mutateAsync(materialId)
       setDeleteOpen(false)
       if (result.modo === 'soft') {
-        void navigate('/productos/materiales', {
-          state: { message: `"${material.name}" fue desactivado (tiene historial de inventario).` },
-        })
+        notify.warning(`"${material.name}" fue desactivado (tiene historial de inventario).`)
       } else {
-        void navigate('/productos/materiales')
+        notify.success(`"${material.name}" fue eliminado.`)
       }
+      void navigate('/productos/materiales')
     } catch (err) {
-      setDeleteError(getApiErrorMessage(err))
-      setDeleteOpen(false)
+      notify.error(getApiErrorMessage(err))
     }
   }
 
@@ -519,8 +515,6 @@ export function MaterialDetallePage() {
         isPending={deleteMutation.isPending}
         onConfirm={() => void confirmDelete()}
       />
-
-      {deleteError ? <p className="text-destructive text-sm whitespace-pre-line">{deleteError}</p> : null}
 
     </div>
 

@@ -16,6 +16,7 @@ import { productSaleUnitAbrev } from '@/features/ventas/constants'
 import { useCatalogProductQuery, useDeleteCatalogProductMutation } from '@/features/ventas/hooks/use-catalog'
 import { productHasSizes } from '@/features/ventas/utils/product-sizes'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { notify } from '@/lib/notify'
 import { detailPageErrorMessage } from '@/lib/detail-page-messages'
 import { parsePositiveIntRouteParam } from '@/lib/route-id'
 import { isBelowCost } from '@/lib/cost-warnings'
@@ -41,7 +42,6 @@ export function ProductDetailPage() {
   const [ajusteOpen, setAjusteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const deleteMutation = useDeleteCatalogProductMutation()
   const { data: product, isLoading, isError, error, refetch } = useCatalogProductQuery(productId)
@@ -112,19 +112,17 @@ export function ProductDetailPage() {
 
   async function confirmDelete() {
     if (!product) return
-    setDeleteError(null)
     try {
       const result = await deleteMutation.mutateAsync(productId)
       setDeleteOpen(false)
       if (result.modo === 'soft') {
-        void navigate('/productos', {
-          state: { message: `"${product.name}" fue desactivado (tiene ventas registradas).` },
-        })
+        notify.warning(`"${product.name}" fue desactivado porque tiene ventas asociadas.`)
       } else {
-        void navigate('/productos')
+        notify.success(`"${product.name}" fue eliminado.`)
       }
+      void navigate('/productos')
     } catch (err) {
-      setDeleteError(getApiErrorMessage(err))
+      notify.error(getApiErrorMessage(err))
     }
   }
 
@@ -170,10 +168,7 @@ export function ProductDetailPage() {
             variant="outline"
             size="icon"
             className="text-destructive hover:text-destructive"
-            onClick={() => {
-              setDeleteError(null)
-              setDeleteOpen(true)
-            }}
+            onClick={() => setDeleteOpen(true)}
             title="Eliminar producto"
             aria-label="Eliminar producto"
           >
@@ -372,11 +367,8 @@ export function ProductDetailPage() {
         onOpenChange={setDeleteOpen}
         product={product}
         isPending={deleteMutation.isPending}
-        error={deleteError}
         onConfirm={() => void confirmDelete()}
       />
-
-      {deleteError ? <p className="text-destructive text-sm whitespace-pre-line">{deleteError}</p> : null}
     </div>
   )
 }

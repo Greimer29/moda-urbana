@@ -7,6 +7,7 @@ import { PROFIT_MARGIN_PANEL_ID } from '@/features/purchases/constants'
 import { useCatalogProductQuery, useCatalogProductsQuery } from '@/features/ventas/hooks/use-catalog'
 import type { CatalogProduct } from '@/features/ventas/types'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { notify } from '@/lib/notify'
 
 type ProfitMarginConfigCardProps = {
   defaultMarginPercent?: string | null
@@ -28,8 +29,6 @@ export function ProfitMarginConfigCard({
   const [activeOnly, setActiveOnly] = useState(true)
   const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null)
 
   const applyMutation = useApplyProfitMarginMutation()
   const saveDefaultMarginMutation = useUpdateProfitMarginMutation()
@@ -150,21 +149,18 @@ export function ProfitMarginConfigCard({
   }
 
   async function handleApply() {
-    setActionError(null)
-    setActionSuccess(null)
-
     if (!marginValid) {
-      setActionError('Ingresá un porcentaje válido (0 o mayor)')
+      notify.error('Ingresá un porcentaje válido (0 o mayor)')
       return
     }
 
     if (selectedIds.size === 0) {
-      setActionError('Seleccioná al menos un producto')
+      notify.error('Seleccioná al menos un producto')
       return
     }
 
     if (applicableSelected.length === 0) {
-      setActionError('Ningún producto seleccionado tiene precio costo registrado')
+      notify.error('Ningún producto seleccionado tiene precio costo registrado')
       return
     }
 
@@ -179,11 +175,11 @@ export function ProfitMarginConfigCard({
       const skippedNoCost = result.skipped.filter((item) => item.reason === 'NO_COST_PRICE').length
       const skippedNotFound = result.skipped.filter((item) => item.reason === 'NOT_FOUND').length
 
-      setActionSuccess(
+      notify.success(
         `Precio venta actualizado en ${result.updatedCount} producto${result.updatedCount === 1 ? '' : 's'}.${skippedNoCost > 0 ? ` ${skippedNoCost} sin precio costo.` : ''}${skippedNotFound > 0 ? ` ${skippedNotFound} no encontrado(s).` : ''}`
       )
     } catch (err) {
-      setActionError(getApiErrorMessage(err))
+      notify.error(getApiErrorMessage(err))
     }
   }
 
@@ -212,8 +208,6 @@ export function ProfitMarginConfigCard({
             selectedCount={selectedIds.size}
             isApplying={applyMutation.isPending}
             onApply={() => void handleApply()}
-            actionError={actionError}
-            actionSuccess={actionSuccess}
           />
           <ProfitMarginProductList
             products={products}

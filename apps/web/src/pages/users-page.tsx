@@ -12,6 +12,7 @@ import {
 import type { AppUser } from '@/features/users/types'
 import { isAppUserActionable, isAppUserListIncomplete } from '@/features/users/parse-app-user'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { notify } from '@/lib/notify'
 import { cn } from '@/lib/utils'
 
 const PER_PAGE = 20
@@ -36,7 +37,6 @@ export function UsersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
 
   const setActiveMutation = useSetUserActiveMutation()
 
@@ -66,7 +66,7 @@ export function UsersPage() {
 
   function openEditDialog(user: AppUser) {
     if (!isAppUserActionable(user)) {
-      setActionError(
+      notify.error(
         'No se puede editar este usuario: la API no devolvió un identificador válido. Redeploy de la API requerido.'
       )
       return
@@ -77,16 +77,16 @@ export function UsersPage() {
 
   async function toggleActive(user: AppUser) {
     if (!isAppUserActionable(user)) {
-      setActionError(
+      notify.error(
         'No se puede cambiar el estado: la API no devolvió un identificador válido. Redeploy de la API requerido.'
       )
       return
     }
-    setActionError(null)
     try {
       await setActiveMutation.mutateAsync({ id: user.id, active: !user.active })
+      notify.success(user.active ? `"${user.name}" fue desactivado.` : `"${user.name}" fue activado.`)
     } catch (err) {
-      setActionError(getApiErrorMessage(err))
+      notify.error(getApiErrorMessage(err))
     }
   }
 
@@ -106,8 +106,6 @@ export function UsersPage() {
           </Button>
         </PermissionGate>
       </div>
-
-      {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
 
       {listIncomplete ? (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

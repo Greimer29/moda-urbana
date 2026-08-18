@@ -10,6 +10,7 @@ import {
 } from '@/features/formulas/hooks/use-formulas'
 import type { Formula } from '@/features/formulas/types'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { notify } from '@/lib/notify'
 
 const PER_PAGE = 30
 
@@ -19,7 +20,6 @@ export function MaterialsFormulasPanel() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingFormula, setEditingFormula] = useState<Formula | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
 
   const deleteMutation = useDeleteFormulaMutation()
 
@@ -52,11 +52,11 @@ export function MaterialsFormulasPanel() {
   }
 
   async function handleDelete(formula: Formula) {
-    setActionError(null)
     try {
       await deleteMutation.mutateAsync(formula.id)
+      notify.success(`"${formula.name}" fue eliminada.`)
     } catch (deleteError) {
-      setActionError(getApiErrorMessage(deleteError))
+      notify.error(getApiErrorMessage(deleteError))
     }
   }
 
@@ -84,8 +84,6 @@ export function MaterialsFormulasPanel() {
           <CardDescription>
             Creá fórmulas con materiales y asignalas a los productos que necesites.
           </CardDescription>
-
-          {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
 
           {isLoading ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">

@@ -323,3 +323,18 @@
     background: color-mix(in oklch, var(--muted-foreground) 38%, transparent);
   }
 }
+
+@keyframes notify-in {
+  from {
+    opacity: 0;
+    transform: translateX(0.85rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@utility animate-notify-in {
+  animation: notify-in 180ms ease-out;
+}

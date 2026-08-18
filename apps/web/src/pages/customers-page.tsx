@@ -13,6 +13,7 @@ import {
 } from '@/features/customers/hooks/use-customers'
 import type { Customer, CustomerTipo } from '@/features/customers/types'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { notify } from '@/lib/notify'
 import { cn } from '@/lib/utils'
 
 const PER_PAGE = 20
@@ -26,7 +27,6 @@ export function CustomersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
 
   const deleteMutation = useDeleteCustomerMutation()
 
@@ -69,20 +69,18 @@ export function CustomersPage() {
       return
     }
 
-    setActionError(null)
-
     try {
       const result = await deleteMutation.mutateAsync(customerToDelete.id)
       setDeleteDialogOpen(false)
       setCustomerToDelete(null)
 
       if (result.modo === 'soft') {
-        setActionError(
-          `"${customerToDelete.name}" fue desactivado porque tiene pedidos asociados.`
-        )
+        notify.warning(`"${customerToDelete.name}" fue desactivado porque tiene pedidos asociados.`)
+      } else {
+        notify.success(`"${customerToDelete.name}" fue eliminado.`)
       }
     } catch (deleteError) {
-      setActionError(getApiErrorMessage(deleteError))
+      notify.error(getApiErrorMessage(deleteError))
     }
   }
 
@@ -137,8 +135,6 @@ export function CustomersPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {actionError ? <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p> : null}
-
           {isLoading ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">
               <Loader2 className="size-4 animate-spin" />

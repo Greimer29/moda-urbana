@@ -55,6 +55,7 @@ import {
 import { cartHasStockIssues } from '@/features/ventas/utils/product-stock'
 import { todayIsoDate } from '@/lib/app-timezone'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { notify } from '@/lib/notify'
 import { normalizeInventoryQuantity } from '@/lib/inventory-units'
 import { cn } from '@/lib/utils'
 import { formatDraftMaterialNotice } from '@/lib/material-availability'
@@ -117,8 +118,6 @@ function VentasCreateView() {
   const [loadDraftOpen, setLoadDraftOpen] = useState(false)
   const [editProduct, setEditProduct] = useState<CatalogProduct | null>(null)
   const [editProductOpen, setEditProductOpen] = useState(false)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderDraftNo] = useState(() => String(Math.floor(100000 + Math.random() * 900000)))
 
@@ -237,7 +236,6 @@ function VentasCreateView() {
     : `Venta N° ${orderDraftNo}`
 
   function pushCartLine(product: CatalogProduct, size: CatalogProductSize | null) {
-    setSuccessMessage(null)
     const sizeId = size?.id ?? null
     const key = cartLineKey(product.id, sizeId)
     setCart((prev) => {
@@ -277,12 +275,10 @@ function VentasCreateView() {
   }
 
   function removeCartLine(key: string) {
-    setSuccessMessage(null)
     setCart((prev) => prev.filter((item) => item.key !== key))
   }
 
   function updateCartQty(key: string, quantity: number) {
-    setSuccessMessage(null)
     if (!Number.isFinite(quantity) || quantity <= 0) {
       removeCartLine(key)
       return
@@ -298,7 +294,6 @@ function VentasCreateView() {
   }
 
   function updateCartUnitPrice(key: string, unitPriceUsd: number) {
-    setSuccessMessage(null)
     setCart((prev) =>
       prev.map((item) => {
         if (item.key !== key) return item
@@ -368,8 +363,7 @@ function VentasCreateView() {
     setPaymentType(draft.paymentType)
     setSourceOrderId(draft.orderId)
     setSourceOrderCode(draft.orderCode)
-    setActionError(null)
-    setSuccessMessage(`Cargaste ${draft.orderCode} para editar.`)
+    notify.success(`Cargaste ${draft.orderCode} para editar.`)
   }
 
   function resetLoadedDraft() {
@@ -427,16 +421,14 @@ function VentasCreateView() {
   }
 
   async function saveBudget() {
-    setActionError(null)
-    setSuccessMessage(null)
     setIsSubmitting(true)
 
     try {
       const orderId = await persistDraftOrder()
       const order = await getOrder(orderId)
-      setSuccessMessage(`Presupuesto guardado (${order.code}). No se descontó stock.`)
+      notify.success(`Presupuesto guardado (${order.code}). No se descontó stock.`)
     } catch (error) {
-      setActionError(getApiErrorMessage(error))
+      notify.error(getApiErrorMessage(error))
     } finally {
       setIsSubmitting(false)
     }
@@ -444,32 +436,30 @@ function VentasCreateView() {
 
   async function confirmOrder() {
     if (cart.length === 0) {
-      setActionError('Agregá al menos un producto al carrito.')
+      notify.error('Agregá al menos un producto al carrito.')
       return
     }
     if (stockBlocked) {
-      setActionError('Hay productos sin stock suficiente en el carrito.')
+      notify.error('Hay productos sin stock suficiente en el carrito.')
       return
     }
 
     if (!customerId && !clientName.trim()) {
-      setActionError('Ingresá el nombre del cliente o buscá uno registrado.')
+      notify.error('Ingresá el nombre del cliente o buscá uno registrado.')
       return
     }
 
     if (paymentType === 'CREDIT') {
       if (!customerId) {
-        setActionError('El crédito solo está disponible para clientes registrados.')
+        notify.error('El crédito solo está disponible para clientes registrados.')
         return
       }
       if (!customerCreditDays || customerCreditDays <= 0) {
-        setActionError('El cliente no tiene días de crédito configurados.')
+        notify.error('El cliente no tiene días de crédito configurados.')
         return
       }
     }
 
-    setActionError(null)
-    setSuccessMessage(null)
     setIsSubmitting(true)
 
     try {
@@ -478,8 +468,7 @@ function VentasCreateView() {
       const availability = await getOrderMaterialAvailability(orderId)
 
       if (availability.has_recipe && !availability.sufficient) {
-        const notice = formatDraftMaterialNotice(availability.missing)
-        setActionError(notice)
+        notify.warning(formatDraftMaterialNotice(availability.missing))
         setCartOpen(false)
         void navigate(`/ventas/${orderId}`, {
           state: { paymentType },
@@ -495,7 +484,7 @@ function VentasCreateView() {
       setCartOpen(false)
       void navigate(`/ventas/${orderId}`)
     } catch (submitError) {
-      setActionError(getApiErrorMessage(submitError))
+      notify.error(getApiErrorMessage(submitError))
     } finally {
       setIsSubmitting(false)
     }
@@ -633,13 +622,6 @@ function VentasCreateView() {
             <p className="text-destructive text-xs">
               Hay productos sin stock o por debajo del mínimo en el carrito.
             </p>
-          ) : null}
-
-          {successMessage ? (
-            <p className="text-emerald-700 text-sm">{successMessage}</p>
-          ) : null}
-          {actionError ? (
-            <p className="text-destructive text-sm whitespace-pre-line">{actionError}</p>
           ) : null}
 
           {canConfirmSale ? (
