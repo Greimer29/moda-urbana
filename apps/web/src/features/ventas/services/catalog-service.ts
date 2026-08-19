@@ -22,6 +22,8 @@ export async function listCatalogProducts(params: CatalogListParams = {}) {
       active: params.active,
       sort_by: params.sortBy,
       sort_dir: params.sortDir,
+      sale_price_min: params.salePriceMin,
+      sale_price_max: params.salePriceMax,
     },
   })
 

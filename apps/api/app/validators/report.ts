@@ -65,6 +65,10 @@ export const inventoryMovementsValidator = vine.create({
   export: vine.boolean().optional(),
 })
 
+export const dailyClosingValidator = vine.create({
+  date: isoDate.optional(),
+})
+
 export const accountStatementValidator = vine.create({
   from: isoDate.optional(),
   to: isoDate.optional(),

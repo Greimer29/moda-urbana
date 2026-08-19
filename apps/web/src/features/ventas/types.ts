@@ -99,6 +99,8 @@ export type CatalogListParams = {
   active?: boolean
   sortBy?: 'name' | 'most_sold' | 'id' | 'sale_price'
   sortDir?: 'asc' | 'desc'
+  salePriceMin?: number
+  salePriceMax?: number
 }
 
 export type CatalogListResponse = {

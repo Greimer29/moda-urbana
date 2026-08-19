@@ -118,6 +118,7 @@ router
         router.put('categories/:id', [CategoriesController, 'update'])
         router.delete('categories/:id', [CategoriesController, 'destroy'])
 
+        router.get('reports/daily-closing', [ReportsController, 'dailyClosing'])
         router.get('reports/account-statement', [ReportsController, 'accountStatement'])
         router.get('reports/inventory', [ReportsController, 'inventory'])
         router.get('reports/inventory/:catalogProductId/movements', [

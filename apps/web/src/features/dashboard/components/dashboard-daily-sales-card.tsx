@@ -77,6 +77,18 @@ export function DashboardDailySalesCard({ ventas, ganancia }: DashboardDailySale
                 {ventas.gastosCantidad.toLocaleString('es-VE')}
               </p>
             </Link>
+            <Link
+              to="/dashboard/cierre-del-dia"
+              className="group col-span-2 flex items-center justify-between gap-3 rounded-xl bg-white/10 px-4 py-3 transition-colors hover:bg-white/15"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-white">Cierre del día</p>
+                <p className="text-xs text-white/70">Ventas, abonos, gastos y resultado</p>
+              </div>
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white transition-colors group-hover:bg-white/20">
+                <ArrowUpRight className="size-4" aria-hidden />
+              </span>
+            </Link>
           </div>
         </div>
 

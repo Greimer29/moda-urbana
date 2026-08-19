@@ -4,6 +4,7 @@ import CatalogProduct from '#models/catalog_product'
 import CatalogProductSize from '#models/catalog_product_size'
 import Customer from '#models/customer'
 import CustomerPayment from '#models/customer_payment'
+import Expense from '#models/expense'
 import Formula from '#models/formula'
 import InventoryMovement from '#models/inventory_movement'
 import Material from '#models/material'
@@ -1128,6 +1129,157 @@ test.group('Inventory Reports API', (group) => {
     assert.lengthOf(body.movements, 1)
     assert.equal(body.movements[0].type, 'MANUAL_CARGO')
     assert.equal(body.movements[0].note, 'Carga inicial')
+  })
+
+  test('GET /api/v1/reports/daily-closing returns empty summary for date', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+
+    const response = await client
+      .get('/api/v1/reports/daily-closing')
+      .qs({ date: '2026-06-16' })
+      .loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body().data
+    assert.equal(body.date, '2026-06-16')
+    assert.equal(body.summary.net_sales_usd, '0.0000')
+    assert.equal(body.summary.operating_net_usd, '0.0000')
+    assert.isArray(body.orders)
+    assert.isArray(body.payments)
+    assert.isArray(body.expenses)
+    assert.isArray(body.products)
+    assert.isArray(body.sale_lines)
+  })
+
+  test('GET /api/v1/reports/daily-closing splits cash, credit, payments and returns', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await Customer.create({
+      name: 'Cliente cierre',
+      type: 'CORPORATE',
+      active: true,
+      creditDays: 30,
+    })
+    const product = await CatalogProduct.create({
+      name: 'Producto cierre',
+      category: 'Calzado',
+      salePriceUsd: '10.0000',
+      costUsd: '4.0000',
+      active: true,
+    })
+
+    const cashOrder = await Order.create({
+      code: 'PED-202606-0100',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta contado',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO('2026-06-16'),
+      status: 'DELIVERED',
+      paymentType: 'CASH',
+      amountPaidUsd: '10.0000',
+      balanceUsd: '0.0000',
+      totalPrice: '10.0000',
+      confirmedAt: DateTime.fromISO('2026-06-16T15:00:00.000Z'),
+    })
+    await OrderLine.create({
+      orderId: cashOrder.id,
+      catalogProductId: product.id,
+      quantity: '1',
+      unitPriceUsd: '10.0000',
+      subtotalUsd: '10.0000',
+      costUsd: '4.0000',
+      returnedQuantity: '0',
+    })
+
+    const creditOrder = await Order.create({
+      code: 'PED-202606-0101',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta crédito',
+      totalQuantity: 2,
+      orderDate: DateTime.fromISO('2026-06-16'),
+      status: 'DELIVERED',
+      paymentType: 'CREDIT',
+      amountPaidUsd: '0.0000',
+      balanceUsd: '20.0000',
+      totalPrice: '20.0000',
+      creditDueDate: DateTime.fromISO('2026-07-16'),
+      confirmedAt: DateTime.fromISO('2026-06-16T16:00:00.000Z'),
+    })
+    await OrderLine.create({
+      orderId: creditOrder.id,
+      catalogProductId: product.id,
+      quantity: '2',
+      unitPriceUsd: '10.0000',
+      subtotalUsd: '20.0000',
+      costUsd: '4.0000',
+      returnedQuantity: '1',
+    })
+
+    await CustomerPayment.create({
+      customerId: customer.id,
+      amountUsd: '5.0000',
+      date: DateTime.fromISO('2026-06-16'),
+    })
+
+    await Expense.create({
+      description: 'Gasto operativo',
+      amountUsd: '3.0000',
+      currencyCode: 'USD',
+      date: DateTime.fromISO('2026-06-16'),
+    })
+
+    const response = await client
+      .get('/api/v1/reports/daily-closing')
+      .qs({ date: '2026-06-16' })
+      .loginAs(user)
+
+    response.assertStatus(200)
+    const body = response.body().data
+
+    assert.equal(body.summary.tickets_count, 2)
+    assert.equal(body.summary.units_sold, 2)
+    assert.equal(body.summary.gross_sales_usd, '30.0000')
+    assert.equal(body.summary.returns_usd, '10.0000')
+    assert.equal(body.summary.net_sales_usd, '20.0000')
+    assert.equal(body.summary.cash_sales_usd, '10.0000')
+    assert.equal(body.summary.credit_sales_usd, '10.0000')
+    assert.equal(body.summary.credit_orders_count, 1)
+    assert.equal(body.summary.profit_usd, '12.0000')
+    assert.equal(body.summary.payments_count, 1)
+    assert.equal(body.summary.payments_total_usd, '5.0000')
+    assert.equal(body.summary.expenses_count, 1)
+    assert.equal(body.summary.expenses_total_usd, '3.0000')
+    assert.equal(body.summary.operating_net_usd, '12.0000')
+    assert.lengthOf(body.orders, 2)
+    assert.lengthOf(body.payments, 1)
+    assert.lengthOf(body.expenses, 1)
+    assert.lengthOf(body.products, 1)
+    assert.lengthOf(body.sale_lines, 2)
+
+    assert.equal(body.products[0].name, 'Producto cierre')
+    assert.equal(body.products[0].quantity_sold, 2)
+    assert.equal(body.products[0].total_usd, '20.0000')
+
+    const saleLinesNetTotal = body.sale_lines.reduce(
+      (sum: number, line: { net_usd: string }) => sum + Number(line.net_usd),
+      0
+    )
+    assert.equal(saleLinesNetTotal.toFixed(4), body.summary.net_sales_usd)
+
+    const creditLine = body.sale_lines.find(
+      (line: { order_code: string }) => line.order_code === 'PED-202606-0101'
+    )
+    assert.exists(creditLine)
+    assert.equal(creditLine.returned_quantity, 1)
+    assert.equal(creditLine.net_quantity, 1)
+    assert.equal(creditLine.net_usd, '10.0000')
   })
 
   test('GET /api/v1/reports/inventory/:id/movements marks formula products unavailable', async ({

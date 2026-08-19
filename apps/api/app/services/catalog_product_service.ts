@@ -57,6 +57,8 @@ export type ListCatalogProductsFilters = {
   active?: boolean
   sortBy?: 'name' | 'most_sold' | 'id' | 'sale_price'
   sortDir?: 'asc' | 'desc'
+  salePriceMin?: number
+  salePriceMax?: number
 }
 
 export type CatalogProductImageDownload = {
@@ -159,6 +161,14 @@ export default class CatalogProductService {
 
     if (filters.active !== undefined) {
       query.where('active', filters.active)
+    }
+
+    if (filters.salePriceMin !== undefined) {
+      query.where('sale_price_usd', '>=', filters.salePriceMin.toFixed(4))
+    }
+
+    if (filters.salePriceMax !== undefined) {
+      query.where('sale_price_usd', '<=', filters.salePriceMax.toFixed(4))
     }
 
     if (sortBy === 'most_sold') {

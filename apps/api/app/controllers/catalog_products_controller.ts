@@ -55,6 +55,8 @@ export default class CatalogProductsController {
       active: filters.active,
       sortBy: filters.sort_by,
       sortDir: filters.sort_dir,
+      salePriceMin: filters.sale_price_min,
+      salePriceMax: filters.sale_price_max,
     })
 
     const products = paginator.all()

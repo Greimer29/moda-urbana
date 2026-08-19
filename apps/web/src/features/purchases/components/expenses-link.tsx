@@ -11,10 +11,9 @@ type ExpensesLinkProps = {
 export function ExpensesLink({ variant = 'outline' }: ExpensesLinkProps) {
   return (
     <PermissionGate permission="expenses.view">
-      <Button variant={variant} asChild>
-        <Link to={gastosUrl({ nuevo: true })}>
+      <Button variant={variant} size="icon" asChild>
+        <Link to={gastosUrl({ nuevo: true })} title="Gastos" aria-label="Gastos">
           <Wallet className="size-4" />
-          Gastos
         </Link>
       </Button>
     </PermissionGate>

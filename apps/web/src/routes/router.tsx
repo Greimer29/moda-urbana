@@ -4,6 +4,7 @@ import { RedirectOrderDetail } from '@/routes/redirect-order-detail'
 import { GuestRoute, ProtectedRoute } from '@/components/auth/auth-route'
 import { AppLayout } from '@/components/layout/app-layout'
 import { DashboardPage } from '@/pages/dashboard-page'
+import { DashboardDailyClosingPage } from '@/pages/dashboard-daily-closing-page'
 import { DashboardDailyProductsPage } from '@/pages/dashboard-daily-products-page'
 import { DashboardDailyExpensesPage } from '@/pages/dashboard-daily-expenses-page'
 import { LoginPage } from '@/pages/login-page'
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
       {
         path: 'dashboard/gastos-del-dia',
         element: <DashboardDailyExpensesPage />,
+      },
+      {
+        path: 'dashboard/cierre-del-dia',
+        element: <DashboardDailyClosingPage />,
       },
       {
         path: 'customers',

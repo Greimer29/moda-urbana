@@ -56,6 +56,8 @@ export const listCatalogProductsValidator = vine.create({
   active: vine.boolean().optional(),
   sort_by: vine.enum(['name', 'most_sold', 'id', 'sale_price'] as const).optional(),
   sort_dir: vine.enum(['asc', 'desc'] as const).optional(),
+  sale_price_min: vine.number().min(0).optional(),
+  sale_price_max: vine.number().min(0).optional(),
 })
 
 export const replaceCatalogProductSizesValidator = vine.create({

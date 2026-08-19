@@ -1,4 +1,8 @@
-import type { AccountStatementParams, AccountStatementResponse } from '@/features/reports/types'
+import type {
+  AccountStatementParams,
+  AccountStatementResponse,
+  DailyClosingResponse,
+} from '@/features/reports/types'
 import { api } from '@/lib/api'
 
 function buildReportQueryParams(params: AccountStatementParams) {
@@ -19,6 +23,15 @@ export async function getAccountStatement(params: AccountStatementParams = {}) {
   const query = buildReportQueryParams(params)
   const url = query.size > 0 ? `/reports/account-statement?${query.toString()}` : '/reports/account-statement'
   const { data } = await api.get<AccountStatementResponse>(url)
+
+  return data.data
+}
+
+export async function getDailyClosing(date?: string) {
+  const search = new URLSearchParams()
+  if (date) search.set('date', date)
+  const url = search.size > 0 ? `/reports/daily-closing?${search.toString()}` : '/reports/daily-closing'
+  const { data } = await api.get<DailyClosingResponse>(url)
 
   return data.data
 }

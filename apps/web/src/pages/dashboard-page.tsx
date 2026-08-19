@@ -1,5 +1,7 @@
-import { Loader2 } from 'lucide-react'
+import { Loader2, ReceiptText } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import { DashboardCreditTable } from '@/features/dashboard/components/dashboard-credit-table'
 import { DashboardDailySalesCard } from '@/features/dashboard/components/dashboard-daily-sales-card'
 import { DashboardLowStockList } from '@/features/dashboard/components/dashboard-low-stock-list'
@@ -88,11 +90,17 @@ export function DashboardPage() {
 
   return (
     <div className={dashboardUi.page}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Dashboard</h1>
           <p className="text-sm text-neutral-500">Resumen del taller — {todayLabel()}</p>
         </div>
+        <Button asChild className="w-full shrink-0 sm:w-auto">
+          <Link to="/dashboard/cierre-del-dia">
+            <ReceiptText className="size-4" />
+            Cierre del día
+          </Link>
+        </Button>
       </div>
 
       {isPageError ? (

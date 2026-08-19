@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, FileText, FolderOpen, Loader2, Plus, Search, ShoppingCart, SlidersHorizontal } from 'lucide-react'
+import { FileText, FolderOpen, Loader2, Plus, Search, ShoppingCart, SlidersHorizontal } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -659,22 +659,42 @@ function VentasCreateView() {
                     : 'Filtrá y agregá productos a la venta'}
                 </CardDescription>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="relative shrink-0 xl:hidden"
-                title="Abrir carrito"
-                aria-label="Abrir carrito"
-                onClick={() => setCartOpen(true)}
-              >
-                <ShoppingCart className="size-4" />
-                {cartItemCount > 0 ? (
-                  <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-semibold text-white">
-                    {cartItemCount > 99 ? '99+' : cartItemCount}
-                  </span>
-                ) : null}
-              </Button>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="relative shrink-0 md:hidden"
+                  title="Filtros"
+                  aria-label="Filtros"
+                  aria-expanded={filtersOpen}
+                  aria-controls="ventas-catalog-filters"
+                  onClick={() => setFiltersOpen((open) => !open)}
+                >
+                  <SlidersHorizontal className="size-4" />
+                  {activeFilterCount > 0 ? (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-semibold text-white">
+                      {activeFilterCount}
+                    </span>
+                  ) : null}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="relative shrink-0 xl:hidden"
+                  title="Abrir carrito"
+                  aria-label="Abrir carrito"
+                  onClick={() => setCartOpen(true)}
+                >
+                  <ShoppingCart className="size-4" />
+                  {cartItemCount > 0 ? (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-semibold text-white">
+                      {cartItemCount > 99 ? '99+' : cartItemCount}
+                    </span>
+                  ) : null}
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pt-0">
@@ -686,25 +706,6 @@ function VentasCreateView() {
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="min-w-0 flex-1 bg-white md:max-w-xs"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="relative shrink-0 md:hidden"
-                  aria-expanded={filtersOpen}
-                  aria-controls="ventas-catalog-filters"
-                  onClick={() => setFiltersOpen((open) => !open)}
-                >
-                  <SlidersHorizontal className="size-4" />
-                  Filtros
-                  <ChevronDown
-                    className={cn('size-4 transition-transform', filtersOpen ? 'rotate-180' : '')}
-                  />
-                  {activeFilterCount > 0 ? (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-semibold text-white">
-                      {activeFilterCount}
-                    </span>
-                  ) : null}
-                </Button>
               </div>
               <div
                 id="ventas-catalog-filters"
