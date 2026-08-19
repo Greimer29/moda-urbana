@@ -1,4 +1,4 @@
-import { nowInAppZone, todayIsoDate } from '#utils/app_timezone'
+import { dayEndInAppZone, dayStartInAppZone, nowInAppZone, todayIsoDate } from '#utils/app_timezone'
 import { test } from '@japa/runner'
 
 test.group('app_timezone', () => {
@@ -19,5 +19,15 @@ test.group('app_timezone', () => {
     } else {
       assert.equal(caracasDate, utcDate)
     }
+  })
+
+  test('dayStartInAppZone and dayEndInAppZone bound the Caracas calendar day in UTC', ({
+    assert,
+  }) => {
+    const start = dayStartInAppZone('2026-08-18').toUTC()
+    const end = dayEndInAppZone('2026-08-18').toUTC()
+
+    assert.equal(start.toISO(), '2026-08-18T04:00:00.000Z')
+    assert.equal(end.toISO(), '2026-08-19T03:59:59.999Z')
   })
 })

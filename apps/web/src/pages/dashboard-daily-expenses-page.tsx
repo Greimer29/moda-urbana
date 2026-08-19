@@ -7,9 +7,11 @@ import { useDailyExpensesQuery } from '@/features/dashboard/hooks/use-dashboard'
 import type { DailyExpenseItem } from '@/features/dashboard/types'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
+import { APP_TIMEZONE } from '@/lib/app-timezone'
 
 function todayLabel() {
   return new Date().toLocaleDateString('es-VE', {
+    timeZone: APP_TIMEZONE,
     weekday: 'long',
     day: 'numeric',
     month: 'long',

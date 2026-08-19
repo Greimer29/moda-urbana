@@ -6,9 +6,11 @@ import { DailySoldProductCard } from '@/features/dashboard/components/daily-sold
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { useDailyProductSalesQuery } from '@/features/dashboard/hooks/use-dashboard'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { APP_TIMEZONE } from '@/lib/app-timezone'
 
 function todayLabel() {
   return new Date().toLocaleDateString('es-VE', {
+    timeZone: APP_TIMEZONE,
     weekday: 'long',
     day: 'numeric',
     month: 'long',

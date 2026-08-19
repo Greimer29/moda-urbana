@@ -212,7 +212,7 @@ export function VentasHistoryPanel() {
                             </span>
                           </td>
                           <td className="text-muted-foreground px-4 py-3">
-                            {formatFecha(order.confirmedAt ?? order.dateOrder)}
+                            {formatFecha(order.dateOrder)}
                           </td>
                           <td className="px-4 py-3">
                             {order.customer?.name ?? order.guestName ?? 'Sin cliente'}

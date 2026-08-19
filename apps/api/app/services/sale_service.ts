@@ -15,6 +15,7 @@ import MaterialService from '#services/material_service'
 import ProductInventoryService from '#services/product_inventory_service'
 import SaleCodigoService from '#services/sale_code_service'
 import { formatCantidadMovimiento } from '#services/order_stock'
+import { dayEndInAppZone, dayStartInAppZone } from '#utils/app_timezone'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
@@ -60,11 +61,19 @@ export default class SaleService {
     }
 
     if (filters.date_from) {
-      query.where('soldAt', '>=', filters.date_from)
+      query.where(
+        'soldAt',
+        '>=',
+        dayStartInAppZone(filters.date_from).toUTC().toSQL({ includeOffset: false })!
+      )
     }
 
     if (filters.date_to) {
-      query.where('soldAt', '<=', `${filters.date_to} 23:59:59`)
+      query.where(
+        'soldAt',
+        '<=',
+        dayEndInAppZone(filters.date_to).toUTC().toSQL({ includeOffset: false })!
+      )
     }
 
     return query.paginate(page, perPage)

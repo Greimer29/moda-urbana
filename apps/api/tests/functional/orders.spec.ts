@@ -457,6 +457,47 @@ test.group('Orders API', (group) => {
     assert.equal(body.data.orders[0].description, 'Confirmado historial')
   })
 
+  test('GET /api/v1/orders date_from/date_to filters by order_date not confirmedAt UTC day', async ({
+    client,
+    assert,
+  }) => {
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    const customer = await seedCustomer()
+
+    await Order.create({
+      code: 'PED-202608-0001',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Venta noche VE',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO('2026-08-18'),
+      status: 'DELIVERED',
+      confirmedAt: DateTime.fromISO('2026-08-19T01:00:00.000Z'),
+    })
+
+    await Order.create({
+      code: 'PED-202608-0002',
+      customerId: customer.id,
+      modality: 'CORPORATE',
+      description: 'Otro día',
+      totalQuantity: 1,
+      orderDate: DateTime.fromISO('2026-08-19'),
+      status: 'DELIVERED',
+      confirmedAt: DateTime.fromISO('2026-08-19T12:00:00.000Z'),
+    })
+
+    const response = await client
+      .get('/api/v1/orders?date_from=2026-08-18&date_to=2026-08-18')
+      .loginAs(user)
+
+    response.assertStatus(200)
+
+    const body = response.body()
+    assert.equal(body.data.meta.total, 1)
+    assert.lengthOf(body.data.orders, 1)
+    assert.equal(body.data.orders[0].description, 'Venta noche VE')
+  })
+
   test('POST transition cancel from IN_PRODUCTION reverts catalog product stock', async ({
     client,
     assert,

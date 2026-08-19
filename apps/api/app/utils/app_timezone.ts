@@ -18,3 +18,11 @@ export function currentMonthRange(): { from: string; to: string } {
     to: now.endOf('month').toISODate()!,
   }
 }
+
+export function dayStartInAppZone(isoDate: string): DateTime {
+  return DateTime.fromISO(isoDate, { zone: APP_TIMEZONE }).startOf('day')
+}
+
+export function dayEndInAppZone(isoDate: string): DateTime {
+  return DateTime.fromISO(isoDate, { zone: APP_TIMEZONE }).endOf('day')
+}

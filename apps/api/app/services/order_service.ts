@@ -199,19 +199,11 @@ export default class OrderService {
     }
 
     if (filters.date_from) {
-      query.where((builder) => {
-        builder.where('confirmedAt', '>=', `${filters.date_from} 00:00:00`).orWhere((sub) => {
-          sub.whereNull('confirmedAt').where('orderDate', '>=', filters.date_from!)
-        })
-      })
+      query.where('orderDate', '>=', filters.date_from)
     }
 
     if (filters.date_to) {
-      query.where((builder) => {
-        builder.where('confirmedAt', '<=', `${filters.date_to} 23:59:59`).orWhere((sub) => {
-          sub.whereNull('confirmedAt').where('orderDate', '<=', filters.date_to!)
-        })
-      })
+      query.where('orderDate', '<=', filters.date_to)
     }
 
     if (filters.search?.trim()) {
