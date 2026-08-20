@@ -1223,7 +1223,7 @@ test.group('Inventory Reports API', (group) => {
     })
 
     await CustomerPayment.create({
-      customerId: customer.id,
+      customerId: Number(customer.id),
       amountUsd: '5.0000',
       date: DateTime.fromISO('2026-06-16'),
     })

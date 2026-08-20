@@ -1,7 +1,6 @@
 import CurrencyService from '#services/currency_service'
 import CustomerPayment from '#models/customer_payment'
 import Order from '#models/order'
-import { sumMachineExpenseRowsUsd } from '#utils/machine_expense_totals'
 import { todayIsoDate } from '#utils/app_timezone'
 import db from '@adonisjs/lucid/services/db'
 
