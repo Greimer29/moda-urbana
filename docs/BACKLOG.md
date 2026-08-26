@@ -136,6 +136,15 @@ Cada solicitud nueva pasa por estos pasos:
 - **Justificación de la decisión:** alcance v1 acordado: tallas + descuento al vender + notas; compras-por-talla queda fuera para no alargar el PR.
 - **Estado:** Pendiente
 
+### 011 — Turnos de venta y cierre por turno
+
+- **Fecha:** 2026-08-25
+- **Origen:** dueño (autorización explícita fuera de Mes 1)
+- **Descripción:** Abrir/cerrar turno; ventas confirmadas enlazadas al turno; cierre diario filtra por turno (fecha/hora de apertura–cierre), no solo por día calendario.
+- **Evaluación:** necesario para operación real de caja; autorización humana para expandir alcance.
+- **Decisión:** `EN_CICLO_ACTIVO` (implementación autorizada).
+- **Estado:** Implementado
+
 ---
 
 ## Plantilla para nuevos items

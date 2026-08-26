@@ -1,6 +1,7 @@
 import MaterialService from '#services/material_service'
 import CurrencyService from '#services/currency_service'
 import CatalogProductStockService from '#services/catalog_product_stock_service'
+import SalesShiftService from '#services/sales_shift_service'
 import CatalogProduct from '#models/catalog_product'
 import {
   currentMonthRange,
@@ -57,6 +58,8 @@ export type VentasDelDia = {
   pedidosCredito: number
   gastosCantidad: number
   gastosMontoUsd: string
+  shiftOpen: boolean
+  shiftOpenedAt: string | null
 }
 
 export type GananciaDelDia = {
@@ -143,6 +146,7 @@ export default class DashboardService {
   private materialService = new MaterialService()
   private currencyService = new CurrencyService()
   private catalogProductStockService = new CatalogProductStockService()
+  private salesShiftService = new SalesShiftService()
 
   private sumMachineExpensesUsd(
     rows: Array<{ amount: string | number; currency_code?: string | null }>,
@@ -186,18 +190,6 @@ export default class DashboardService {
     }
 
     return totalUsd
-  }
-
-  private async sumLegacyOrdersCreditUsd(desde: string, hasta: string): Promise<number> {
-    return this.sumLegacyOrdersSalesUsd(desde, hasta, 'CREDIT')
-  }
-
-  private async countLegacyCreditOrders(desde: string, hasta: string): Promise<number> {
-    const row = await this.legacyOrdersQuery(desde, hasta, 'CREDIT')
-      .count('orders.id as total')
-      .first()
-
-    return Number(row?.total ?? 0)
   }
 
   async overview(chart: 'daily' | 'weekly' | 'monthly' = 'weekly'): Promise<DashboardOverview> {
@@ -415,15 +407,28 @@ export default class DashboardService {
     }
   }
 
-  /** Ventas del dashboard usan order_date (mismo criterio que reportes), no confirmed_at. */
+  /** Ventas del dashboard usan el turno abierto actual (sales_shift_id). */
   private async ventasDelDia(): Promise<VentasDelDia> {
-    const hoy = todayIsoDate()
+    const shift = await this.salesShiftService.current()
+    if (!shift) {
+      return {
+        productosVendidos: 0,
+        montoProductosUsd: '0.0000',
+        montoCreditoUsd: '0.0000',
+        pedidosCredito: 0,
+        gastosCantidad: 0,
+        gastosMontoUsd: '0.0000',
+        shiftOpen: false,
+        shiftOpenedAt: null,
+      }
+    }
 
+    const shiftId = Number(shift.id)
     const ventas = await db
       .from('orders')
       .join('order_lines', 'order_lines.order_id', 'orders.id')
       .whereIn('orders.status', [...SALE_STATUSES])
-      .where('orders.order_date', hoy)
+      .where('orders.sales_shift_id', shiftId)
       .select(
         db.raw('COALESCE(SUM(order_lines.quantity - order_lines.returned_quantity), 0) as qty'),
         db.raw(
@@ -438,10 +443,10 @@ export default class DashboardService {
       )
       .first()
 
-    const gastos = await this.gastosDelDia()
-    const legacySalesUsd = await this.sumLegacyOrdersSalesUsd(hoy, hoy)
-    const legacyCreditUsd = await this.sumLegacyOrdersCreditUsd(hoy, hoy)
-    const legacyCreditCount = await this.countLegacyCreditOrders(hoy, hoy)
+    const gastos = await this.gastosDelTurno(shift)
+    const legacySalesUsd = await this.sumLegacyOrdersSalesUsdForShift(shiftId)
+    const legacyCreditUsd = await this.sumLegacyOrdersCreditUsdForShift(shiftId)
+    const legacyCreditCount = await this.countLegacyCreditOrdersForShift(shiftId)
 
     return {
       productosVendidos: Number(ventas?.qty ?? 0),
@@ -450,18 +455,107 @@ export default class DashboardService {
       pedidosCredito: Number(ventas?.pedidos_credito ?? 0) + legacyCreditCount,
       gastosCantidad: gastos.cantidad,
       gastosMontoUsd: gastos.montoUsd.toFixed(4),
+      shiftOpen: true,
+      shiftOpenedAt: shift.openedAt.toISO(),
+    }
+  }
+
+  private async sumLegacyOrdersSalesUsdForShift(
+    shiftId: number,
+    paymentType?: 'CREDIT'
+  ): Promise<number> {
+    const rates = await this.currencyService.getActiveRates()
+    const query = db
+      .from('orders')
+      .leftJoin('order_lines', 'order_lines.order_id', 'orders.id')
+      .whereIn('orders.status', [...SALE_STATUSES])
+      .where('orders.sales_shift_id', shiftId)
+      .whereNull('order_lines.id')
+
+    if (paymentType) {
+      query.where('orders.payment_type', paymentType)
+    }
+
+    const rows = await query.select('orders.total_price as totalPrice')
+    let totalUsd = 0
+    for (const row of rows) {
+      const native = Number(row.totalPrice ?? 0)
+      if (native > 0) {
+        totalUsd += this.currencyService.toUsd(native, 'VES', rates)
+      }
+    }
+    return totalUsd
+  }
+
+  private async sumLegacyOrdersCreditUsdForShift(shiftId: number): Promise<number> {
+    return this.sumLegacyOrdersSalesUsdForShift(shiftId, 'CREDIT')
+  }
+
+  private async countLegacyCreditOrdersForShift(shiftId: number): Promise<number> {
+    const row = await db
+      .from('orders')
+      .leftJoin('order_lines', 'order_lines.order_id', 'orders.id')
+      .whereIn('orders.status', [...SALE_STATUSES])
+      .where('orders.sales_shift_id', shiftId)
+      .whereNull('order_lines.id')
+      .where('orders.payment_type', 'CREDIT')
+      .count('orders.id as total')
+      .first()
+
+    return Number(row?.total ?? 0)
+  }
+
+  private async gastosDelTurno(shift: {
+    openedAt: DateTime
+    closedAt: DateTime | null
+  }): Promise<{ cantidad: number; montoUsd: number }> {
+    const dates = this.salesShiftService.calendarDatesForShift(shift)
+    if (dates.length === 0) {
+      return { cantidad: 0, montoUsd: 0 }
+    }
+
+    const rates = await this.currencyService.getActiveRates()
+    const expenses = await db
+      .from('expenses')
+      .whereIn('date', dates)
+      .select(db.raw('COUNT(*) as qty'), db.raw('COALESCE(SUM(amount_usd), 0) as total_usd'))
+      .first()
+
+    const machineRows = await db
+      .from('machine_expenses')
+      .whereIn('date', dates)
+      .select('amount', 'currency_code')
+
+    const machineUsd = this.sumMachineExpensesUsd(machineRows, rates)
+
+    return {
+      cantidad: Number(expenses?.qty ?? 0) + machineRows.length,
+      montoUsd: Number(expenses?.total_usd ?? 0) + machineUsd,
     }
   }
 
   async productosVendidosDelDia(): Promise<DailyProductSalesResult> {
+    const shift = await this.salesShiftService.current()
     const hoy = todayIsoDate()
 
+    if (!shift) {
+      return {
+        date: hoy,
+        products: [],
+        summary: {
+          productosVendidos: 0,
+          montoProductosUsd: '0.0000',
+        },
+      }
+    }
+
+    const shiftId = Number(shift.id)
     const rows = await db
       .from('orders')
       .join('order_lines', 'order_lines.order_id', 'orders.id')
       .join('catalog_products', 'catalog_products.id', 'order_lines.catalog_product_id')
       .whereIn('orders.status', [...SALE_STATUSES])
-      .where('orders.order_date', hoy)
+      .where('orders.sales_shift_id', shiftId)
       .whereNotNull('order_lines.catalog_product_id')
       .groupBy(
         'catalog_products.id',
@@ -592,14 +686,22 @@ export default class DashboardService {
   }
 
   private async gananciaDelDia(): Promise<GananciaDelDia> {
-    const hoy = todayIsoDate()
+    const shift = await this.salesShiftService.current()
+    if (!shift) {
+      return {
+        montoUsd: '0.0000',
+        gananciaCreditoUsd: '0.0000',
+        porcentajeSobreVentas: 0,
+      }
+    }
 
+    const shiftId = Number(shift.id)
     const row = await db
       .from('orders')
       .join('order_lines', 'order_lines.order_id', 'orders.id')
       .join('catalog_products', 'catalog_products.id', 'order_lines.catalog_product_id')
       .whereIn('orders.status', [...SALE_STATUSES])
-      .where('orders.order_date', hoy)
+      .where('orders.sales_shift_id', shiftId)
       .select(
         db.raw(
           'COALESCE(SUM((order_lines.unit_price_usd - COALESCE(order_lines.cost_usd, catalog_products.cost_usd)) * (order_lines.quantity - order_lines.returned_quantity)), 0) as profit'
@@ -620,7 +722,7 @@ export default class DashboardService {
     const sales = Number(row?.sales ?? 0)
     const creditProfit = Number(row?.credit_profit ?? 0)
     const creditSales = Number(row?.credit_sales ?? 0)
-    const gastos = await this.gastosDelDia()
+    const gastos = await this.gastosDelTurno(shift)
     const netProfit = profit - creditProfit - gastos.montoUsd
     const ventasContado = sales - creditSales
     const porcentaje = ventasContado > 0 ? (netProfit / ventasContado) * 100 : 0

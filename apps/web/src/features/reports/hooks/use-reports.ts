@@ -16,9 +16,10 @@ export function useAccountStatementQuery(
   })
 }
 
-export function useDailyClosingQuery(date?: string) {
+export function useDailyClosingQuery(salesShiftId?: number) {
   return useQuery({
-    queryKey: [...dailyClosingQueryKey, date ?? 'today'],
-    queryFn: () => getDailyClosing(date),
+    queryKey: [...dailyClosingQueryKey, salesShiftId ?? 'none'],
+    queryFn: () => getDailyClosing({ sales_shift_id: salesShiftId }),
+    enabled: salesShiftId != null && salesShiftId > 0,
   })
 }

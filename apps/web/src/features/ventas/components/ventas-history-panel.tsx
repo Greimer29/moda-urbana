@@ -85,7 +85,7 @@ export function VentasHistoryPanel() {
         : 'Sin resultados'
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden">
       <p className="text-muted-foreground shrink-0 text-sm">
         Consultá ventas confirmadas, abrí el detalle del pedido y registrá devoluciones.
       </p>
@@ -166,8 +166,8 @@ export function VentasHistoryPanel() {
           ) : (
             <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto rounded-md border">
               <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  <tr className="border-b text-left">
+                <thead className="bg-background sticky top-0 z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
+                  <tr className="bg-muted border-b text-left">
                     <th className="px-4 py-3 font-medium">Código</th>
                     <th className="px-4 py-3 font-medium">Fecha</th>
                     <th className="px-4 py-3 font-medium">Cliente</th>

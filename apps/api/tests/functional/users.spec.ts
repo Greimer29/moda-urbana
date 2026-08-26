@@ -2,6 +2,7 @@ import User from '#models/user'
 import { allPermissions } from '#permissions/catalog'
 import testUtils from '@adonisjs/core/services/test_utils'
 import { resetTestDatabase } from '#tests/helpers/reset_test_database'
+import { ensureOpenSalesShift } from '#tests/helpers/ensure_open_sales_shift'
 import { DateTime } from 'luxon'
 import { test } from '@japa/runner'
 
@@ -29,6 +30,8 @@ test.group('Users API', (group) => {
   group.each.setup(async () => {
     await resetTestDatabase()
     await seedAdminUser()
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    await ensureOpenSalesShift(user)
   })
 
   test('GET /api/v1/auth/me returns permissions for admin', async ({ client, assert }) => {

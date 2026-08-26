@@ -1,25 +1,36 @@
 import { ArrowLeft, Download, Loader2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { useDailyClosingQuery } from '@/features/reports/hooks/use-reports'
 import type { DailyClosingExpenseItem } from '@/features/reports/types'
+import { useSalesShiftsQuery } from '@/features/ventas/hooks/use-sales-shifts'
+import type { SalesShift } from '@/features/ventas/services/sales-shift-service'
 import { getApiErrorMessage } from '@/lib/api-error'
-import { todayIsoDate } from '@/lib/app-timezone'
 import { cn } from '@/lib/utils'
 
-function formatBusinessDateLabel(date: string) {
-  const [year, month, day] = date.split('-').map(Number)
-  return new Date(year, month - 1, day).toLocaleDateString('es-VE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
+function formatShiftRange(shift: SalesShift) {
+  const opened = new Date(shift.opened_at).toLocaleString('es-VE', {
+    day: '2-digit',
+    month: 'short',
     year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
+  if (!shift.closed_at) {
+    return `${opened} → en curso`
+  }
+  const closed = new Date(shift.closed_at).toLocaleString('es-VE', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  return `${opened} → ${closed}`
 }
 
 function formatConfirmedTime(value: string | null) {
@@ -53,10 +64,26 @@ function SummaryMetric({
 }
 
 export function DashboardDailyClosingPage() {
-  const defaultDate = useMemo(() => todayIsoDate(), [])
-  const [selectedDate, setSelectedDate] = useState(defaultDate)
+  const shiftsQuery = useSalesShiftsQuery({ per_page: 50 })
+  const shifts = shiftsQuery.data?.sales_shifts ?? []
+  const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null)
   const [exporting, setExporting] = useState(false)
-  const { data, isLoading, isError, error, isFetching } = useDailyClosingQuery(selectedDate)
+
+  useEffect(() => {
+    if (selectedShiftId != null) return
+    if (shifts.length === 0) return
+    const open = shifts.find((shift) => shift.status === 'OPEN')
+    setSelectedShiftId(Number(open?.id ?? shifts[0].id))
+  }, [shifts, selectedShiftId])
+
+  const selectedShift = useMemo(
+    () => shifts.find((shift) => Number(shift.id) === selectedShiftId) ?? null,
+    [shifts, selectedShiftId]
+  )
+
+  const { data, isLoading, isError, error, isFetching } = useDailyClosingQuery(
+    selectedShiftId ?? undefined
+  )
 
   async function handleExport() {
     if (!data) return
@@ -84,19 +111,31 @@ export function DashboardDailyClosingPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Cierre del día</h1>
-            <p className="text-muted-foreground text-sm capitalize">
-              {formatBusinessDateLabel(selectedDate)}
+            <p className="text-muted-foreground text-sm">
+              {selectedShift ? formatShiftRange(selectedShift) : 'Elegí un turno para ver el cierre'}
             </p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
-            <div className="flex w-full max-w-xs flex-col gap-1.5">
-              <Label htmlFor="daily-closing-date">Fecha</Label>
-              <Input
-                id="daily-closing-date"
-                type="date"
-                value={selectedDate}
-                onChange={(event) => setSelectedDate(event.target.value)}
-              />
+            <div className="flex w-full max-w-md flex-col gap-1.5">
+              <Label htmlFor="daily-closing-shift">Turno</Label>
+              <select
+                id="daily-closing-shift"
+                className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm"
+                value={selectedShiftId ?? ''}
+                disabled={shiftsQuery.isLoading || shifts.length === 0}
+                onChange={(event) => setSelectedShiftId(Number(event.target.value))}
+              >
+                {shifts.length === 0 ? (
+                  <option value="">Sin turnos registrados</option>
+                ) : (
+                  shifts.map((shift) => (
+                    <option key={shift.id} value={shift.id}>
+                      {formatShiftRange(shift)}
+                      {shift.status === 'OPEN' ? ' (abierto)' : ''}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
             <Button
               type="button"
@@ -112,10 +151,18 @@ export function DashboardDailyClosingPage() {
         </div>
       </div>
 
-      {isLoading ? (
+      {shiftsQuery.isError ? (
+        <p className="text-destructive text-sm whitespace-pre-line">
+          {getApiErrorMessage(shiftsQuery.error)}
+        </p>
+      ) : shifts.length === 0 && !shiftsQuery.isLoading ? (
+        <p className="text-muted-foreground py-24 text-center text-sm">
+          Todavía no hay turnos. Abrí un turno desde Ventas para registrar el cierre.
+        </p>
+      ) : isLoading || shiftsQuery.isLoading ? (
         <div className="text-muted-foreground flex items-center justify-center gap-2 py-24 text-sm">
           <Loader2 className="size-4 animate-spin" />
-          Cargando cierre del día…
+          Cargando cierre del turno…
         </div>
       ) : isError ? (
         <p className="text-destructive text-sm whitespace-pre-line">{getApiErrorMessage(error)}</p>
@@ -129,7 +176,7 @@ export function DashboardDailyClosingPage() {
             <CardHeader>
               <CardTitle className="text-base">Resultado operativo</CardTitle>
               <CardDescription>
-                Ventas contado + abonos cobrados − gastos del día
+                Ventas del turno + abonos − gastos en las fechas del turno
                 {isFetching ? ' · actualizando…' : null}
               </CardDescription>
             </CardHeader>
@@ -142,25 +189,43 @@ export function DashboardDailyClosingPage() {
           </Card>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <SummaryMetric label="Ventas netas" amountUsd={data.summary.net_sales_usd} detail={`${data.summary.tickets_count} tickets · ${data.summary.units_sold} uds.`} />
+            <SummaryMetric
+              label="Ventas netas"
+              amountUsd={data.summary.net_sales_usd}
+              detail={`${data.summary.tickets_count} tickets · ${data.summary.units_sold} uds.`}
+            />
             <SummaryMetric label="Ventas contado" amountUsd={data.summary.cash_sales_usd} />
-            <SummaryMetric label="Ventas crédito" amountUsd={data.summary.credit_sales_usd} detail={`${data.summary.credit_orders_count} pedidos`} />
-            <SummaryMetric label="Abonos cobrados" amountUsd={data.summary.payments_total_usd} detail={`${data.summary.payments_count} pagos`} />
+            <SummaryMetric
+              label="Ventas crédito"
+              amountUsd={data.summary.credit_sales_usd}
+              detail={`${data.summary.credit_orders_count} pedidos`}
+            />
+            <SummaryMetric
+              label="Abonos cobrados"
+              amountUsd={data.summary.payments_total_usd}
+              detail={`${data.summary.payments_count} pagos`}
+            />
             <SummaryMetric label="Devoluciones" amountUsd={data.summary.returns_usd} />
             <SummaryMetric label="Ganancia" amountUsd={data.summary.profit_usd} />
-            <SummaryMetric label="Gastos" amountUsd={data.summary.expenses_total_usd} detail={`${data.summary.expenses_count} registros`} />
+            <SummaryMetric
+              label="Gastos"
+              amountUsd={data.summary.expenses_total_usd}
+              detail={`${data.summary.expenses_count} registros`}
+            />
             <SummaryMetric label="Ventas brutas" amountUsd={data.summary.gross_sales_usd} />
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Tickets del día</CardTitle>
+                <CardTitle className="text-base">Tickets del turno</CardTitle>
                 <CardDescription>{data.orders.length} ventas con monto neto</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {data.orders.length === 0 ? (
-                  <p className="text-muted-foreground py-8 text-center text-sm">No hay ventas este día.</p>
+                  <p className="text-muted-foreground py-8 text-center text-sm">
+                    No hay ventas en este turno.
+                  </p>
                 ) : (
                   data.orders.map((order) => {
                     const buyer = order.customer_name ?? order.guest_name ?? 'Cliente'
@@ -203,11 +268,13 @@ export function DashboardDailyClosingPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Abonos</CardTitle>
-                  <CardDescription>Cobranza registrada en la fecha</CardDescription>
+                  <CardDescription>Cobranza en las fechas del turno</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {data.payments.length === 0 ? (
-                    <p className="text-muted-foreground py-8 text-center text-sm">No hay abonos este día.</p>
+                    <p className="text-muted-foreground py-8 text-center text-sm">
+                      No hay abonos en este turno.
+                    </p>
                   ) : (
                     data.payments.map((payment) => (
                       <div
@@ -236,11 +303,13 @@ export function DashboardDailyClosingPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Gastos</CardTitle>
-                  <CardDescription>Egresos del día</CardDescription>
+                  <CardDescription>Egresos en las fechas del turno</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {data.expenses.length === 0 ? (
-                    <p className="text-muted-foreground py-8 text-center text-sm">No hay gastos este día.</p>
+                    <p className="text-muted-foreground py-8 text-center text-sm">
+                      No hay gastos en este turno.
+                    </p>
                   ) : (
                     data.expenses.map((item) => (
                       <div

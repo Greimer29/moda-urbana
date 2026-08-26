@@ -351,5 +351,8 @@ export async function exportDailyClosingExcel(data: DailyClosingResult) {
     ['TOTAL', '', '', '', toMoney(data.summary.credit_sales_usd)]
   )
 
-  await downloadWorkbook(workbook, `cierre-${data.date}.xlsx`)
+  const shiftSuffix = data.shift
+    ? `turno-${data.shift.id}`
+    : data.date
+  await downloadWorkbook(workbook, `cierre-${shiftSuffix}.xlsx`)
 }

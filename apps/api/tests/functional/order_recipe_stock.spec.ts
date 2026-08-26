@@ -8,6 +8,7 @@ import CatalogProduct from '#models/catalog_product'
 import Formula from '#models/formula'
 import FormulaMaterial from '#models/formula_material'
 import User from '#models/user'
+import { ensureOpenSalesShift } from '#tests/helpers/ensure_open_sales_shift'
 import { NOTA_FORZADO_SIN_STOCK, RECETA_VACIA_WARNING } from '#services/order_stock'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
@@ -30,6 +31,7 @@ async function resetDatabase() {
   await db.from('purchases').delete()
   await db.from('order_materials').delete()
   await db.from('orders').delete()
+  await db.from('sales_shifts').delete()
   await db.from('machine_expenses').delete()
   await db.from('materials').delete()
   await db.from('machines').delete()
@@ -91,6 +93,8 @@ test.group('Order receta y stock API', (group) => {
   group.each.setup(async () => {
     await resetDatabase()
     await seedAdminUser()
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    await ensureOpenSalesShift(user)
   })
 
   test('POST /api/v1/orders/:id/materials adds recipe item in DRAFT', async ({ client }) => {

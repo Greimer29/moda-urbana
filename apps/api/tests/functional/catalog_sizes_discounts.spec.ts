@@ -7,6 +7,7 @@ import OrderLine from '#models/order_line'
 import User from '#models/user'
 import testUtils from '@adonisjs/core/services/test_utils'
 import { resetTestDatabase } from '#tests/helpers/reset_test_database'
+import { ensureOpenSalesShift } from '#tests/helpers/ensure_open_sales_shift'
 import { DateTime } from 'luxon'
 import { test } from '@japa/runner'
 
@@ -41,6 +42,8 @@ test.group('Catalog sizes and sale discounts', (group) => {
     await resetTestDatabase()
     await seedAdminUser()
     await seedCategory()
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    await ensureOpenSalesShift(user)
   })
 
   test('creates product with sizes and exposes has_sizes + total stock', async ({

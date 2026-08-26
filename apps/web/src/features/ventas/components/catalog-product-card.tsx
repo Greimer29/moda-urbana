@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
-import { ChevronDown, DollarSign, Package, Pencil, Tag, Trash2 } from 'lucide-react'
+import { ChevronDown, DollarSign, Package, Pencil, Tag, Trash2, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { PublicImage } from '@/components/public-image'
@@ -133,7 +133,7 @@ export function CatalogProductCard({
   return (
     <article
       className={cn(
-        'group relative flex h-full flex-col overflow-visible rounded-xl border bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-shadow hover:shadow-md',
+        '@container group relative flex h-full flex-col overflow-visible rounded-xl border bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-shadow hover:shadow-md',
         cardAction && 'cursor-pointer'
       )}
       onClick={cardAction}
@@ -288,35 +288,57 @@ export function CatalogProductCard({
           </p>
         </div>
 
-        <div className="mt-auto space-y-1.5 border-t pt-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground inline-flex items-center gap-1.5 text-[11px]">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-violet-50 text-violet-600">
-                <DollarSign className="size-3" />
+        <div className="mt-auto min-w-0 space-y-[clamp(0.25rem,2cqi,0.375rem)] border-t pt-[clamp(0.25rem,2cqi,0.5rem)]">
+          <div className="grid min-h-[clamp(2rem,18cqi,2.75rem)] w-full grid-cols-2 gap-[clamp(0.25rem,2.5cqi,0.5rem)] border-b border-slate-100 pb-[clamp(0.25rem,2cqi,0.5rem)]">
+            <div className="flex min-h-0 min-w-0 items-center gap-[clamp(0.25rem,2.5cqi,0.5rem)]">
+              <span className="flex size-[clamp(1.25rem,13cqi,2rem)] shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+                <DollarSign className="size-[clamp(0.625rem,6.5cqi,1rem)]" />
               </span>
-              Costo
-            </span>
-            <span className="inline-flex items-baseline gap-1.5">
-              <DisplayMoneyFromUsd
-                amountUsd={product.cost_usd}
-                size="sm"
-                className="text-[11px] font-normal [&>span]:text-[11px] [&>span]:font-normal"
-              />
-              {profitMargin !== null ? (
-                <span
-                  className={cn(
-                    'text-[10px] font-medium tabular-nums',
-                    profitMarginIsNegative(profitMargin) && 'text-destructive',
-                    profitMargin > 0 && 'text-emerald-700'
-                  )}
-                >
-                  {formatSignedProfitMarginPercent(profitMargin)}
-                </span>
-              ) : null}
-            </span>
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <p className="text-muted-foreground truncate text-[clamp(0.5rem,2.2cqi,0.625rem)] leading-tight">
+                  Costo
+                </p>
+                <DisplayMoneyFromUsd
+                  amountUsd={product.cost_usd}
+                  className="block truncate text-[clamp(0.625rem,3.2cqi,0.875rem)] leading-tight font-semibold text-slate-900"
+                />
+              </div>
+            </div>
+
+            <div className="flex min-h-0 min-w-0 items-center gap-[clamp(0.25rem,2.5cqi,0.5rem)]">
+              <span
+                className={cn(
+                  'flex size-[clamp(1.25rem,13cqi,2rem)] shrink-0 items-center justify-center rounded-lg',
+                  profitMargin !== null && profitMarginIsNegative(profitMargin)
+                    ? 'bg-red-100 text-red-600'
+                    : 'bg-emerald-100 text-emerald-600'
+                )}
+              >
+                <TrendingUp className="size-[clamp(0.625rem,6.5cqi,1rem)]" />
+              </span>
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <p className="text-muted-foreground truncate text-[clamp(0.5rem,2.2cqi,0.625rem)] leading-tight">
+                  Margen
+                </p>
+                {profitMargin !== null ? (
+                  <span
+                    className={cn(
+                      'block truncate text-[clamp(0.625rem,3.2cqi,0.875rem)] leading-tight font-semibold tabular-nums',
+                      profitMarginIsNegative(profitMargin) ? 'text-destructive' : 'text-emerald-700'
+                    )}
+                  >
+                    {formatSignedProfitMarginPercent(profitMargin)}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground block truncate text-[clamp(0.625rem,3.2cqi,0.875rem)] leading-tight font-semibold">
+                    —
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-end justify-between gap-2">
+          <div className="flex min-w-0 items-end justify-between gap-[clamp(0.25rem,2cqi,0.5rem)]">
             <div className="min-w-0 flex-1">
               {belowCost ? (
                 <p className="mb-0.5 text-[10px] font-medium text-destructive">

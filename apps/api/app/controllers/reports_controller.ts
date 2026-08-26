@@ -16,10 +16,21 @@ export default class ReportsController {
 
   async dailyClosing({ request, serialize }: HttpContext) {
     const filters = await request.validateUsing(dailyClosingValidator)
-    const result = await this.dailyClosingService.generar(filters.date)
+    const result = await this.dailyClosingService.generar({
+      salesShiftId: filters.sales_shift_id,
+      date: filters.date,
+    })
 
     return serialize({
       date: result.date,
+      shift: result.shift
+        ? {
+            id: result.shift.id,
+            opened_at: result.shift.openedAt,
+            closed_at: result.shift.closedAt,
+            status: result.shift.status,
+          }
+        : null,
       summary: {
         date: result.summary.date,
         tickets_count: result.summary.ticketsCount,

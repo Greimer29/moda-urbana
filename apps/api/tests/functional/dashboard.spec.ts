@@ -12,6 +12,7 @@ import Formula from '#models/formula'
 import FormulaMaterial from '#models/formula_material'
 import Order from '#models/order'
 import OrderLine from '#models/order_line'
+import SalesShift from '#models/sales_shift'
 import Currency from '#models/currency'
 import testUtils from '@adonisjs/core/services/test_utils'
 import { resetTestDatabase } from '#tests/helpers/reset_test_database'
@@ -32,6 +33,17 @@ async function seedAdminUser() {
       active: true,
     }
   )
+}
+
+async function openShiftFor(user: User) {
+  return SalesShift.create({
+    openedAt: DateTime.now(),
+    closedAt: null,
+    openedByUserId: Number(user.id),
+    closedByUserId: null,
+    status: 'OPEN',
+    notes: null,
+  })
 }
 
 test.group('Dashboard API', (group) => {
@@ -196,6 +208,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
+    const shift = await openShiftFor(user)
     const customer = await Customer.create({
       name: 'Cliente Dashboard',
       active: true,
@@ -219,6 +232,7 @@ test.group('Dashboard API', (group) => {
       status: 'DELIVERED',
       totalPrice: '24.0000',
       confirmedAt: DateTime.now(),
+      salesShiftId: Number(shift.id),
     })
     await OrderLine.create({
       orderId: order.id,
@@ -252,6 +266,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
+    const shift = await openShiftFor(user)
     const material = await Material.create({
       code: 'MAT-DASH-FORM',
       name: 'Material dashboard',
@@ -305,7 +320,8 @@ test.group('Dashboard API', (group) => {
       status: 'DELIVERED',
       totalPrice: '24.0000',
       confirmedAt: DateTime.now(),
-    })
+      salesShiftId: Number(shift.id),
+      })
     await OrderLine.create({
       orderId: order.id,
       catalogProductId: product.id,
@@ -332,6 +348,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
+    const shift = await openShiftFor(user)
     const hoy = todayIsoDate()
     const customer = await Customer.create({
       name: 'Cliente Ganancia',
@@ -356,7 +373,8 @@ test.group('Dashboard API', (group) => {
       status: 'DELIVERED',
       totalPrice: '24.0000',
       confirmedAt: DateTime.now(),
-    })
+      salesShiftId: Number(shift.id),
+      })
     await OrderLine.create({
       orderId: order.id,
       catalogProductId: product.id,
@@ -485,11 +503,12 @@ test.group('Dashboard API', (group) => {
     assert.equal(body.data.machineExpensesMonth.totalAmount, '100.00')
   })
 
-  test('GET /api/v1/dashboard/overview uses order_date for sales of the day', async ({
+  test('GET /api/v1/dashboard/overview uses open shift for sales of the day', async ({
     client,
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
+    const shift = await openShiftFor(user)
     const hoy = todayIsoDate()
     const ayer = nowInAppZone().minus({ days: 1 }).toISODate()!
     const customer = await Customer.create({ name: 'Cliente Fecha', active: true })
@@ -513,6 +532,7 @@ test.group('Dashboard API', (group) => {
       status: 'DELIVERED',
       totalPrice: '10.0000',
       confirmedAt: DateTime.now().minus({ days: 2 }),
+      salesShiftId: Number(shift.id),
     })
     await OrderLine.create({
       orderId: orderHoy.id,
@@ -534,7 +554,8 @@ test.group('Dashboard API', (group) => {
       status: 'DELIVERED',
       totalPrice: '10.0000',
       confirmedAt: DateTime.now(),
-    })
+      salesShiftId: Number(shift.id),
+      })
     await OrderLine.create({
       orderId: orderAyer.id,
       catalogProductId: product.id,
@@ -565,6 +586,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
+    const shift = await openShiftFor(user)
     const hoy = todayIsoDate()
     const customer = await Customer.create({ name: 'Cliente Costo', active: true })
     const product = await CatalogProduct.create({
@@ -587,7 +609,8 @@ test.group('Dashboard API', (group) => {
       status: 'DELIVERED',
       totalPrice: '20.0000',
       confirmedAt: DateTime.now(),
-    })
+      salesShiftId: Number(shift.id),
+      })
     await OrderLine.create({
       orderId: order.id,
       catalogProductId: product.id,
@@ -616,6 +639,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
+    const shift = await openShiftFor(user)
     const hoy = todayIsoDate()
     const mes = nowInAppZone().toFormat('yyyy-MM')
     const customer = await Customer.create({ name: 'Cliente coherencia', active: true })
@@ -639,6 +663,7 @@ test.group('Dashboard API', (group) => {
       status: 'DELIVERED',
       totalPrice: '60.0000',
       confirmedAt: DateTime.now().minus({ days: 3 }),
+      salesShiftId: Number(shift.id),
     }).then(async (order) => {
       await OrderLine.create({
         orderId: order.id,
@@ -683,6 +708,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
+    const shift = await openShiftFor(user)
     const hoy = todayIsoDate()
     const customer = await Customer.create({
       name: 'Cliente mixto coherencia',
@@ -712,7 +738,8 @@ test.group('Dashboard API', (group) => {
       balanceUsd: '0.0000',
       totalPrice: '60.0000',
       confirmedAt: DateTime.now(),
-    })
+      salesShiftId: Number(shift.id),
+      })
     await OrderLine.create({
       orderId: cashOrder.id,
       catalogProductId: product.id,
@@ -735,6 +762,7 @@ test.group('Dashboard API', (group) => {
       amountPaidUsd: '0.0000',
       balanceUsd: '40.0000',
       creditDueDate: nowInAppZone().plus({ days: 30 }),
+      salesShiftId: Number(shift.id),
       totalPrice: '40.0000',
       confirmedAt: DateTime.now(),
     })
@@ -777,6 +805,7 @@ test.group('Dashboard API', (group) => {
     assert,
   }) => {
     const user = await User.findByOrFail('email', TEST_EMAIL)
+    const shift = await openShiftFor(user)
     const customer = await Customer.create({
       name: 'Cliente crédito dashboard',
       creditDays: 30,
@@ -805,7 +834,8 @@ test.group('Dashboard API', (group) => {
       balanceUsd: '0.0000',
       totalPrice: '50.0000',
       confirmedAt: DateTime.now(),
-    })
+      salesShiftId: Number(shift.id),
+      })
     await OrderLine.create({
       orderId: cashOrder.id,
       catalogProductId: product.id,
@@ -828,6 +858,7 @@ test.group('Dashboard API', (group) => {
       amountPaidUsd: '0.0000',
       balanceUsd: '50.0000',
       creditDueDate: nowInAppZone().plus({ days: 30 }),
+      salesShiftId: Number(shift.id),
       totalPrice: '50.0000',
       confirmedAt: DateTime.now(),
     })

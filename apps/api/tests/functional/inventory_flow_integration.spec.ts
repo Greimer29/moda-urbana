@@ -6,6 +6,7 @@ import Supplier from '#models/supplier'
 import User from '#models/user'
 import testUtils from '@adonisjs/core/services/test_utils'
 import db from '@adonisjs/lucid/services/db'
+import { ensureOpenSalesShift } from '#tests/helpers/ensure_open_sales_shift'
 import { test } from '@japa/runner'
 
 const TEST_EMAIL = 'test-inventory-flow@hebra.local'
@@ -24,6 +25,7 @@ async function resetDatabase() {
   await db.from('purchases').delete()
   await db.from('order_materials').delete()
   await db.from('orders').delete()
+  await db.from('sales_shifts').delete()
   await db.from('machine_expenses').delete()
   await db.from('materials').delete()
   await db.from('machines').delete()
@@ -111,6 +113,8 @@ test.group('Inventory flow integration — compras, ventas, fórmulas, materiale
   group.each.setup(async () => {
     await resetDatabase()
     await seedAdminUser()
+    const user = await User.findByOrFail('email', TEST_EMAIL)
+    await ensureOpenSalesShift(user)
   })
 
   test('purchase confirm increases material stock reflected in detail and list APIs', async ({

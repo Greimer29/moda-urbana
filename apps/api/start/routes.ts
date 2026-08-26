@@ -10,6 +10,7 @@ import { controllers } from '#generated/controllers'
 const FormulasController = () => import('#controllers/formulas_controller')
 const CatalogProductsController = () => import('#controllers/catalog_products_controller')
 const SalesController = () => import('#controllers/sales_controller')
+const SalesShiftsController = () => import('#controllers/sales_shifts_controller')
 const ExpensesController = () => import('#controllers/expenses_controller')
 const SettingsController = () => import('#controllers/settings_controller')
 const AccountsController = () => import('#controllers/accounts_controller')
@@ -184,6 +185,11 @@ router
         router.post('users', [UsersController, 'store'])
         router.put('users/:id', [UsersController, 'update'])
         router.patch('users/:id/active', [UsersController, 'updateActive'])
+
+        router.get('sales-shifts/current', [SalesShiftsController, 'current'])
+        router.get('sales-shifts', [SalesShiftsController, 'index'])
+        router.post('sales-shifts/open', [SalesShiftsController, 'open'])
+        router.post('sales-shifts/:id/close', [SalesShiftsController, 'close'])
 
         router.get('sales', [SalesController, 'index'])
         router.get('sales/:id', [SalesController, 'show'])

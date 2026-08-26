@@ -70,6 +70,8 @@
 7. **Los gastos de máquinas NO afectan el inventario.** Aunque un "insumo" suene parecido a un "material", los gastos de máquina (aceite, agujas, repuestos) se registran como `GastoMaquina` y NO generan `MovimientoInventario`. Son flujos financieros distintos y separados.
 8. **El `estado` de una `Maquina` no cambia automáticamente al registrar gastos.** Es un campo informativo que el dueño actualiza manualmente cuando lo considera necesario.
 9. **Receta vacía al transicionar a `EN_PRODUCCION`:** si un pedido no tiene ningún `PedidoMaterial` cargado al pasar de `CONFIRMADO` a `EN_PRODUCCION`, la transición es **válida y procede normalmente** (HTTP 200, NO 422). No se generan movimientos de inventario (consistente con la regla 3: "movimientos por cada `PedidoMaterial`"; con cero materiales, cero movimientos). La respuesta exitosa incluye `warnings: [{ code: "RECETA_VACIA", message: "..." }]` y la UI muestra un banner persistente mientras el pedido siga en ese estado. Esta política es intencionalmente permisiva en Mes 1; endurecerla a 422 queda evaluado en ciclos futuros (ver `BACKLOG.md` item 002).
+10. **Turno de ventas (`SalesShift`):** para confirmar una venta (`DRAFT → CONFIRMED` o `DRAFT → DELIVERED`) debe existir un turno con `status = OPEN`. La venta queda enlazada con `orders.sales_shift_id`. El cierre diario agrupa por turno (no por medianoche del calendario): una venta a las 00:30 con turno abierto desde el día anterior pertenece a ese turno.
+11. **Un solo turno abierto:** no puede haber más de un `SalesShift` con `status = OPEN` a la vez en la tienda.
 
 ## Entidades
 
@@ -447,6 +449,19 @@ En `order_lines` (además de cantidad/precio):
 | `unit_price_usd`           | puede enviarse desde el cliente en DRAFT (descuento al vender); el precio de catálogo no cambia |
 
 `orders.notes` ya existía; la UI de Ventas lo expone como nota de factura.
+
+### Turno de ventas (`SalesShift`)
+
+Tabla `sales_shifts`: ventana operativa de ventas (puede cruzar medianoche).
+
+| Campo | Tipo | Notas |
+|-------|------|--------|
+| `opened_at` / `closed_at` | timestamp | `closed_at` null mientras `OPEN` |
+| `opened_by_user_id` / `closed_by_user_id` | FK users | Restrict |
+| `status` | `OPEN` \| `CLOSED` | como máximo un `OPEN` |
+| `notes` | text nullable | |
+
+`orders.sales_shift_id` (nullable FK): se asigna al confirmar la venta. Órdenes históricas sin turno no aparecen en cierres por turno.
 
 ### Sin fórmula (`formula_id` NULL)
 

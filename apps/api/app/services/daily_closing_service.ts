@@ -1,10 +1,24 @@
 import CurrencyService from '#services/currency_service'
 import CustomerPayment from '#models/customer_payment'
 import Order from '#models/order'
+import SalesShift from '#models/sales_shift'
+import SalesShiftService from '#services/sales_shift_service'
+import TurnoNoEncontradoException from '#exceptions/turno_no_encontrado_exception'
 import { todayIsoDate } from '#utils/app_timezone'
 import db from '@adonisjs/lucid/services/db'
 
 const SALE_STATUSES = ['CONFIRMED', 'IN_PRODUCTION', 'DELIVERED'] as const
+
+type SalesScope =
+  | { kind: 'shift'; shiftId: number; labelDate: string }
+  | { kind: 'date'; date: string }
+
+export type DailyClosingShiftMeta = {
+  id: number
+  openedAt: string
+  closedAt: string | null
+  status: 'OPEN' | 'CLOSED'
+}
 
 export type DailyClosingSummary = {
   date: string
@@ -87,6 +101,7 @@ export type DailyClosingSaleLineItem = {
 
 export type DailyClosingResult = {
   date: string
+  shift: DailyClosingShiftMeta | null
   summary: DailyClosingSummary
   orders: DailyClosingOrderItem[]
   payments: DailyClosingPaymentItem[]
@@ -95,23 +110,56 @@ export type DailyClosingResult = {
   saleLines: DailyClosingSaleLineItem[]
 }
 
+export type DailyClosingInput = {
+  salesShiftId?: number
+  date?: string
+}
+
 export default class DailyClosingService {
   private currencyService = new CurrencyService()
+  private salesShiftService = new SalesShiftService()
 
-  async generar(date?: string): Promise<DailyClosingResult> {
-    const businessDate = date ?? todayIsoDate()
+  async generar(input: DailyClosingInput = {}): Promise<DailyClosingResult> {
     const rates = await this.currencyService.getActiveRates()
+    let scope: SalesScope
+    let shiftMeta: DailyClosingShiftMeta | null = null
+    let paymentExpenseDates: string[]
+
+    if (input.salesShiftId) {
+      const shift = await SalesShift.find(input.salesShiftId)
+      if (!shift) {
+        throw new TurnoNoEncontradoException()
+      }
+
+      const openedIso = shift.openedAt.toISO()!
+      scope = {
+        kind: 'shift',
+        shiftId: Number(shift.id),
+        labelDate: openedIso.slice(0, 10),
+      }
+      shiftMeta = {
+        id: Number(shift.id),
+        openedAt: openedIso,
+        closedAt: shift.closedAt?.toISO() ?? null,
+        status: shift.status,
+      }
+      paymentExpenseDates = this.salesShiftService.calendarDatesForShift(shift)
+    } else {
+      const businessDate = input.date ?? todayIsoDate()
+      scope = { kind: 'date', date: businessDate }
+      paymentExpenseDates = [businessDate]
+    }
 
     const [salesRow, orders, payments, expenses, products, saleLines] = await Promise.all([
-      this.queryCatalogSales(businessDate),
-      this.listOrders(businessDate, rates),
-      this.listPayments(businessDate),
-      this.listExpenses(businessDate, rates),
-      this.listProducts(businessDate),
-      this.listSaleLines(businessDate, rates),
+      this.queryCatalogSales(scope),
+      this.listOrders(scope, rates),
+      this.listPayments(paymentExpenseDates),
+      this.listExpenses(paymentExpenseDates, rates),
+      this.listProducts(scope),
+      this.listSaleLines(scope, rates),
     ])
 
-    const legacyTotals = await this.legacyTotals(businessDate, rates)
+    const legacyTotals = await this.legacyTotals(scope, rates)
 
     const unitsSold = Number(salesRow?.unitsSold ?? 0)
     const netCatalogUsd = Number(salesRow?.netSalesUsd ?? 0)
@@ -135,11 +183,13 @@ export default class DailyClosingService {
     const paymentsTotalUsd = payments.reduce((sum, payment) => sum + Number(payment.amountUsd), 0)
     const expensesTotalUsd = expenses.reduce((sum, expense) => sum + Number(expense.amountUsd), 0)
     const operatingNetUsd = cashSalesUsd + paymentsTotalUsd - expensesTotalUsd
+    const labelDate = scope.kind === 'shift' ? scope.labelDate : scope.date
 
     return {
-      date: businessDate,
+      date: labelDate,
+      shift: shiftMeta,
       summary: {
-        date: businessDate,
+        date: labelDate,
         ticketsCount,
         unitsSold,
         grossSalesUsd: grossSalesUsd.toFixed(4),
@@ -163,13 +213,26 @@ export default class DailyClosingService {
     }
   }
 
-  private async queryCatalogSales(date: string) {
-    return db
+  private applySalesScope(
+    query: ReturnType<typeof db.from>,
+    scope: SalesScope
+  ): ReturnType<typeof db.from> {
+    if (scope.kind === 'shift') {
+      return query.where('orders.sales_shift_id', scope.shiftId)
+    }
+    return query.where('orders.order_date', scope.date)
+  }
+
+  private async queryCatalogSales(scope: SalesScope) {
+    const query = db
       .from('orders')
       .join('order_lines', 'order_lines.order_id', 'orders.id')
       .leftJoin('catalog_products', 'catalog_products.id', 'order_lines.catalog_product_id')
       .whereIn('orders.status', [...SALE_STATUSES])
-      .where('orders.order_date', date)
+
+    this.applySalesScope(query, scope)
+
+    return query
       .select(
         db.raw(
           'COALESCE(SUM(order_lines.quantity - order_lines.returned_quantity), 0) as unitsSold'
@@ -202,14 +265,20 @@ export default class DailyClosingService {
       .first()
   }
 
-  private async legacyTotals(date: string, rates: Record<string, number>) {
-    const rows = await db
+  private async legacyTotals(scope: SalesScope, rates: Record<string, number>) {
+    const query = db
       .from('orders')
       .leftJoin('order_lines', 'order_lines.order_id', 'orders.id')
       .whereIn('orders.status', [...SALE_STATUSES])
-      .where('orders.order_date', date)
       .whereNull('order_lines.id')
-      .select('orders.id', 'orders.total_price as totalPrice', 'orders.payment_type as paymentType')
+
+    this.applySalesScope(query, scope)
+
+    const rows = await query.select(
+      'orders.id',
+      'orders.total_price as totalPrice',
+      'orders.payment_type as paymentType'
+    )
 
     let grossUsd = 0
     let netUsd = 0
@@ -240,10 +309,19 @@ export default class DailyClosingService {
     return { grossUsd, netUsd, cashUsd, creditUsd, creditOrdersCount, ticketsCount }
   }
 
-  private async listOrders(date: string, rates: Record<string, number>): Promise<DailyClosingOrderItem[]> {
-    const orders = await Order.query()
-      .whereIn('status', [...SALE_STATUSES])
-      .where('orderDate', date)
+  private async listOrders(
+    scope: SalesScope,
+    rates: Record<string, number>
+  ): Promise<DailyClosingOrderItem[]> {
+    const query = Order.query().whereIn('status', [...SALE_STATUSES])
+
+    if (scope.kind === 'shift') {
+      query.where('salesShiftId', scope.shiftId)
+    } else {
+      query.where('orderDate', scope.date)
+    }
+
+    const orders = await query
       .preload('customer')
       .preload('orderLines')
       .orderBy('confirmedAt', 'desc')
@@ -286,9 +364,13 @@ export default class DailyClosingService {
     return items
   }
 
-  private async listPayments(date: string): Promise<DailyClosingPaymentItem[]> {
+  private async listPayments(dates: string[]): Promise<DailyClosingPaymentItem[]> {
+    if (dates.length === 0) {
+      return []
+    }
+
     const payments = await CustomerPayment.query()
-      .where('date', date)
+      .whereIn('date', dates)
       .preload('customer')
       .preload('order')
       .preload('account')
@@ -304,19 +386,23 @@ export default class DailyClosingService {
   }
 
   private async listExpenses(
-    date: string,
+    dates: string[],
     rates: Record<string, number>
   ): Promise<DailyClosingExpenseItem[]> {
+    if (dates.length === 0) {
+      return []
+    }
+
     const expenseRows = await db
       .from('expenses')
-      .where('date', date)
+      .whereIn('date', dates)
       .select('id', 'description', 'amount_usd as amountUsd')
       .orderBy('amount_usd', 'desc')
 
     const machineRows = await db
       .from('machine_expenses')
       .join('machines', 'machines.id', 'machine_expenses.machine_id')
-      .where('machine_expenses.date', date)
+      .whereIn('machine_expenses.date', dates)
       .select(
         'machine_expenses.id',
         'machine_expenses.description',
@@ -354,14 +440,17 @@ export default class DailyClosingService {
     return items.sort((a, b) => Number(b.amountUsd) - Number(a.amountUsd))
   }
 
-  private async listProducts(date: string): Promise<DailyClosingProductItem[]> {
-    const rows = await db
+  private async listProducts(scope: SalesScope): Promise<DailyClosingProductItem[]> {
+    const query = db
       .from('orders')
       .join('order_lines', 'order_lines.order_id', 'orders.id')
       .join('catalog_products', 'catalog_products.id', 'order_lines.catalog_product_id')
       .whereIn('orders.status', [...SALE_STATUSES])
-      .where('orders.order_date', date)
       .whereNotNull('order_lines.catalog_product_id')
+
+    this.applySalesScope(query, scope)
+
+    const rows = await query
       .groupBy(
         'catalog_products.id',
         'catalog_products.name',
@@ -406,16 +495,19 @@ export default class DailyClosingService {
   }
 
   private async listSaleLines(
-    date: string,
+    scope: SalesScope,
     rates: Record<string, number>
   ): Promise<DailyClosingSaleLineItem[]> {
-    const rows = await db
+    const linesQuery = db
       .from('orders')
       .join('order_lines', 'order_lines.order_id', 'orders.id')
       .leftJoin('catalog_products', 'catalog_products.id', 'order_lines.catalog_product_id')
       .leftJoin('customers', 'customers.id', 'orders.customer_id')
       .whereIn('orders.status', [...SALE_STATUSES])
-      .where('orders.order_date', date)
+
+    this.applySalesScope(linesQuery, scope)
+
+    const rows = await linesQuery
       .orderBy('orders.confirmed_at', 'desc')
       .orderBy('orders.id', 'desc')
       .orderBy('order_lines.id', 'asc')
@@ -479,13 +571,16 @@ export default class DailyClosingService {
       })
     }
 
-    const legacyOrders = await db
+    const legacyQuery = db
       .from('orders')
       .leftJoin('order_lines', 'order_lines.order_id', 'orders.id')
       .leftJoin('customers', 'customers.id', 'orders.customer_id')
       .whereIn('orders.status', [...SALE_STATUSES])
-      .where('orders.order_date', date)
       .whereNull('order_lines.id')
+
+    this.applySalesScope(legacyQuery, scope)
+
+    const legacyOrders = await legacyQuery
       .select(
         'orders.id as orderId',
         'orders.code as orderCode',

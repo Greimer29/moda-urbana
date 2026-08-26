@@ -23,6 +23,8 @@ export type VentasDelDia = {
   pedidosCredito: number
   gastosCantidad: number
   gastosMontoUsd: string
+  shiftOpen?: boolean
+  shiftOpenedAt?: string | null
 }
 
 export type GananciaDelDia = {

@@ -27,6 +27,7 @@ import PedidoLineaNoEncontradaException from '#exceptions/pedido_linea_no_encont
 import DevolucionCantidadInvalidaException from '#exceptions/devolucion_cantidad_invalida_exception'
 import OrderCodigoService from '#services/order_code_service'
 import CatalogProductSize from '#models/catalog_product_size'
+import SalesShiftService from '#services/sales_shift_service'
 import {
   evaluarConsumoVsStock,
   formatCantidadMovimiento,
@@ -168,6 +169,7 @@ export default class OrderService {
   private codeService = new OrderCodigoService()
   private productInventoryService = new ProductInventoryService()
   private catalogProductStockService = new CatalogProductStockService()
+  private salesShiftService = new SalesShiftService()
 
   async listar(filters: ListOrdersFilters = {}): Promise<ModelPaginatorContract<Order>> {
     const page = filters.page ?? 1
@@ -592,18 +594,22 @@ export default class OrderService {
       const warnings = [...result.warnings]
 
       if (statusActual === 'DRAFT' && nuevoEstado === 'CONFIRMED') {
+        const shift = await this.salesShiftService.requireOpen(trx)
         await this.assertStockLineasCatalogo(order, trx)
         await this.congelarCostoLineas(order, trx)
         await this.procesarDescuentoStockProductos(order, trx)
         order.confirmedAt = DateTime.now()
+        order.salesShiftId = Number(shift.id)
         await this.aplicarPagoAlConfirmar(order, options.payment_type ?? 'CASH', trx)
       }
 
       if (statusActual === 'DRAFT' && nuevoEstado === 'DELIVERED') {
+        const shift = await this.salesShiftService.requireOpen(trx)
         await this.assertStockLineasCatalogo(order, trx)
         await this.congelarCostoLineas(order, trx)
         await this.procesarDescuentoStockProductos(order, trx)
         order.confirmedAt = DateTime.now()
+        order.salesShiftId = Number(shift.id)
         await this.aplicarPagoAlConfirmar(order, options.payment_type ?? 'CASH', trx)
         await this.procesarTransicionAProduccion(order, warnings, options.force ?? false, trx)
       }
@@ -914,12 +920,14 @@ export default class OrderService {
           }
 
           if (locked.status === 'DRAFT') {
+            const shift = await this.salesShiftService.requireOpen(trx)
             await locked.load('customer')
             await this.assertStockLineasCatalogo(locked, trx)
             await this.congelarCostoLineas(locked, trx)
             await this.procesarDescuentoStockProductos(locked, trx)
             locked.status = 'CONFIRMED'
             locked.confirmedAt = DateTime.now()
+            locked.salesShiftId = Number(shift.id)
             const paymentType: 'CASH' | 'CREDIT' =
               locked.paymentType === 'CREDIT' ? 'CREDIT' : 'CASH'
             await this.aplicarPagoAlConfirmar(locked, paymentType, trx)

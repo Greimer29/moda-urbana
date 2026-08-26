@@ -197,8 +197,16 @@ export type DailyClosingSaleLineItem = {
   profit_usd: string
 }
 
+export type DailyClosingShift = {
+  id: number
+  opened_at: string
+  closed_at: string | null
+  status: 'OPEN' | 'CLOSED'
+}
+
 export type DailyClosingResult = {
   date: string
+  shift: DailyClosingShift | null
   summary: DailyClosingSummary
   orders: DailyClosingOrderItem[]
   payments: DailyClosingPaymentItem[]

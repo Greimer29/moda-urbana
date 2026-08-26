@@ -67,6 +67,7 @@ export const inventoryMovementsValidator = vine.create({
 
 export const dailyClosingValidator = vine.create({
   date: isoDate.optional(),
+  sales_shift_id: vine.number().min(1).optional(),
 })
 
 export const accountStatementValidator = vine.create({

@@ -434,7 +434,7 @@ export class OrderMaterialSchema extends BaseModel {
 }
 
 export class OrderSchema extends BaseModel {
-  static $columns = ['amountPaidUsd', 'balanceUsd', 'code', 'confirmedAt', 'createdAt', 'creditDueDate', 'customerId', 'description', 'estimatedDeliveryDate', 'guestName', 'id', 'modality', 'notes', 'orderDate', 'paymentType', 'referenceFile', 'returnedAt', 'status', 'totalPrice', 'totalQuantity', 'updatedAt'] as const
+  static $columns = ['amountPaidUsd', 'balanceUsd', 'code', 'confirmedAt', 'createdAt', 'creditDueDate', 'customerId', 'description', 'estimatedDeliveryDate', 'guestName', 'id', 'modality', 'notes', 'orderDate', 'paymentType', 'referenceFile', 'returnedAt', 'salesShiftId', 'status', 'totalPrice', 'totalQuantity', 'updatedAt'] as const
   $columns = OrderSchema.$columns
   @column()
   declare amountPaidUsd: string
@@ -470,6 +470,8 @@ export class OrderSchema extends BaseModel {
   declare referenceFile: string | null
   @column.dateTime()
   declare returnedAt: DateTime | null
+  @column()
+  declare salesShiftId: bigint | number | null
   @column()
   declare status: string
   @column()

@@ -42,6 +42,7 @@ import { useActiveCategoriesQuery } from '@/features/categories/hooks/use-catego
 import { catalogImageUrl } from '@/features/ventas/constants'
 import type { BillingMethod } from '@/features/ventas/constants'
 import { useCatalogProductsQuery } from '@/features/ventas/hooks/use-catalog'
+import { useCurrentSalesShiftQuery } from '@/features/ventas/hooks/use-sales-shifts'
 import type { CatalogProduct, CatalogProductSize } from '@/features/ventas/types'
 import {
   CATALOG_SORT_OPTIONS,
@@ -90,6 +91,8 @@ function VentasCreateView() {
   const { can } = useAuth()
   const canConfirmSale = can('ventas.confirm')
   const canCreditSale = can('ventas.credit')
+  const { data: currentShift, isLoading: shiftLoading } = useCurrentSalesShiftQuery()
+  const shiftOpen = Boolean(currentShift)
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [category, setCategory] = useState('')
@@ -101,7 +104,7 @@ function VentasCreateView() {
   )
   const [page, setPage] = useState(1)
   const [customerId, setCustomerId] = useState<number | ''>('')
-  const [clientName, setClientName] = useState('')
+  const [clientName, setClientName] = useState('Generico')
   const [customerCreditDays, setCustomerCreditDays] = useState<number | null>(null)
   const [paymentType, setPaymentType] = useState<'CASH' | 'CREDIT'>('CASH')
   const [billingMethod, setBillingMethod] = useState<BillingMethod>('FAST')
@@ -358,7 +361,7 @@ function VentasCreateView() {
     } else {
       setCustomerId('')
       setCustomerCreditDays(null)
-      setClientName(draft.guestName ?? '')
+      setClientName(draft.guestName ?? 'Generico')
     }
     setPaymentType(draft.paymentType)
     setSourceOrderId(draft.orderId)
@@ -627,11 +630,15 @@ function VentasCreateView() {
           {canConfirmSale ? (
             <Button
               className="w-full"
-              disabled={isSubmitting || cart.length === 0 || stockBlocked}
+              disabled={isSubmitting || cart.length === 0 || stockBlocked || !shiftOpen || shiftLoading}
               onClick={() => void confirmOrder()}
             >
               {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
-              {billingMethod === 'FAST' ? 'Confirmar venta' : 'Confirmar pedido'}
+              {!shiftLoading && !shiftOpen
+                ? 'Abrí un turno para vender'
+                : billingMethod === 'FAST'
+                  ? 'Confirmar venta'
+                  : 'Confirmar pedido'}
             </Button>
           ) : (
             <p className="text-muted-foreground text-center text-sm">

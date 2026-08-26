@@ -35,6 +35,7 @@ export default class OrderTransformer extends BaseTransformer<Order> {
       totalPrice: this.resource.totalPrice,
       notes: this.resource.notes,
       returnedAt: this.resource.returnedAt,
+      salesShiftId: this.resource.salesShiftId ? Number(this.resource.salesShiftId) : null,
       tieneReferencia: Boolean(this.resource.referenceFile),
       createdAt: this.resource.createdAt,
       updatedAt: this.resource.updatedAt,

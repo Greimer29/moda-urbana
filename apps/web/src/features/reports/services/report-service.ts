@@ -27,9 +27,10 @@ export async function getAccountStatement(params: AccountStatementParams = {}) {
   return data.data
 }
 
-export async function getDailyClosing(date?: string) {
+export async function getDailyClosing(params?: { date?: string; sales_shift_id?: number }) {
   const search = new URLSearchParams()
-  if (date) search.set('date', date)
+  if (params?.date) search.set('date', params.date)
+  if (params?.sales_shift_id != null) search.set('sales_shift_id', String(params.sales_shift_id))
   const url = search.size > 0 ? `/reports/daily-closing?${search.toString()}` : '/reports/daily-closing'
   const { data } = await api.get<DailyClosingResponse>(url)
 

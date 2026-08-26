@@ -90,15 +90,15 @@ export function DashboardPage() {
 
   return (
     <div className={dashboardUi.page}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Dashboard</h1>
           <p className="text-sm text-neutral-500">Resumen del taller — {todayLabel()}</p>
         </div>
-        <Button asChild className="w-full shrink-0 sm:w-auto">
-          <Link to="/dashboard/cierre-del-dia">
+        <Button asChild size="icon" className="shrink-0 sm:h-9 sm:w-auto sm:px-4 sm:py-2" title="Cierre del día">
+          <Link to="/dashboard/cierre-del-dia" aria-label="Cierre del día">
             <ReceiptText className="size-4" />
-            Cierre del día
+            <span className="hidden sm:inline">Cierre del día</span>
           </Link>
         </Button>
       </div>
