@@ -13,8 +13,8 @@ export function VentasPage() {
 
   return (
     <div className="-m-4 flex h-[calc(100%+2rem)] min-h-0 flex-col gap-4 overflow-hidden p-4 md:-m-6 md:h-[calc(100%+3rem)] md:p-6">
-      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 gap-2">
           {(
             [
               { id: 'facturar' as const, label: 'Facturar' },
@@ -36,8 +36,8 @@ export function VentasPage() {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <VentasShiftControls />
+        <div className="flex items-center gap-2">
+          <VentasShiftControls iconOnly="mobile" />
           <ExpensesLink />
           <ProfitMarginLink />
         </div>

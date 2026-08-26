@@ -230,10 +230,35 @@ export function SidebarNavContent({
   )
 }
 
-export function AppSidebar() {
-  const appVersion = import.meta.env.VITE_APP_VERSION
+export function getAppVersionLabel() {
+  const fromEnv = import.meta.env.VITE_APP_VERSION?.trim()
+  if (fromEnv) return fromEnv
+  const buildId = import.meta.env.VITE_BUILD_ID?.trim()
+  if (!buildId) return null
+  const versionPart = buildId.split('-')[0]?.trim()
+  return versionPart || null
+}
+
+export function SidebarBrandFooter({ className }: { className?: string }) {
+  const appVersion = getAppVersionLabel()
   const copyrightYear = new Date().getFullYear()
 
+  return (
+    <footer
+      className={cn(
+        'text-sidebar-foreground/60 shrink-0 border-t px-4 py-3 text-xs leading-relaxed',
+        className
+      )}
+    >
+      <p>
+        © {copyrightYear} Gestión {brand.legalName}
+      </p>
+      <p className="mt-0.5 tabular-nums">{appVersion ? `v${appVersion}` : 'v—'}</p>
+    </footer>
+  )
+}
+
+export function AppSidebar() {
   return (
     <aside className="bg-sidebar text-sidebar-foreground hidden h-svh w-56 shrink-0 flex-col overflow-hidden border-r md:flex">
       <div className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
@@ -246,12 +271,7 @@ export function AppSidebar() {
         <span className="text-lg font-semibold tracking-tight">{brand.legalName}</span>
       </div>
       <SidebarNavContent />
-      <footer className="text-sidebar-foreground/60 shrink-0 border-t px-4 py-3 text-xs leading-relaxed">
-        <p>
-          © {copyrightYear} Gestión {brand.legalName}
-        </p>
-        {appVersion ? <p className="mt-0.5 tabular-nums">v{appVersion}</p> : null}
-      </footer>
+      <SidebarBrandFooter />
     </aside>
   )
 }

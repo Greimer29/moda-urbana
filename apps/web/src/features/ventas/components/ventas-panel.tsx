@@ -43,6 +43,7 @@ import { catalogImageUrl } from '@/features/ventas/constants'
 import type { BillingMethod } from '@/features/ventas/constants'
 import { useCatalogProductsQuery } from '@/features/ventas/hooks/use-catalog'
 import { useCurrentSalesShiftQuery } from '@/features/ventas/hooks/use-sales-shifts'
+import { VentasShiftControls } from '@/features/ventas/components/ventas-shift-controls'
 import type { CatalogProduct, CatalogProductSize } from '@/features/ventas/types'
 import {
   CATALOG_SORT_OPTIONS,
@@ -628,18 +629,23 @@ function VentasCreateView() {
           ) : null}
 
           {canConfirmSale ? (
-            <Button
-              className="w-full"
-              disabled={isSubmitting || cart.length === 0 || stockBlocked || !shiftOpen || shiftLoading}
-              onClick={() => void confirmOrder()}
-            >
-              {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
-              {!shiftLoading && !shiftOpen
-                ? 'Abrí un turno para vender'
-                : billingMethod === 'FAST'
-                  ? 'Confirmar venta'
-                  : 'Confirmar pedido'}
-            </Button>
+            <div className="space-y-2">
+              {!shiftLoading && !shiftOpen ? (
+                <VentasShiftControls fullWidth align="start" />
+              ) : null}
+              <Button
+                className="w-full"
+                disabled={isSubmitting || cart.length === 0 || stockBlocked || !shiftOpen || shiftLoading}
+                onClick={() => void confirmOrder()}
+              >
+                {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
+                {!shiftLoading && !shiftOpen
+                  ? 'Abrí un turno para vender'
+                  : billingMethod === 'FAST'
+                    ? 'Confirmar venta'
+                    : 'Confirmar pedido'}
+              </Button>
+            </div>
           ) : (
             <p className="text-muted-foreground text-center text-sm">
               No tenés permiso para confirmar ventas.

@@ -2,6 +2,7 @@ import { Menu, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { SidebarBrandFooter } from '@/components/layout/app-sidebar'
 import { brand } from '@/lib/brand-config'
 import { cn } from '@/lib/utils'
 
@@ -88,6 +89,7 @@ export function MobileNavDrawer({ children }: MobileNavDrawerProps) {
             </Button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">{content}</div>
+          <SidebarBrandFooter className="pb-[max(0.75rem,env(safe-area-inset-bottom))]" />
         </aside>
       </div>
     </>

@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { Clock, Loader2, Lock } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/hooks/use-auth'
@@ -8,6 +8,7 @@ import {
   useOpenSalesShiftMutation,
 } from '@/features/ventas/hooks/use-sales-shifts'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { cn } from '@/lib/utils'
 
 function formatShiftDateTime(iso: string) {
   return new Date(iso).toLocaleString('es-VE', {
@@ -19,7 +20,25 @@ function formatShiftDateTime(iso: string) {
   })
 }
 
-export function VentasShiftControls() {
+type VentasShiftControlsProps = {
+  className?: string
+  /** Botón a ancho completo (útil en carrito). */
+  fullWidth?: boolean
+  /** Alineación del mensaje de error. */
+  align?: 'start' | 'end'
+  /**
+   * Solo icono en viewport móvil; desde `sm` muestra texto.
+   * Si es `true`, siempre solo icono.
+   */
+  iconOnly?: boolean | 'mobile'
+}
+
+export function VentasShiftControls({
+  className,
+  fullWidth = false,
+  align = 'end',
+  iconOnly = false,
+}: VentasShiftControlsProps) {
   const { can } = useAuth()
   const canConfirm = can('ventas.confirm')
   const { data: shift, isLoading } = useCurrentSalesShiftQuery()
@@ -28,6 +47,14 @@ export function VentasShiftControls() {
   const [error, setError] = useState<string | null>(null)
 
   const busy = openMutation.isPending || closeMutation.isPending
+  const alwaysIcon = iconOnly === true
+  const mobileIcon = iconOnly === 'mobile'
+  const showLabelClass = alwaysIcon ? 'sr-only' : mobileIcon ? 'hidden sm:inline' : undefined
+  const buttonClassName = cn(
+    fullWidth && 'w-full',
+    (alwaysIcon || mobileIcon) && 'size-8 shrink-0 px-0',
+    mobileIcon && 'sm:h-8 sm:w-auto sm:px-3'
+  )
 
   async function handleOpen() {
     setError(null)
@@ -58,19 +85,44 @@ export function VentasShiftControls() {
 
   if (isLoading) {
     return (
-      <Button type="button" size="sm" variant="outline" disabled>
-        <Loader2 className="size-4 animate-spin" />
-        Turno…
-      </Button>
+      <div className={cn(fullWidth && 'w-full', className)}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled
+          className={buttonClassName}
+          title="Turno"
+          aria-label="Cargando turno"
+        >
+          <Loader2 className="size-4 animate-spin" />
+          {showLabelClass ? <span className={showLabelClass}>Turno…</span> : 'Turno…'}
+        </Button>
+      </div>
     )
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div
+      className={cn(
+        'flex flex-col gap-1',
+        align === 'end' ? 'items-end' : 'items-stretch',
+        fullWidth && 'w-full',
+        className
+      )}
+    >
       {!shift ? (
-        <Button type="button" size="sm" disabled={busy} onClick={() => void handleOpen()}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-          Abrir turno
+        <Button
+          type="button"
+          size="sm"
+          disabled={busy}
+          className={buttonClassName}
+          title="Abrir turno"
+          aria-label="Abrir turno"
+          onClick={() => void handleOpen()}
+        >
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Clock className="size-4" />}
+          {showLabelClass ? <span className={showLabelClass}>Abrir turno</span> : 'Abrir turno'}
         </Button>
       ) : (
         <Button
@@ -78,14 +130,25 @@ export function VentasShiftControls() {
           size="sm"
           variant="outline"
           disabled={busy}
-          title={`Abierto desde ${formatShiftDateTime(shift.opened_at)}`}
+          className={buttonClassName}
+          title={`Cerrar turno · abierto desde ${formatShiftDateTime(shift.opened_at)}`}
+          aria-label="Cerrar turno"
           onClick={() => void handleClose()}
         >
-          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-          Cerrar turno
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />}
+          {showLabelClass ? <span className={showLabelClass}>Cerrar turno</span> : 'Cerrar turno'}
         </Button>
       )}
-      {error ? <p className="text-destructive max-w-[12rem] text-right text-xs">{error}</p> : null}
+      {error ? (
+        <p
+          className={cn(
+            'text-destructive text-xs',
+            align === 'end' ? 'max-w-[12rem] text-right' : 'text-left'
+          )}
+        >
+          {error}
+        </p>
+      ) : null}
     </div>
   )
 }
