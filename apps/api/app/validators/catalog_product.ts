@@ -53,6 +53,7 @@ export const listCatalogProductsValidator = vine.create({
   reference: vine.string().trim().maxLength(100).optional(),
   size: vine.string().trim().maxLength(20).optional(),
   category: vine.string().trim().maxLength(100).optional(),
+  folder_id: vine.number().min(1).optional(),
   active: vine.boolean().optional(),
   sort_by: vine.enum(['name', 'most_sold', 'id', 'sale_price'] as const).optional(),
   sort_dir: vine.enum(['asc', 'desc'] as const).optional(),

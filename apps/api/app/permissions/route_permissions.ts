@@ -98,6 +98,11 @@ const ROUTE_RULES: RouteRule[] = [
   { method: 'POST', pattern: /^\/categories(\/|$)/, permission: 'catalog.edit' },
   { method: 'PUT', pattern: /^\/categories(\/|$)/, permission: 'catalog.edit' },
   { method: 'DELETE', pattern: /^\/categories(\/|$)/, permission: 'catalog.edit' },
+
+  { method: 'GET', pattern: /^\/product-folders(\/|$)/, permission: 'catalog.view' },
+  { method: 'POST', pattern: /^\/product-folders(\/|$)/, permission: 'catalog.edit' },
+  { method: 'PUT', pattern: /^\/product-folders(\/|$)/, permission: 'catalog.edit' },
+  { method: 'DELETE', pattern: /^\/product-folders(\/|$)/, permission: 'catalog.edit' },
 ]
 
 const AUTH_ONLY_PATHS = new Set(['/auth/me', '/auth/logout'])

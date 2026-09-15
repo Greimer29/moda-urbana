@@ -17,6 +17,7 @@ const AccountsController = () => import('#controllers/accounts_controller')
 const CurrenciesController = () => import('#controllers/currencies_controller')
 const ReportsController = () => import('#controllers/reports_controller')
 const CategoriesController = () => import('#controllers/categories_controller')
+const ProductFoldersController = () => import('#controllers/product_folders_controller')
 const CsrfController = () => import('#controllers/csrf_controller')
 const UsersController = () => import('#controllers/users_controller')
 
@@ -118,6 +119,17 @@ router
         router.post('categories', [CategoriesController, 'store'])
         router.put('categories/:id', [CategoriesController, 'update'])
         router.delete('categories/:id', [CategoriesController, 'destroy'])
+
+        router.get('product-folders', [ProductFoldersController, 'index'])
+        router.get('product-folders/:id', [ProductFoldersController, 'show'])
+        router.post('product-folders', [ProductFoldersController, 'store'])
+        router.put('product-folders/:id', [ProductFoldersController, 'update'])
+        router.delete('product-folders/:id', [ProductFoldersController, 'destroy'])
+        router.post('product-folders/:id/products', [ProductFoldersController, 'addProduct'])
+        router.delete('product-folders/:id/products/:catalogProductId', [
+          ProductFoldersController,
+          'removeProduct',
+        ])
 
         router.get('reports/daily-closing', [ReportsController, 'dailyClosing'])
         router.get('reports/account-statement', [ReportsController, 'accountStatement'])

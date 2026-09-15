@@ -19,6 +19,7 @@ export async function listCatalogProducts(params: CatalogListParams = {}) {
       reference: params.reference || undefined,
       size: params.size || undefined,
       category: params.category,
+      folder_id: params.folderId,
       active: params.active,
       sort_by: params.sortBy,
       sort_dir: params.sortDir,

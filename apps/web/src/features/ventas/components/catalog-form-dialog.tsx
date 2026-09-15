@@ -240,13 +240,15 @@ export function CatalogFormDialog({
     const cost = formulaCost
     setCostPrice(cost.toFixed(2))
 
-    if (marginPercent.trim()) {
+    // Si ya hay precio de venta, preservar venta y recalcular margen.
+    // Solo derivar venta desde margen cuando aún no hay precio de venta.
+    if (salePrice.trim()) {
+      setMarginPercent(formatMarginValue(cost, salePrice))
+    } else if (marginPercent.trim()) {
       const sale = calcSalePriceFromMargin(cost, Number(marginPercent))
       if (sale !== null) {
         setSalePrice(sale.toFixed(2))
       }
-    } else if (salePrice.trim()) {
-      setMarginPercent(formatMarginValue(cost, salePrice))
     }
   }, [hasFormula, formulaCost, formulaMaterials])
 
@@ -275,10 +277,12 @@ export function CatalogFormDialog({
     const cost = Number(value)
     if (!Number.isFinite(cost) || cost <= 0) return
 
-    if (marginPercent.trim()) {
-      applySaleFromMargin(cost, marginPercent)
-    } else if (salePrice.trim()) {
+    // Con precio venta existente: solo actualizar margen.
+    // Sin precio venta y con margen: calcular venta desde margen + costo.
+    if (salePrice.trim()) {
       applyMarginFromSale(cost, salePrice)
+    } else if (marginPercent.trim()) {
+      applySaleFromMargin(cost, marginPercent)
     }
   }
 

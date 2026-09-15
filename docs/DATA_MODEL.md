@@ -463,6 +463,31 @@ Tabla `sales_shifts`: ventana operativa de ventas (puede cruzar medianoche).
 
 `orders.sales_shift_id` (nullable FK): se asigna al confirmar la venta. Órdenes históricas sin turno no aparecen en cierres por turno.
 
+### Carpetas de productos (`ProductFolder`)
+
+Agrupación operativa del catálogo (complementa categorías; no las reemplaza).
+
+Tabla `product_folders`:
+
+| Campo | Tipo | Notas |
+|-------|------|--------|
+| `name` | varchar(100) | único (case-insensitive en validación de servicio) |
+| `sort_order` | int | default 0 |
+
+Tabla pivote `product_folder_items`:
+
+| Campo | Tipo | Notas |
+|-------|------|--------|
+| `product_folder_id` | FK | cascade al borrar carpeta |
+| `catalog_product_id` | FK | cascade al borrar producto |
+| unique | (folder, product) | un producto no se duplica en la misma carpeta |
+
+Reglas:
+
+- Un producto puede pertenecer a **varias** carpetas.
+- El listado de catálogo admite filtro `folder_id`.
+- La UI de Productos/Ventas mantiene el catálogo completo; “Carpetas” es una vista adicional.
+
 ### Sin fórmula (`formula_id` NULL)
 
 - El stock se almacena en `stock_quantity` y se actualiza con `product_inventory_movements`:

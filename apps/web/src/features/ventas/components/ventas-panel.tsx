@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileText, FolderOpen, Loader2, Plus, Search, ShoppingCart, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, FileText, Folder, FolderOpen, Loader2, Plus, Search, ShoppingCart, SlidersHorizontal } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,6 +27,8 @@ import {
 } from '@/features/orders/services/order-service'
 import { CatalogFormDialog } from '@/features/ventas/components/catalog-form-dialog'
 import { CatalogProductCard } from '@/features/ventas/components/catalog-product-card'
+import { ProductFoldersBrowser } from '@/features/folders/components/product-folders-browser'
+import type { ProductFolder } from '@/features/folders/types'
 import { VentasCustomerPickDialog } from '@/features/ventas/components/ventas-customer-pick-dialog'
 import {
   VentasLoadDraftDialog,
@@ -91,6 +93,7 @@ function VentasCreateView() {
   const navigate = useNavigate()
   const { can } = useAuth()
   const canConfirmSale = can('ventas.confirm')
+  const canEditCatalog = can('catalog.edit')
   const canCreditSale = can('ventas.credit')
   const { data: currentShift, isLoading: shiftLoading } = useCurrentSalesShiftQuery()
   const shiftOpen = Boolean(currentShift)
@@ -112,6 +115,8 @@ function VentasCreateView() {
   const [cart, setCart] = useState<CartLine[]>([])
   const [cartOpen, setCartOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [catalogBrowse, setCatalogBrowse] = useState<'catalog' | 'folders' | 'folder'>('catalog')
+  const [activeFolder, setActiveFolder] = useState<ProductFolder | null>(null)
   const [orderNotes, setOrderNotes] = useState('')
   const [orderNotesOpen, setOrderNotesOpen] = useState(false)
   const [sizePickerProduct, setSizePickerProduct] = useState<CatalogProduct | null>(null)
@@ -137,11 +142,12 @@ function VentasCreateView() {
   } = useCatalogProductsQuery({
     page,
     perPage: CATALOG_PER_PAGE,
-    search: debouncedSearch || undefined,
-    category: category || undefined,
-    brand: brandFilter || undefined,
-    productModel: modelFilter || undefined,
-    size: sizeFilter || undefined,
+    search: catalogBrowse === 'catalog' ? debouncedSearch || undefined : undefined,
+    category: catalogBrowse === 'catalog' ? category || undefined : undefined,
+    brand: catalogBrowse === 'catalog' ? brandFilter || undefined : undefined,
+    productModel: catalogBrowse === 'catalog' ? modelFilter || undefined : undefined,
+    size: catalogBrowse === 'catalog' ? sizeFilter || undefined : undefined,
+    folderId: catalogBrowse === 'folder' ? activeFolder?.id : undefined,
     active: true,
     sortBy,
     sortDir,
@@ -665,32 +671,79 @@ function VentasCreateView() {
           <CardHeader className="shrink-0">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 space-y-1.5">
-                <CardTitle className="text-base">Catálogo de productos</CardTitle>
+                <CardTitle className="text-base">
+                  {catalogBrowse === 'folders'
+                    ? 'Carpetas'
+                    : catalogBrowse === 'folder'
+                      ? (activeFolder?.name ?? 'Carpeta')
+                      : 'Catálogo de productos'}
+                </CardTitle>
                 <CardDescription>
-                  {catalogMeta
-                    ? `${catalogMeta.total} producto${catalogMeta.total === 1 ? '' : 's'}`
-                    : 'Filtrá y agregá productos a la venta'}
+                  {catalogBrowse === 'folders'
+                    ? 'Elegí una carpeta para filtrar productos'
+                    : catalogMeta
+                      ? `${catalogMeta.total} producto${catalogMeta.total === 1 ? '' : 's'}`
+                      : 'Filtrá y agregá productos a la venta'}
                 </CardDescription>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="relative shrink-0 md:hidden"
-                  title="Filtros"
-                  aria-label="Filtros"
-                  aria-expanded={filtersOpen}
-                  aria-controls="ventas-catalog-filters"
-                  onClick={() => setFiltersOpen((open) => !open)}
-                >
-                  <SlidersHorizontal className="size-4" />
-                  {activeFilterCount > 0 ? (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-semibold text-white">
-                      {activeFilterCount}
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                <div className="bg-muted inline-flex rounded-lg p-1">
+                  <button
+                    type="button"
+                    className={cn(
+                      'rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors',
+                      catalogBrowse === 'catalog'
+                        ? 'bg-background shadow-sm'
+                        : 'text-muted-foreground'
+                    )}
+                    onClick={() => {
+                      setCatalogBrowse('catalog')
+                      setActiveFolder(null)
+                      setPage(1)
+                    }}
+                  >
+                    Catálogo
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      'rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors',
+                      catalogBrowse === 'folders' || catalogBrowse === 'folder'
+                        ? 'bg-background shadow-sm'
+                        : 'text-muted-foreground'
+                    )}
+                    onClick={() => {
+                      setCatalogBrowse('folders')
+                      setActiveFolder(null)
+                      setPage(1)
+                    }}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <Folder className="size-3.5" />
+                      Carpetas
                     </span>
-                  ) : null}
-                </Button>
+                  </button>
+                </div>
+                {catalogBrowse === 'catalog' ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="relative shrink-0 md:hidden"
+                    title="Filtros"
+                    aria-label="Filtros"
+                    aria-expanded={filtersOpen}
+                    aria-controls="ventas-catalog-filters"
+                    onClick={() => setFiltersOpen((open) => !open)}
+                  >
+                    <SlidersHorizontal className="size-4" />
+                    {activeFilterCount > 0 ? (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-semibold text-white">
+                        {activeFilterCount}
+                      </span>
+                    ) : null}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="outline"
@@ -711,152 +764,194 @@ function VentasCreateView() {
             </div>
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pt-0">
-            <div className="flex shrink-0 flex-col gap-3">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Buscar producto…"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="min-w-0 flex-1 bg-white md:max-w-xs"
+            {catalogBrowse === 'folders' ? (
+              <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto pr-1">
+                <ProductFoldersBrowser
+                  canEdit={canEditCatalog}
+                  onOpenFolder={(folder) => {
+                    setActiveFolder(folder)
+                    setCatalogBrowse('folder')
+                    setPage(1)
+                  }}
                 />
               </div>
-              <div
-                id="ventas-catalog-filters"
-                className={cn('flex-wrap gap-3', filtersOpen ? 'flex' : 'hidden', 'md:flex')}
-              >
-              <select
-                className="border-input flex h-9 rounded-md border bg-white px-3 text-sm"
-                value={category}
-                onChange={(e) => {
-                  setCategory(e.target.value)
-                  setPage(1)
-                }}
-              >
-                <option value="">Todas las categorías</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <Input
-                placeholder="Marca"
-                value={brandFilter}
-                list="ventas-brand-options"
-                onChange={(e) => {
-                  setBrandFilter(e.target.value)
-                  setPage(1)
-                }}
-                className="w-32 bg-white"
-              />
-              <datalist id="ventas-brand-options">
-                {brandOptions.map((brand) => (
-                  <option key={brand} value={brand} />
-                ))}
-              </datalist>
-              <Input
-                placeholder="Modelo"
-                value={modelFilter}
-                list="ventas-model-options"
-                onChange={(e) => {
-                  setModelFilter(e.target.value)
-                  setPage(1)
-                }}
-                className="w-32 bg-white"
-              />
-              <datalist id="ventas-model-options">
-                {modelOptions.map((model) => (
-                  <option key={model} value={model} />
-                ))}
-              </datalist>
-              <Input
-                placeholder="Talla"
-                value={sizeFilter}
-                list="ventas-size-options"
-                onChange={(e) => {
-                  setSizeFilter(e.target.value)
-                  setPage(1)
-                }}
-                className="w-24 bg-white"
-              />
-              <datalist id="ventas-size-options">
-                {sizeOptions.map((size) => (
-                  <option key={size} value={size} />
-                ))}
-              </datalist>
-              <select
-                className="border-input flex h-9 rounded-md border bg-white px-3 text-sm"
-                value={sortValue}
-                onChange={(e) => {
-                  setSortValue(e.target.value)
-                  setPage(1)
-                }}
-                aria-label="Ordenar productos"
-              >
-                {CATALOG_SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              </div>
-            </div>
+            ) : (
+              <>
+                {catalogBrowse === 'folder' && activeFolder ? (
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCatalogBrowse('folders')
+                        setActiveFolder(null)
+                        setPage(1)
+                      }}
+                    >
+                      <ArrowLeft className="size-4" />
+                      Todas las carpetas
+                    </Button>
+                    <p className="text-muted-foreground text-sm">
+                      Solo productos de esta carpeta. El catálogo completo está en Catálogo.
+                    </p>
+                  </div>
+                ) : null}
 
-            <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto pr-1">
-              {loadingCatalog ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="text-muted-foreground size-6 animate-spin" />
-                </div>
-              ) : catalogError ? (
-                <p className="text-destructive py-8 text-center text-sm whitespace-pre-line">
-                  {getApiErrorMessage(catalogQueryError)}
-                </p>
-              ) : products.length === 0 ? (
-                <p className="text-muted-foreground py-8 text-center text-sm">
-                  No hay productos en el catálogo.
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 gap-3 pb-1 sm:grid-cols-3 xl:grid-cols-4">
-                  {products.map((product) => (
-                    <CatalogProductCard
-                      key={product.id}
-                      product={product}
-                      showActions
-                      onEdit={openEditProduct}
-                      onAddToCart={addToCart}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+                {catalogBrowse === 'catalog' ? (
+                  <div className="flex shrink-0 flex-col gap-3">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Buscar producto…"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        className="min-w-0 flex-1 bg-white md:max-w-xs"
+                      />
+                    </div>
+                    <div
+                      id="ventas-catalog-filters"
+                      className={cn('flex-wrap gap-3', filtersOpen ? 'flex' : 'hidden', 'md:flex')}
+                    >
+                      <select
+                        className="border-input flex h-9 rounded-md border bg-white px-3 text-sm"
+                        value={category}
+                        onChange={(e) => {
+                          setCategory(e.target.value)
+                          setPage(1)
+                        }}
+                      >
+                        <option value="">Todas las categorías</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                      <Input
+                        placeholder="Marca"
+                        value={brandFilter}
+                        list="ventas-brand-options"
+                        onChange={(e) => {
+                          setBrandFilter(e.target.value)
+                          setPage(1)
+                        }}
+                        className="w-32 bg-white"
+                      />
+                      <datalist id="ventas-brand-options">
+                        {brandOptions.map((brand) => (
+                          <option key={brand} value={brand} />
+                        ))}
+                      </datalist>
+                      <Input
+                        placeholder="Modelo"
+                        value={modelFilter}
+                        list="ventas-model-options"
+                        onChange={(e) => {
+                          setModelFilter(e.target.value)
+                          setPage(1)
+                        }}
+                        className="w-32 bg-white"
+                      />
+                      <datalist id="ventas-model-options">
+                        {modelOptions.map((model) => (
+                          <option key={model} value={model} />
+                        ))}
+                      </datalist>
+                      <Input
+                        placeholder="Talla"
+                        value={sizeFilter}
+                        list="ventas-size-options"
+                        onChange={(e) => {
+                          setSizeFilter(e.target.value)
+                          setPage(1)
+                        }}
+                        className="w-24 bg-white"
+                      />
+                      <datalist id="ventas-size-options">
+                        {sizeOptions.map((size) => (
+                          <option key={size} value={size} />
+                        ))}
+                      </datalist>
+                      <select
+                        className="border-input flex h-9 rounded-md border bg-white px-3 text-sm"
+                        value={sortValue}
+                        onChange={(e) => {
+                          setSortValue(e.target.value)
+                          setPage(1)
+                        }}
+                        aria-label="Ordenar productos"
+                      >
+                        {CATALOG_SORT_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ) : null}
 
-            {catalogMeta && catalogMeta.lastPage > 1 ? (
-              <div className="flex shrink-0 items-center justify-between gap-4 border-t pt-3">
-                <p className="text-muted-foreground text-sm">
-                  Página {catalogMeta.currentPage} de {catalogMeta.lastPage}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={catalogMeta.currentPage <= 1 || loadingCatalog}
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  >
-                    Anterior
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={catalogMeta.currentPage >= catalogMeta.lastPage || loadingCatalog}
-                    onClick={() => setPage((current) => current + 1)}
-                  >
-                    Siguiente
-                  </Button>
+                <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto pr-1">
+                  {loadingCatalog ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="text-muted-foreground size-6 animate-spin" />
+                    </div>
+                  ) : catalogError ? (
+                    <p className="text-destructive py-8 text-center text-sm whitespace-pre-line">
+                      {getApiErrorMessage(catalogQueryError)}
+                    </p>
+                  ) : products.length === 0 ? (
+                    <p className="text-muted-foreground py-8 text-center text-sm">
+                      {catalogBrowse === 'folder'
+                        ? 'Esta carpeta no tiene productos.'
+                        : 'No hay productos en el catálogo.'}
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 pb-1 sm:grid-cols-3 xl:grid-cols-4">
+                      {products.map((product) => (
+                        <CatalogProductCard
+                          key={product.id}
+                          product={product}
+                          showActions
+                          onEdit={openEditProduct}
+                          onAddToCart={addToCart}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ) : null}
+
+                {catalogMeta && catalogMeta.lastPage > 1 ? (
+                  <div className="flex shrink-0 items-center justify-between gap-4 border-t pt-3">
+                    <p className="text-muted-foreground text-sm">
+                      Página {catalogMeta.currentPage} de {catalogMeta.lastPage}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={catalogMeta.currentPage <= 1 || loadingCatalog}
+                        onClick={() => setPage((current) => Math.max(1, current - 1))}
+                      >
+                        Anterior
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={
+                          catalogMeta.currentPage >= catalogMeta.lastPage || loadingCatalog
+                        }
+                        onClick={() => setPage((current) => current + 1)}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

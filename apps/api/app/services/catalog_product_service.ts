@@ -54,6 +54,7 @@ export type ListCatalogProductsFilters = {
   reference?: string
   size?: string
   category?: string
+  folderId?: number
   active?: boolean
   sortBy?: 'name' | 'most_sold' | 'id' | 'sale_price'
   sortDir?: 'asc' | 'desc'
@@ -157,6 +158,15 @@ export default class CatalogProductService {
 
     if (filters.category) {
       query.where('category', filters.category)
+    }
+
+    if (filters.folderId) {
+      query.whereExists((subQuery) => {
+        subQuery
+          .from('product_folder_items')
+          .whereColumn('product_folder_items.catalog_product_id', 'catalog_products.id')
+          .where('product_folder_items.product_folder_id', filters.folderId!)
+      })
     }
 
     if (filters.active !== undefined) {

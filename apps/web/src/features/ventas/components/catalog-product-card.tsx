@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
-import { ChevronDown, DollarSign, Package, Pencil, Tag, Trash2, TrendingUp } from 'lucide-react'
+import { ChevronDown, DollarSign, FolderPlus, Package, Pencil, Tag, Trash2, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DisplayMoneyFromUsd } from '@/features/currencies/components/display-money'
 import { PublicImage } from '@/components/public-image'
@@ -23,6 +23,7 @@ type CatalogProductCardProps = {
   product: CatalogProduct
   onEdit?: (product: CatalogProduct) => void
   onDelete?: (product: CatalogProduct) => void
+  onAddToFolder?: (product: CatalogProduct) => void
   onAddToCart?: (product: CatalogProduct) => void
   onOpen?: (product: CatalogProduct) => void
   showActions?: boolean
@@ -46,6 +47,7 @@ export function CatalogProductCard({
   product,
   onEdit,
   onDelete,
+  onAddToFolder,
   onAddToCart,
   onOpen,
   showActions = false,
@@ -150,8 +152,24 @@ export function CatalogProductCard({
       role={cardAction ? 'button' : undefined}
       tabIndex={cardAction ? 0 : undefined}
     >
-      {showActions && (onEdit || onDelete) ? (
+      {showActions && (onEdit || onDelete || onAddToFolder) ? (
         <div className="absolute top-2 left-2 z-10 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          {onAddToFolder ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="size-6"
+              title="Agregar a carpeta"
+              aria-label="Agregar a carpeta"
+              onClick={(e) => {
+                e.stopPropagation()
+                onAddToFolder(product)
+              }}
+            >
+              <FolderPlus className="size-3" />
+            </Button>
+          ) : null}
           {onEdit ? (
             <Button
               type="button"

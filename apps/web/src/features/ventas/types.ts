@@ -96,6 +96,7 @@ export type CatalogListParams = {
   reference?: string
   size?: string
   category?: string
+  folderId?: number
   active?: boolean
   sortBy?: 'name' | 'most_sold' | 'id' | 'sale_price'
   sortDir?: 'asc' | 'desc'

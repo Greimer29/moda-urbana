@@ -145,6 +145,19 @@ Cada solicitud nueva pasa por estos pasos:
 - **Decisión:** `EN_CICLO_ACTIVO` (implementación autorizada).
 - **Estado:** Implementado
 
+### 012 — Carpetas de productos (agrupación operativa)
+
+- **Fecha:** 2026-09-15
+- **Origen:** dueño (autorización explícita fuera de Mes 1)
+- **Descripción:** Crear carpetas con nombre; asignar productos del catálogo (N:N); en Productos y Ventas el catálogo completo sigue siendo la vista por defecto y “Carpetas” es un botón/vista adicional para navegar por carpeta.
+- **Evaluación:** mejora búsqueda operativa en zapatería; no reemplaza categorías; autorización humana para expandir alcance.
+- **Decisión:** `EN_CICLO_ACTIVO` (implementación autorizada).
+- **Estado:** Implementado
+- **Recortes acordados:**
+  - Solo productos de catálogo (no materiales).
+  - Sin subcarpetas.
+  - Un producto puede estar en varias carpetas.
+
 ---
 
 ## Plantilla para nuevos items

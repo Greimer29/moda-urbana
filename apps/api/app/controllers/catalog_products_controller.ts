@@ -52,6 +52,7 @@ export default class CatalogProductsController {
       reference: filters.reference,
       size: filters.size,
       category: filters.category,
+      folderId: filters.folder_id,
       active: filters.active,
       sortBy: filters.sort_by,
       sortDir: filters.sort_dir,
